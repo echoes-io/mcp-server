@@ -1,0 +1,85 @@
+{
+  "name": "@echoes-io/mcp-server",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for AI integration with Echoes storytelling platform",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "node lib/index.js",
+    "lint": "concurrently npm:lint:* --prefixColors auto",
+    "lint:fix": "biome check --write",
+    "lint:lockfile": "lockfile-lint --path package-lock.json",
+    "lint:engines": "ls-engines",
+    "lint:publish": "publint --strict",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "prepare": "[ \"$CI\" = \"true\" ] || [ \"$GITHUB_ACTIONS\" = \"true\" ] && echo 'Skipping husky' && exit 0 || husky",
+    "clean": "rimraf --glob ./{lib,test}/**/*.{d.ts,js} ./vitest*.{d.ts,js}",
+    "prebuild": "npm run clean",
+    "build": "tsc",
+    "release": "semantic-release"
+  },
+  "exports": {
+    ".": "./lib/index.js"
+  },
+  "files": [
+    "lib/**/*.{d.ts,js}"
+  ],
+  "engines": {
+    "node": ">= 20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/echoes-io/mcp-server.git"
+  },
+  "keywords": [
+    "echoes",
+    "storytelling",
+    "multi-pov"
+  ],
+  "author": "Zweer <n.olivieriachille@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/echoes-io/mcp-server/issues"
+  },
+  "homepage": "https://github.com/echoes-io/mcp-server#readme",
+  "release": {
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      "@semantic-release/github",
+      "@semantic-release/git"
+    ]
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.7",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@tsconfig/node22": "^22.0.2",
+    "@types/node": "^24.9.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.5",
+    "lockfile-lint": "^4.14.1",
+    "ls-engines": "^0.9.3",
+    "publint": "^0.3.15",
+    "rimraf": "^6.0.1",
+    "semantic-release": "^25.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@echoes-io/utils": "^1.1.1",
+    "@echoes-io/models": "^1.0.0",
+    "@echoes-io/tracker": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
