@@ -4,17 +4,50 @@ Model Context Protocol server for AI integration with Echoes storytelling platfo
 
 ## Installation
 
+The server is distributed as an npm package and can be used without cloning the repository.
+
+### Using with MCP Clients
+
+Add to your MCP client configuration (e.g., `~/.config/q/mcp.json` for Amazon Q):
+
+```json
+{
+  "mcpServers": {
+    "echoes": {
+      "command": "npx",
+      "args": ["-y", "@echoes-io/mcp-server"]
+    }
+  }
+}
+```
+
+Or install globally:
+
 ```bash
-npm install @echoes-io/mcp-server
+npm install -g @echoes-io/mcp-server
+```
+
+Then configure:
+
+```json
+{
+  "mcpServers": {
+    "echoes": {
+      "command": "echoes-mcp-server"
+    }
+  }
+}
 ```
 
 ## Usage
 
-```typescript
-import { } from '@echoes-io/mcp-server';
+Once configured, the server provides tools for:
+- Content management (chapters, episodes, arcs)
+- Word counting and text statistics
+- Database operations via @echoes-io/tracker
+- Timeline synchronization
 
-// Usage examples here
-```
+Available tools will be listed by your MCP client.
 
 ## Development
 

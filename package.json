@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "description": "Model Context Protocol server for AI integration with Echoes storytelling platform",
   "scripts": {
-    "dev": "tsx src/index.ts",
-    "start": "node lib/index.js",
+    "dev": "tsx cli/index.ts",
+    "start": "node cli/index.js",
     "lint": "concurrently npm:lint:* --prefixColors auto",
     "lint:fix": "biome check --write",
     "lint:lockfile": "lockfile-lint --path package-lock.json",
@@ -14,15 +14,19 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "prepare": "[ \"$CI\" = \"true\" ] || [ \"$GITHUB_ACTIONS\" = \"true\" ] && echo 'Skipping husky' && exit 0 || husky",
-    "clean": "rimraf --glob ./{lib,test}/**/*.{d.ts,js} ./vitest*.{d.ts,js}",
+    "clean": "rimraf --glob ./{cli,lib,test}/**/*.{d.ts,js} ./vitest*.{d.ts,js}",
     "prebuild": "npm run clean",
     "build": "tsc",
     "release": "semantic-release"
   },
+  "bin": {
+    "echoes-mcp-server": "./cli/index.js"
+  },
   "exports": {
-    ".": "./lib/index.js"
+    ".": "./lib/server.js"
   },
   "files": [
+    "cli/**/*.{d.ts,js}",
     "lib/**/*.{d.ts,js}"
   ],
   "engines": {
