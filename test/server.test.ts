@@ -1,11 +1,20 @@
 import { join } from 'node:path';
 
 import { Tracker } from '@echoes-io/tracker';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createServer } from '../lib/server.js';
+import { clearTestTimeline, setTestTimeline } from './helpers.js';
 
 describe('MCP Server', () => {
+  beforeEach(() => {
+    setTestTimeline();
+  });
+
+  afterEach(() => {
+    clearTestTimeline();
+  });
+
   it('should create server instance', async () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();

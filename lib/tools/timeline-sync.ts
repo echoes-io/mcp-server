@@ -5,29 +5,29 @@ import type { Tracker } from '@echoes-io/tracker';
 import { getTextStats, parseMarkdown } from '@echoes-io/utils';
 import { z } from 'zod';
 
+import { getTimeline } from '../utils.js';
+
 export const timelineSyncSchema = z.object({
-  timeline: z.string().describe('Timeline name'),
   contentPath: z.string().describe('Path to content directory'),
 });
 
 export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tracker: Tracker) {
   try {
+    const timeline = getTimeline();
     let added = 0,
       updated = 0,
       deleted = 0,
       errors = 0;
 
-    // Ensure timeline exists
-    let timeline = await tracker.getTimeline(args.timeline);
-    if (!timeline) {
-      timeline = await tracker.createTimeline({
-        name: args.timeline,
-        description: `Timeline ${args.timeline}`,
+    let timelineRecord = await tracker.getTimeline(timeline);
+    if (!timelineRecord) {
+      timelineRecord = await tracker.createTimeline({
+        name: timeline,
+        description: `Timeline ${timeline}`,
       });
       added++;
     }
 
-    // PHASE 1: Scan filesystem and add/update chapters
     const arcs = readdirSync(args.contentPath, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name);
@@ -35,11 +35,10 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
     for (const arcName of arcs) {
       const arcPath = join(args.contentPath, arcName);
 
-      // Ensure arc exists
-      let arc = await tracker.getArc(args.timeline, arcName);
+      let arc = await tracker.getArc(timeline, arcName);
       if (!arc) {
         arc = await tracker.createArc({
-          timelineName: args.timeline,
+          timelineName: timeline,
           name: arcName,
           number: 1,
           description: `Arc ${arcName}`,
@@ -47,22 +46,20 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
         added++;
       }
 
-      // Scan episodes
       const episodes = readdirSync(arcPath, { withFileTypes: true })
         .filter((entry) => entry.isDirectory() && entry.name.startsWith('ep'))
         .map((entry) => ({
           name: entry.name,
-          number: parseInt(entry.name.match(/ep(\d+)/)?.[1] || '0', 10),
+          number: Number.parseInt(entry.name.match(/ep(\d+)/)?.[1] || '0', 10),
         }));
 
       for (const ep of episodes) {
         const episodePath = join(arcPath, ep.name);
 
-        // Ensure episode exists
-        let episode = await tracker.getEpisode(args.timeline, arcName, ep.number);
+        let episode = await tracker.getEpisode(timeline, arcName, ep.number);
         if (!episode) {
           episode = await tracker.createEpisode({
-            timelineName: args.timeline,
+            timelineName: timeline,
             arcName: arcName,
             number: ep.number,
             slug: ep.name,
@@ -72,7 +69,6 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
           added++;
         }
 
-        // Scan chapters
         const chapters = readdirSync(episodePath)
           .filter((file) => extname(file) === '.md')
           .map((file) => {
@@ -84,7 +80,6 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
 
               return {
                 file: filePath,
-                filename: file,
                 metadata,
                 stats,
               };
@@ -93,43 +88,43 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
               return null;
             }
           })
-          .filter(Boolean);
+          .filter((ch) => ch !== null);
 
-        for (const chapter of chapters) {
-          if (!chapter) continue;
+        for (const chapterData of chapters) {
+          if (!chapterData) continue;
+
+          const chNumber = chapterData.metadata.chapter;
+          if (!chNumber) continue;
 
           try {
-            const chNumber = chapter.metadata?.chapter || 1;
+            const existing = await tracker.getChapter(timeline, arcName, ep.number, chNumber);
 
-            // Check if chapter exists
-            const existing = await tracker.getChapter(args.timeline, arcName, ep.number, chNumber);
-
-            const chapterData = {
-              timelineName: args.timeline,
+            const data = {
+              timelineName: timeline,
               arcName: arcName,
               episodeNumber: ep.number,
-              partNumber: chapter.metadata?.part || 1,
+              partNumber: chapterData.metadata.part || 1,
               number: chNumber,
-              pov: chapter.metadata?.pov || 'Unknown',
-              title: chapter.metadata?.title || chapter.filename,
-              date: new Date(chapter.metadata?.date || Date.now()),
-              excerpt: chapter.metadata?.excerpt || '',
-              location: chapter.metadata?.location || '',
-              outfit: chapter.metadata?.outfit || '',
-              kink: chapter.metadata?.kink || '',
-              words: chapter.stats?.words || 0,
-              characters: chapter.stats?.characters || 0,
-              charactersNoSpaces: chapter.stats?.charactersNoSpaces || 0,
-              paragraphs: chapter.stats?.paragraphs || 0,
-              sentences: chapter.stats?.sentences || 0,
-              readingTimeMinutes: Math.ceil((chapter.stats?.words || 0) / 200),
+              pov: chapterData.metadata.pov || 'Unknown',
+              title: chapterData.metadata.title || 'Untitled',
+              date: new Date(chapterData.metadata.date || Date.now()),
+              excerpt: chapterData.metadata.excerpt || '',
+              location: chapterData.metadata.location || '',
+              outfit: chapterData.metadata.outfit || '',
+              kink: chapterData.metadata.kink || '',
+              words: chapterData.stats.words,
+              characters: chapterData.stats.characters,
+              charactersNoSpaces: chapterData.stats.charactersNoSpaces,
+              paragraphs: chapterData.stats.paragraphs,
+              sentences: chapterData.stats.sentences,
+              readingTimeMinutes: Math.ceil(chapterData.stats.words / 200),
             };
 
             if (existing) {
-              await tracker.updateChapter(args.timeline, arcName, ep.number, chNumber, chapterData);
+              await tracker.updateChapter(timeline, arcName, ep.number, chNumber, data);
               updated++;
             } else {
-              await tracker.createChapter(chapterData);
+              await tracker.createChapter(data);
               added++;
             }
           } catch (_error) {
@@ -139,19 +134,16 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
       }
     }
 
-    // PHASE 2: Check for deleted files and remove from database
     try {
-      // Get all arcs and episodes to fetch all chapters
-      const dbArcs = await tracker.getArcs(args.timeline);
+      const dbArcs = await tracker.getArcs(timeline);
 
       for (const arc of dbArcs) {
-        const dbEpisodes = await tracker.getEpisodes(args.timeline, arc.name);
+        const dbEpisodes = await tracker.getEpisodes(timeline, arc.name);
 
         for (const episode of dbEpisodes) {
-          const allChapters = await tracker.getChapters(args.timeline, arc.name, episode.number);
+          const allChapters = await tracker.getChapters(timeline, arc.name, episode.number);
 
           for (const dbChapter of allChapters) {
-            // Check if any file matching the chapter pattern exists
             let fileExists = false;
             try {
               const arcPath = join(args.contentPath, dbChapter.arcName);
@@ -179,11 +171,9 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
                 }
               }
             } catch (_error) {
-              // If we can't check, assume file doesn't exist
               fileExists = false;
             }
 
-            // If file doesn't exist, delete from database
             if (!fileExists) {
               try {
                 await tracker.deleteChapter(
@@ -201,7 +191,6 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
         }
       }
     } catch (_error) {
-      // If we can't get chapters list, skip deletion phase
       errors++;
     }
 
@@ -211,7 +200,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
           type: 'text' as const,
           text: JSON.stringify(
             {
-              timeline: args.timeline,
+              timeline,
               contentPath: args.contentPath,
               summary: {
                 added,

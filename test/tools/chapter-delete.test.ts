@@ -1,9 +1,18 @@
 import type { Tracker } from '@echoes-io/tracker';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { chapterDelete, chapterDeleteSchema } from '../../lib/tools/chapter-delete.js';
+import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('chapter-delete tool', () => {
+  beforeEach(() => {
+    setTestTimeline();
+  });
+
+  afterEach(() => {
+    clearTestTimeline();
+  });
+
   it('should delete existing chapter from database only', async () => {
     // Mock tracker with existing chapter
     const mockChapter = {
@@ -19,7 +28,6 @@ describe('chapter-delete tool', () => {
 
     const result = await chapterDelete(
       {
-        timeline: 'test-timeline',
         arc: 'test-arc',
         episode: 1,
         chapter: 1,
@@ -53,7 +61,6 @@ describe('chapter-delete tool', () => {
     await expect(
       chapterDelete(
         {
-          timeline: 'test-timeline',
           arc: 'test-arc',
           episode: 1,
           chapter: 999,
@@ -74,7 +81,6 @@ describe('chapter-delete tool', () => {
     await expect(
       chapterDelete(
         {
-          timeline: 'test-timeline',
           arc: 'test-arc',
           episode: 1,
           chapter: 1,

@@ -1,9 +1,17 @@
 import { Tracker } from '@echoes-io/tracker';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { chapterInfo, chapterInfoSchema } from '../../lib/tools/chapter-info.js';
+import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('chapter-info tool', () => {
+  beforeEach(() => {
+    setTestTimeline();
+  });
+
+  afterEach(() => {
+    clearTestTimeline();
+  });
   it('should get chapter info from database', async () => {
     // Create a mock tracker that returns a chapter
     const mockTracker = {
@@ -27,7 +35,6 @@ describe('chapter-info tool', () => {
 
     const result = await chapterInfo(
       {
-        timeline: 'test-timeline',
         arc: 'test-arc',
         episode: 1,
         chapter: 1,
@@ -54,7 +61,6 @@ describe('chapter-info tool', () => {
   it('should validate input schema', () => {
     expect(() =>
       chapterInfoSchema.parse({
-        timeline: 'test-timeline',
         arc: 'test-arc',
         episode: 1,
         chapter: 1,

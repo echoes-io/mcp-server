@@ -1,81 +1,86 @@
 import type { Tracker } from '@echoes-io/tracker';
+import { getTextStats, parseMarkdown } from '@echoes-io/utils';
 import { z } from 'zod';
 
+import { getTimeline } from '../utils.js';
+
 export const chapterInsertSchema = z.object({
-  timeline: z.string().describe('Timeline name'),
   arc: z.string().describe('Arc name'),
   episode: z.number().describe('Episode number'),
   after: z.number().describe('Insert after this chapter number'),
   pov: z.string().describe('Point of view character'),
   title: z.string().describe('Chapter title'),
   excerpt: z.string().optional().describe('Chapter excerpt'),
-  location: z.string().optional().describe('Scene location'),
+  location: z.string().optional().describe('Chapter location'),
+  outfit: z.string().optional().describe('Character outfit'),
+  kink: z.string().optional().describe('Content tags'),
+  file: z.string().optional().describe('Path to markdown file to read content from'),
 });
 
 export async function chapterInsert(args: z.infer<typeof chapterInsertSchema>, tracker: Tracker) {
   try {
-    // Verify episode exists
-    const episode = await tracker.getEpisode(args.timeline, args.arc, args.episode);
+    const timeline = getTimeline();
+    const episode = await tracker.getEpisode(timeline, args.arc, args.episode);
+
     if (!episode) {
-      throw new Error(`Episode not found: ${args.timeline}/${args.arc}/ep${args.episode}`);
+      throw new Error(`Episode not found: ${timeline}/${args.arc}/ep${args.episode}`);
     }
 
-    // Get all chapters in the episode, sorted by number
-    const allChapters = await tracker.getChapters(args.timeline, args.arc, args.episode);
-    const sortedChapters = allChapters.sort((a, b) => a.number - b.number);
+    const existingChapters = await tracker.getChapters(timeline, args.arc, args.episode);
+    const newChapterNumber = args.after + 1;
 
-    // Find chapters that need to be renumbered (number > after)
-    const chaptersToRenumber = sortedChapters.filter((ch) => ch.number > args.after);
+    const chaptersToRenumber = existingChapters.filter((ch) => ch.number >= newChapterNumber);
 
-    const renumbered: Array<{ old: number; new: number; title: string }> = [];
-
-    // Renumber chapters from highest to lowest to avoid conflicts
-    for (const chapter of chaptersToRenumber.reverse()) {
-      const oldNumber = chapter.number;
-      const newNumber = oldNumber + 1;
-
+    for (const chapter of chaptersToRenumber) {
       try {
-        await tracker.updateChapter(args.timeline, args.arc, args.episode, oldNumber, {
-          ...chapter,
-          number: newNumber,
-        });
-
-        renumbered.push({
-          old: oldNumber,
-          new: newNumber,
-          title: chapter.title,
+        await tracker.updateChapter(timeline, args.arc, args.episode, chapter.number, {
+          number: chapter.number + 1,
         });
       } catch (error) {
         throw new Error(
-          `Failed to renumber chapter ${oldNumber}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          `Failed to renumber chapter ${chapter.number}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         );
       }
     }
 
-    // Create the new chapter
-    const newChapterNumber = args.after + 1;
-    const newChapterData = {
-      timelineName: args.timeline,
+    let words = 0;
+    let characters = 0;
+    let charactersNoSpaces = 0;
+    let paragraphs = 0;
+    let sentences = 0;
+
+    if (args.file) {
+      const { readFileSync } = await import('node:fs');
+      const content = readFileSync(args.file, 'utf-8');
+      const { content: markdownContent } = parseMarkdown(content);
+      const stats = getTextStats(markdownContent);
+      words = stats.words;
+      characters = stats.characters;
+      charactersNoSpaces = stats.charactersNoSpaces;
+      paragraphs = stats.paragraphs;
+      sentences = stats.sentences;
+    }
+
+    await tracker.createChapter({
+      timelineName: timeline,
       arcName: args.arc,
       episodeNumber: args.episode,
-      partNumber: 1, // Default part
+      partNumber: 1,
       number: newChapterNumber,
       pov: args.pov,
       title: args.title,
       date: new Date(),
       excerpt: args.excerpt || '',
       location: args.location || '',
-      outfit: '',
-      kink: '',
-      words: 0, // Placeholder chapter starts with 0 words
-      characters: 0,
-      charactersNoSpaces: 0,
-      paragraphs: 0,
-      sentences: 0,
-      readingTimeMinutes: 0,
-    };
-
-    await tracker.createChapter(newChapterData);
+      outfit: args.outfit || '',
+      kink: args.kink || '',
+      words,
+      characters,
+      charactersNoSpaces,
+      paragraphs,
+      sentences,
+      readingTimeMinutes: Math.ceil(words / 200),
+    });
 
     return {
       content: [
@@ -83,24 +88,20 @@ export async function chapterInsert(args: z.infer<typeof chapterInsertSchema>, t
           type: 'text' as const,
           text: JSON.stringify(
             {
+              timeline,
+              arc: args.arc,
+              episode: args.episode,
               inserted: {
-                timeline: args.timeline,
-                arc: args.arc,
-                episode: args.episode,
                 chapter: newChapterNumber,
                 pov: args.pov,
                 title: args.title,
+                words,
               },
-              renumbered: renumbered.reverse(), // Show in ascending order
-              summary: {
-                chaptersRenumbered: renumbered.length,
-                newTotalChapters: sortedChapters.length + 1,
-              },
-              message: `Chapter inserted successfully. ${renumbered.length} chapters renumbered.`,
-              warning:
-                renumbered.length > 0
-                  ? 'Remember to rename corresponding files in filesystem if they exist'
-                  : undefined,
+              renumbered: chaptersToRenumber.map((ch) => ({
+                oldNumber: ch.number,
+                newNumber: ch.number + 1,
+                title: ch.title,
+              })),
             },
             null,
             2,

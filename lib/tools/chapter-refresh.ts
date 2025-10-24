@@ -4,6 +4,8 @@ import type { Tracker } from '@echoes-io/tracker';
 import { getTextStats, parseMarkdown } from '@echoes-io/utils';
 import { z } from 'zod';
 
+import { getTimeline } from '../utils.js';
+
 export const chapterRefreshSchema = z.object({
   file: z.string().describe('Path to chapter markdown file'),
 });
@@ -14,17 +16,15 @@ export async function chapterRefresh(args: z.infer<typeof chapterRefreshSchema>,
     const { metadata, content: markdownContent } = parseMarkdown(content);
     const stats = getTextStats(markdownContent);
 
-    // Extract required fields from metadata
-    const timeline = metadata.timeline;
+    const timeline = getTimeline();
     const arc = metadata.arc;
     const episode = metadata.episode;
     const chapter = metadata.chapter;
 
-    if (!timeline || !arc || !episode || !chapter) {
-      throw new Error('Missing required metadata: timeline, arc, episode, or chapter');
+    if (!arc || !episode || !chapter) {
+      throw new Error('Missing required metadata: arc, episode, or chapter');
     }
 
-    // Check if chapter exists
     const existing = await tracker.getChapter(timeline, arc, episode, chapter);
 
     if (!existing) {
@@ -33,7 +33,6 @@ export async function chapterRefresh(args: z.infer<typeof chapterRefreshSchema>,
       );
     }
 
-    // Update chapter with new data
     const chapterData = {
       timelineName: timeline,
       arcName: arc,

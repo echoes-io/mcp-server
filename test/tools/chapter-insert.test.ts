@@ -1,9 +1,17 @@
 import type { Tracker } from '@echoes-io/tracker';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { chapterInsert, chapterInsertSchema } from '../../lib/tools/chapter-insert.js';
+import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('chapter-insert tool', () => {
+  beforeEach(() => {
+    setTestTimeline();
+  });
+
+  afterEach(() => {
+    clearTestTimeline();
+  });
   it('should insert chapter and renumber subsequent chapters', async () => {
     // Mock episode and existing chapters
     const mockEpisode = { number: 1, title: 'Test Episode' };
@@ -23,7 +31,6 @@ describe('chapter-insert tool', () => {
 
     const result = await chapterInsert(
       {
-        timeline: 'test-timeline',
         arc: 'test-arc',
         episode: 1,
         after: 2,
@@ -43,10 +50,8 @@ describe('chapter-insert tool', () => {
     expect(info.inserted.pov).toBe('Charlie');
     expect(info.inserted.title).toBe('New Chapter');
     expect(info.renumbered).toHaveLength(2);
-    expect(info.renumbered[0]).toEqual({ old: 3, new: 4, title: 'Chapter 3' });
-    expect(info.renumbered[1]).toEqual({ old: 4, new: 5, title: 'Chapter 4' });
-    expect(info.summary.chaptersRenumbered).toBe(2);
-    expect(info.warning).toContain('Remember to rename corresponding files');
+    expect(info.renumbered[0]).toEqual({ oldNumber: 3, newNumber: 4, title: 'Chapter 3' });
+    expect(info.renumbered[1]).toEqual({ oldNumber: 4, newNumber: 5, title: 'Chapter 4' });
 
     // Verify renumbering happened from high to low
     expect(mockTracker.updateChapter).toHaveBeenCalledTimes(2);
@@ -75,7 +80,6 @@ describe('chapter-insert tool', () => {
 
     const result = await chapterInsert(
       {
-        timeline: 'test-timeline',
         arc: 'test-arc',
         episode: 1,
         after: 2,
@@ -88,8 +92,6 @@ describe('chapter-insert tool', () => {
     const info = JSON.parse(result.content[0].text);
     expect(info.inserted.chapter).toBe(3);
     expect(info.renumbered).toHaveLength(0);
-    expect(info.summary.chaptersRenumbered).toBe(0);
-    expect(info.warning).toBeUndefined();
 
     expect(mockTracker.updateChapter).not.toHaveBeenCalled();
   });
@@ -105,7 +107,6 @@ describe('chapter-insert tool', () => {
     await expect(
       chapterInsert(
         {
-          timeline: 'test-timeline',
           arc: 'test-arc',
           episode: 999,
           after: 1,
@@ -136,7 +137,6 @@ describe('chapter-insert tool', () => {
     await expect(
       chapterInsert(
         {
-          timeline: 'test-timeline',
           arc: 'test-arc',
           episode: 1,
           after: 1,

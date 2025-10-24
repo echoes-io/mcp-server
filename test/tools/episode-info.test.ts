@@ -1,11 +1,19 @@
 import { join } from 'node:path';
 
 import { Tracker } from '@echoes-io/tracker';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { episodeInfo, episodeInfoSchema } from '../../lib/tools/episode-info.js';
+import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('episode-info tool', () => {
+  beforeEach(() => {
+    setTestTimeline();
+  });
+
+  afterEach(() => {
+    clearTestTimeline();
+  });
   it('should get episode info from database', async () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
@@ -17,7 +25,6 @@ describe('episode-info tool', () => {
     // Sync data first
     const syncResult = await timelineSync(
       {
-        timeline: 'test-timeline',
         contentPath,
       },
       tracker,
@@ -30,7 +37,6 @@ describe('episode-info tool', () => {
       try {
         const result = await episodeInfo(
           {
-            timeline: 'test-timeline',
             arc: 'test-arc',
             episode: 1,
           },
@@ -53,7 +59,6 @@ describe('episode-info tool', () => {
   it('should validate input schema', () => {
     expect(() =>
       episodeInfoSchema.parse({
-        timeline: 'test-timeline',
         arc: 'test-arc',
         episode: 1,
       }),

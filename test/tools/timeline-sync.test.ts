@@ -1,11 +1,19 @@
 import { join } from 'node:path';
 
 import { Tracker } from '@echoes-io/tracker';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { timelineSync, timelineSyncSchema } from '../../lib/tools/timeline-sync.js';
+import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('timeline-sync tool', () => {
+  beforeEach(() => {
+    setTestTimeline();
+  });
+
+  afterEach(() => {
+    clearTestTimeline();
+  });
   it('should sync timeline content to database', async () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
@@ -13,7 +21,6 @@ describe('timeline-sync tool', () => {
     const contentPath = join(process.cwd(), 'test/content');
     const result = await timelineSync(
       {
-        timeline: 'test-timeline',
         contentPath,
       },
       tracker,
@@ -33,6 +40,7 @@ describe('timeline-sync tool', () => {
   });
 
   it('should handle existing timeline (update path)', async () => {
+    setTestTimeline('existing-timeline');
     const tracker = new Tracker(':memory:');
     await tracker.init();
 
@@ -45,7 +53,6 @@ describe('timeline-sync tool', () => {
     const contentPath = join(process.cwd(), 'test/content');
     const result = await timelineSync(
       {
-        timeline: 'existing-timeline',
         contentPath,
       },
       tracker,
@@ -75,7 +82,6 @@ describe('timeline-sync tool', () => {
     const contentPath = join(process.cwd(), 'test/content');
     const result = await timelineSync(
       {
-        timeline: 'test-timeline',
         contentPath,
       },
       tracker,
@@ -113,7 +119,6 @@ describe('timeline-sync tool', () => {
     const { timelineSync: mockedTimelineSync } = await import('../../lib/tools/timeline-sync.js');
     const result = await mockedTimelineSync(
       {
-        timeline: 'test-timeline',
         contentPath,
       },
       tracker,
@@ -134,7 +139,6 @@ describe('timeline-sync tool', () => {
     await expect(
       timelineSync(
         {
-          timeline: 'test-timeline',
           contentPath: '/nonexistent/path',
         },
         tracker,
@@ -168,7 +172,6 @@ describe('timeline-sync tool', () => {
     const contentPath = join(process.cwd(), 'test/content');
     const result = await timelineSync(
       {
-        timeline: 'test-timeline',
         contentPath,
       },
       tracker,
@@ -192,7 +195,6 @@ describe('timeline-sync tool', () => {
     const contentPath = join(process.cwd(), 'test/content');
     const result = await timelineSync(
       {
-        timeline: 'test-timeline',
         contentPath,
       },
       tracker,
@@ -227,7 +229,6 @@ describe('timeline-sync tool', () => {
     const contentPath = join(process.cwd(), 'test/content');
     const result = await timelineSync(
       {
-        timeline: 'test-timeline',
         contentPath,
       },
       tracker,
@@ -271,7 +272,6 @@ describe('timeline-sync tool', () => {
     const contentPath = join(process.cwd(), 'test/content');
     const result = await timelineSync(
       {
-        timeline: 'test-timeline',
         contentPath,
       },
       tracker,

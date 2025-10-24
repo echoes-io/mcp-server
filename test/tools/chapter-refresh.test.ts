@@ -1,11 +1,19 @@
 import { join } from 'node:path';
 
 import type { Tracker } from '@echoes-io/tracker';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { chapterRefresh, chapterRefreshSchema } from '../../lib/tools/chapter-refresh.js';
+import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('chapter-refresh tool', () => {
+  beforeEach(() => {
+    setTestTimeline();
+  });
+
+  afterEach(() => {
+    clearTestTimeline();
+  });
   it('should refresh chapter from file', async () => {
     // Mock tracker with existing chapter
     const mockTracker = {

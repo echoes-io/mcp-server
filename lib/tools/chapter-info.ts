@@ -1,8 +1,9 @@
 import type { Tracker } from '@echoes-io/tracker';
 import { z } from 'zod';
 
+import { getTimeline } from '../utils.js';
+
 export const chapterInfoSchema = z.object({
-  timeline: z.string().describe('Timeline name'),
   arc: z.string().describe('Arc name'),
   episode: z.number().describe('Episode number'),
   chapter: z.number().describe('Chapter number'),
@@ -10,11 +11,12 @@ export const chapterInfoSchema = z.object({
 
 export async function chapterInfo(args: z.infer<typeof chapterInfoSchema>, tracker: Tracker) {
   try {
-    const chapter = await tracker.getChapter(args.timeline, args.arc, args.episode, args.chapter);
+    const timeline = getTimeline();
+    const chapter = await tracker.getChapter(timeline, args.arc, args.episode, args.chapter);
 
     if (!chapter) {
       throw new Error(
-        `Chapter not found: ${args.timeline}/${args.arc}/ep${args.episode}/ch${args.chapter}`,
+        `Chapter not found: ${timeline}/${args.arc}/ep${args.episode}/ch${args.chapter}`,
       );
     }
 
@@ -24,7 +26,7 @@ export async function chapterInfo(args: z.infer<typeof chapterInfoSchema>, track
           type: 'text' as const,
           text: JSON.stringify(
             {
-              timeline: args.timeline,
+              timeline,
               arc: args.arc,
               episode: args.episode,
               chapter: args.chapter,

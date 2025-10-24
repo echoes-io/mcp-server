@@ -1,12 +1,14 @@
 import { Tracker } from '@echoes-io/tracker';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { episodeUpdate } from '../../lib/tools/episode-update.js';
+import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('episode-update', () => {
   let tracker: Tracker;
 
   beforeEach(async () => {
+    setTestTimeline();
     tracker = new Tracker(':memory:');
     await tracker.init();
 
@@ -27,10 +29,13 @@ describe('episode-update', () => {
     });
   });
 
+  afterEach(() => {
+    clearTestTimeline();
+  });
+
   it('should update episode description', async () => {
     const result = await episodeUpdate(
       {
-        timeline: 'test-timeline',
         arc: 'arc1',
         episode: 1,
         description: 'New description',
@@ -46,7 +51,6 @@ describe('episode-update', () => {
   it('should update episode title and slug', async () => {
     const result = await episodeUpdate(
       {
-        timeline: 'test-timeline',
         arc: 'arc1',
         episode: 1,
         title: 'New Title',
@@ -64,7 +68,6 @@ describe('episode-update', () => {
     await expect(
       episodeUpdate(
         {
-          timeline: 'test-timeline',
           arc: 'arc1',
           episode: 999,
           description: 'Test',

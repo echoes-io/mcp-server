@@ -1,8 +1,9 @@
 import type { Tracker } from '@echoes-io/tracker';
 import { z } from 'zod';
 
+import { getTimeline } from '../utils.js';
+
 export const episodeUpdateSchema = z.object({
-  timeline: z.string().describe('Timeline name'),
   arc: z.string().describe('Arc name'),
   episode: z.number().describe('Episode number'),
   description: z.string().optional().describe('Episode description'),
@@ -12,10 +13,11 @@ export const episodeUpdateSchema = z.object({
 
 export async function episodeUpdate(args: z.infer<typeof episodeUpdateSchema>, tracker: Tracker) {
   try {
-    const existing = await tracker.getEpisode(args.timeline, args.arc, args.episode);
+    const timeline = getTimeline();
+    const existing = await tracker.getEpisode(timeline, args.arc, args.episode);
 
     if (!existing) {
-      throw new Error(`Episode not found: ${args.timeline}/${args.arc}/ep${args.episode}`);
+      throw new Error(`Episode not found: ${timeline}/${args.arc}/ep${args.episode}`);
     }
 
     const updateData: Record<string, string> = {};
@@ -23,7 +25,7 @@ export async function episodeUpdate(args: z.infer<typeof episodeUpdateSchema>, t
     if (args.title !== undefined) updateData.title = args.title;
     if (args.slug !== undefined) updateData.slug = args.slug;
 
-    await tracker.updateEpisode(args.timeline, args.arc, args.episode, updateData);
+    await tracker.updateEpisode(timeline, args.arc, args.episode, updateData);
 
     return {
       content: [
@@ -31,7 +33,7 @@ export async function episodeUpdate(args: z.infer<typeof episodeUpdateSchema>, t
           type: 'text' as const,
           text: JSON.stringify(
             {
-              timeline: args.timeline,
+              timeline,
               arc: args.arc,
               episode: args.episode,
               updated: updateData,
