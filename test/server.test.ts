@@ -235,7 +235,7 @@ describe('MCP Server', () => {
       params: {},
     });
 
-    expect(result.tools).toHaveLength(8);
+    expect(result.tools).toHaveLength(9);
     expect(result.tools.map((t: { name: string }) => t.name)).toEqual([
       'words-count',
       'chapter-info',
@@ -245,6 +245,7 @@ describe('MCP Server', () => {
       'chapter-delete',
       'chapter-insert',
       'timeline-sync',
+      'stats',
     ]);
 
     await tracker.close();

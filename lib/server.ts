@@ -21,6 +21,8 @@ import {
   episodeInfoSchema,
   episodeUpdate,
   episodeUpdateSchema,
+  stats,
+  statsSchema,
   timelineSync,
   timelineSyncSchema,
   wordsCount,
@@ -86,6 +88,11 @@ export function createServer(tracker: Tracker) {
           description: 'Synchronize timeline content with database',
           inputSchema: zodToJsonSchema(timelineSyncSchema),
         },
+        {
+          name: 'stats',
+          description: 'Get statistics for timeline, arc, episode, or POV',
+          inputSchema: zodToJsonSchema(statsSchema),
+        },
       ],
     };
   });
@@ -110,6 +117,8 @@ export function createServer(tracker: Tracker) {
         return await episodeUpdate(episodeUpdateSchema.parse(args), tracker);
       case 'timeline-sync':
         return await timelineSync(timelineSyncSchema.parse(args), tracker);
+      case 'stats':
+        return await stats(statsSchema.parse(args), tracker);
       default:
         throw new Error(`Unknown tool: ${name}`);
     }

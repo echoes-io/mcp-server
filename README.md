@@ -78,6 +78,16 @@ All tools operate on the timeline specified by the `ECHOES_TIMELINE` environment
 - **`timeline-sync`** - Synchronize filesystem content with database
   - Input: `contentPath` (path to content directory)
 
+### Statistics
+- **`stats`** - Get aggregate statistics with optional filters
+  - Input: optional: `arc`, `episode`, `pov`
+  - Output: Total words/chapters, POV distribution, arc/episode breakdown, longest/shortest chapters
+  - Examples:
+    - No filters: Overall timeline statistics
+    - `arc: "arc1"`: Statistics for specific arc
+    - `arc: "arc1", episode: 1`: Statistics for specific episode
+    - `pov: "Alice"`: Statistics for specific POV across timeline
+
 ## Development
 
 ### Scripts
@@ -117,7 +127,6 @@ npm run lint:fix
 ## Roadmap
 
 ### Planned Features
-- **Statistics tools** - Aggregate statistics for timelines/arcs/episodes
 - **Book generation** - LaTeX/PDF compilation (when ready)
 - **Performance optimizations** - Caching and batch operations
 

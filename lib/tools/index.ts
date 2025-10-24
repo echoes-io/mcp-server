@@ -4,5 +4,6 @@ export { chapterInsert, chapterInsertSchema } from './chapter-insert.js';
 export { chapterRefresh, chapterRefreshSchema } from './chapter-refresh.js';
 export { episodeInfo, episodeInfoSchema } from './episode-info.js';
 export { episodeUpdate, episodeUpdateSchema } from './episode-update.js';
+export { stats, statsSchema } from './stats.js';
 export { timelineSync, timelineSyncSchema } from './timeline-sync.js';
 export { wordsCount, wordsCountSchema } from './words-count.js';
