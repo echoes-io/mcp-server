@@ -15,7 +15,10 @@ Add to your MCP client configuration (e.g., `~/.config/q/mcp.json` for Amazon Q)
   "mcpServers": {
     "echoes": {
       "command": "npx",
-      "args": ["-y", "@echoes-io/mcp-server"]
+      "args": ["-y", "@echoes-io/mcp-server"],
+      "env": {
+        "ECHOES_TIMELINE": "your-timeline-name"
+      }
     }
   }
 }
@@ -33,27 +36,47 @@ Then configure:
 {
   "mcpServers": {
     "echoes": {
-      "command": "echoes-mcp-server"
+      "command": "echoes-mcp-server",
+      "env": {
+        "ECHOES_TIMELINE": "your-timeline-name"
+      }
     }
   }
 }
 ```
 
+**Important:** The `ECHOES_TIMELINE` environment variable must be set to specify which timeline to work with. All tools operate on this timeline.
+
 ## Available Tools
+
+All tools operate on the timeline specified by the `ECHOES_TIMELINE` environment variable.
 
 ### Content Operations
 - **`words-count`** - Count words and text statistics in markdown files
+  - Input: `file` (path to markdown file)
+  
 - **`chapter-info`** - Extract chapter metadata from database
+  - Input: `arc`, `episode`, `chapter`
+  
 - **`chapter-refresh`** - Refresh chapter metadata and word counts from file
+  - Input: `file` (path to chapter file)
+  
 - **`chapter-insert`** - Insert new chapter with automatic renumbering
+  - Input: `arc`, `episode`, `after`, `pov`, `title`, optional: `excerpt`, `location`, `outfit`, `kink`, `file`
+  
 - **`chapter-delete`** - Delete chapter from database and optionally from filesystem
+  - Input: `arc`, `episode`, `chapter`, optional: `file` (to delete from filesystem)
 
 ### Episode Operations
 - **`episode-info`** - Get episode information and list of chapters
+  - Input: `arc`, `episode`
+  
 - **`episode-update`** - Update episode metadata (description, title, slug)
+  - Input: `arc`, `episode`, optional: `description`, `title`, `slug`
 
 ### Timeline Operations
 - **`timeline-sync`** - Synchronize filesystem content with database
+  - Input: `contentPath` (path to content directory)
 
 ## Development
 
@@ -89,6 +112,7 @@ npm run lint:fix
 - **Database**: SQLite via @echoes-io/tracker (singleton pattern)
 - **Validation**: Zod schemas for type-safe inputs
 - **Testing**: Comprehensive unit and integration tests
+- **Environment**: Uses `ECHOES_TIMELINE` env var for timeline context
 
 ## Roadmap
 
