@@ -127,8 +127,8 @@ npm run lint:fix
 ## Roadmap
 
 ### Planned Features
-- **Book generation** - LaTeX/PDF compilation (when ready)
-- **Performance optimizations** - Caching and batch operations
+- **Book generation** - LaTeX/PDF compilation tools for creating publishable books from timeline content
+- **RAG system** - Retrieval-Augmented Generation integration for AI-assisted writing and content analysis
 
 ## License
 
