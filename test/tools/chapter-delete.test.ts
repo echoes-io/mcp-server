@@ -1,3 +1,4 @@
+import type { Tracker } from '@echoes-io/tracker';
 import { describe, expect, it, vi } from 'vitest';
 
 import { chapterDelete, chapterDeleteSchema } from '../../lib/tools/chapter-delete.js';
@@ -14,7 +15,7 @@ describe('chapter-delete tool', () => {
     const mockTracker = {
       getChapter: vi.fn().mockResolvedValue(mockChapter),
       deleteChapter: vi.fn().mockResolvedValue(undefined),
-    };
+    } as unknown as Tracker;
 
     const result = await chapterDelete(
       {
@@ -23,7 +24,7 @@ describe('chapter-delete tool', () => {
         episode: 1,
         chapter: 1,
       },
-      mockTracker as any,
+      mockTracker,
     );
 
     expect(result.content).toHaveLength(1);
@@ -47,7 +48,7 @@ describe('chapter-delete tool', () => {
     const mockTracker = {
       getChapter: vi.fn().mockResolvedValue(null),
       deleteChapter: vi.fn(),
-    };
+    } as unknown as Tracker;
 
     await expect(
       chapterDelete(
@@ -57,7 +58,7 @@ describe('chapter-delete tool', () => {
           episode: 1,
           chapter: 999,
         },
-        mockTracker as any,
+        mockTracker,
       ),
     ).rejects.toThrow('Chapter not found: test-timeline/test-arc/ep1/ch999');
 
@@ -68,7 +69,7 @@ describe('chapter-delete tool', () => {
     const mockTracker = {
       getChapter: vi.fn().mockResolvedValue({ pov: 'Alice', title: 'Test' }),
       deleteChapter: vi.fn().mockRejectedValue(new Error('Database error')),
-    };
+    } as unknown as Tracker;
 
     await expect(
       chapterDelete(
@@ -78,7 +79,7 @@ describe('chapter-delete tool', () => {
           episode: 1,
           chapter: 1,
         },
-        mockTracker as any,
+        mockTracker,
       ),
     ).rejects.toThrow('Failed to delete chapter: Database error');
   });

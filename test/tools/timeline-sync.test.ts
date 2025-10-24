@@ -160,7 +160,9 @@ describe('timeline-sync tool', () => {
       },
     ];
 
-    vi.spyOn(tracker, 'getChapters').mockResolvedValue(mockChapters as any);
+    vi.spyOn(tracker, 'getChapters').mockResolvedValue(
+      mockChapters as unknown as Awaited<ReturnType<Tracker['getChapters']>>,
+    );
     vi.spyOn(tracker, 'deleteChapter').mockResolvedValue(undefined);
 
     const contentPath = join(process.cwd(), 'test/content');
@@ -217,7 +219,9 @@ describe('timeline-sync tool', () => {
       },
     ];
 
-    vi.spyOn(tracker, 'getChapters').mockResolvedValue(mockChapters as any);
+    vi.spyOn(tracker, 'getChapters').mockResolvedValue(
+      mockChapters as unknown as Awaited<ReturnType<Tracker['getChapters']>>,
+    );
     vi.spyOn(tracker, 'deleteChapter').mockRejectedValue(new Error('Delete error'));
 
     const contentPath = join(process.cwd(), 'test/content');
@@ -250,7 +254,9 @@ describe('timeline-sync tool', () => {
       },
     ];
 
-    vi.spyOn(tracker, 'getChapters').mockResolvedValue(mockChapters as any);
+    vi.spyOn(tracker, 'getChapters').mockResolvedValue(
+      mockChapters as unknown as Awaited<ReturnType<Tracker['getChapters']>>,
+    );
     vi.spyOn(tracker, 'deleteChapter').mockResolvedValue(undefined);
 
     // Mock readdirSync to throw error

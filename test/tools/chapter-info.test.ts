@@ -23,7 +23,7 @@ describe('chapter-info tool', () => {
         paragraphs: 3,
         sentences: 8,
       }),
-    };
+    } as unknown as Tracker;
 
     const result = await chapterInfo(
       {
@@ -32,7 +32,7 @@ describe('chapter-info tool', () => {
         episode: 1,
         chapter: 1,
       },
-      mockTracker as any,
+      mockTracker,
     );
 
     expect(result.content).toHaveLength(1);

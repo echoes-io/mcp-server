@@ -1,3 +1,4 @@
+import type { Tracker } from '@echoes-io/tracker';
 import { describe, expect, it, vi } from 'vitest';
 
 import { chapterInsert, chapterInsertSchema } from '../../lib/tools/chapter-insert.js';
@@ -18,7 +19,7 @@ describe('chapter-insert tool', () => {
       getChapters: vi.fn().mockResolvedValue(mockChapters),
       updateChapter: vi.fn().mockResolvedValue(undefined),
       createChapter: vi.fn().mockResolvedValue(undefined),
-    };
+    } as unknown as Tracker;
 
     const result = await chapterInsert(
       {
@@ -31,7 +32,7 @@ describe('chapter-insert tool', () => {
         excerpt: 'A new chapter',
         location: 'Castle',
       },
-      mockTracker as any,
+      mockTracker,
     );
 
     expect(result.content).toHaveLength(1);
@@ -70,7 +71,7 @@ describe('chapter-insert tool', () => {
       getChapters: vi.fn().mockResolvedValue(mockChapters),
       updateChapter: vi.fn(),
       createChapter: vi.fn().mockResolvedValue(undefined),
-    };
+    } as unknown as Tracker;
 
     const result = await chapterInsert(
       {
@@ -81,7 +82,7 @@ describe('chapter-insert tool', () => {
         pov: 'Alice',
         title: 'Final Chapter',
       },
-      mockTracker as any,
+      mockTracker,
     );
 
     const info = JSON.parse(result.content[0].text);
@@ -99,7 +100,7 @@ describe('chapter-insert tool', () => {
       getChapters: vi.fn(),
       updateChapter: vi.fn(),
       createChapter: vi.fn(),
-    };
+    } as unknown as Tracker;
 
     await expect(
       chapterInsert(
@@ -111,7 +112,7 @@ describe('chapter-insert tool', () => {
           pov: 'Alice',
           title: 'Test',
         },
-        mockTracker as any,
+        mockTracker,
       ),
     ).rejects.toThrow('Episode not found');
 
@@ -130,7 +131,7 @@ describe('chapter-insert tool', () => {
       getChapters: vi.fn().mockResolvedValue(mockChapters),
       updateChapter: vi.fn().mockRejectedValue(new Error('Update failed')),
       createChapter: vi.fn(),
-    };
+    } as unknown as Tracker;
 
     await expect(
       chapterInsert(
@@ -142,7 +143,7 @@ describe('chapter-insert tool', () => {
           pov: 'Alice',
           title: 'Test',
         },
-        mockTracker as any,
+        mockTracker,
       ),
     ).rejects.toThrow('Failed to renumber chapter 2');
   });
