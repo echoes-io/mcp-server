@@ -141,51 +141,62 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
 
     // PHASE 2: Check for deleted files and remove from database
     try {
-      const allChapters = await tracker.getChapters(args.timeline);
+      // Get all arcs and episodes to fetch all chapters
+      const dbArcs = await tracker.getArcs(args.timeline);
 
-      for (const dbChapter of allChapters) {
-        // Check if any file matching the chapter pattern exists
-        let fileExists = false;
-        try {
-          const arcPath = join(args.contentPath, dbChapter.arcName);
-          if (existsSync(arcPath)) {
-            const episodeDirs = readdirSync(arcPath, { withFileTypes: true }).filter(
-              (entry) =>
-                entry.isDirectory() &&
-                entry.name.startsWith(`ep${dbChapter.episodeNumber.toString().padStart(2, '0')}-`),
-            );
+      for (const arc of dbArcs) {
+        const dbEpisodes = await tracker.getEpisodes(args.timeline, arc.name);
 
-            for (const episodeDir of episodeDirs) {
-              const episodePath = join(arcPath, episodeDir.name);
-              const chapterFiles = readdirSync(episodePath).filter(
-                (file) =>
-                  file.includes(`ch${dbChapter.number.toString().padStart(3, '0')}`) &&
-                  file.endsWith('.md'),
-              );
+        for (const episode of dbEpisodes) {
+          const allChapters = await tracker.getChapters(args.timeline, arc.name, episode.number);
 
-              if (chapterFiles.length > 0) {
-                fileExists = true;
-                break;
+          for (const dbChapter of allChapters) {
+            // Check if any file matching the chapter pattern exists
+            let fileExists = false;
+            try {
+              const arcPath = join(args.contentPath, dbChapter.arcName);
+              if (existsSync(arcPath)) {
+                const episodeDirs = readdirSync(arcPath, { withFileTypes: true }).filter(
+                  (entry) =>
+                    entry.isDirectory() &&
+                    entry.name.startsWith(
+                      `ep${dbChapter.episodeNumber.toString().padStart(2, '0')}-`,
+                    ),
+                );
+
+                for (const episodeDir of episodeDirs) {
+                  const episodePath = join(arcPath, episodeDir.name);
+                  const chapterFiles = readdirSync(episodePath).filter(
+                    (file) =>
+                      file.includes(`ch${dbChapter.number.toString().padStart(3, '0')}`) &&
+                      file.endsWith('.md'),
+                  );
+
+                  if (chapterFiles.length > 0) {
+                    fileExists = true;
+                    break;
+                  }
+                }
+              }
+            } catch (error) {
+              // If we can't check, assume file doesn't exist
+              fileExists = false;
+            }
+
+            // If file doesn't exist, delete from database
+            if (!fileExists) {
+              try {
+                await tracker.deleteChapter(
+                  dbChapter.timelineName,
+                  dbChapter.arcName,
+                  dbChapter.episodeNumber,
+                  dbChapter.number,
+                );
+                deleted++;
+              } catch (error) {
+                errors++;
               }
             }
-          }
-        } catch (error) {
-          // If we can't check, assume file doesn't exist
-          fileExists = false;
-        }
-
-        // If file doesn't exist, delete from database
-        if (!fileExists) {
-          try {
-            await tracker.deleteChapter(
-              dbChapter.timelineName,
-              dbChapter.arcName,
-              dbChapter.episodeNumber,
-              dbChapter.number,
-            );
-            deleted++;
-          } catch (error) {
-            errors++;
           }
         }
       }

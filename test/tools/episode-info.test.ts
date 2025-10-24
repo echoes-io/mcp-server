@@ -43,7 +43,7 @@ describe('episode-info tool', () => {
         expect(info.episodeInfo).toBeDefined();
       } catch (error) {
         // If episode not found, that's also valid coverage
-        expect(error.message).toContain('Episode not found');
+        expect((error as Error).message).toContain('Episode not found');
       }
     }
 

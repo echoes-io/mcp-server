@@ -39,15 +39,21 @@ Then configure:
 }
 ```
 
-## Usage
+## Available Tools
 
-Once configured, the server provides tools for:
-- Content management (chapters, episodes, arcs)
-- Word counting and text statistics
-- Database operations via @echoes-io/tracker
-- Timeline synchronization
+### Content Operations
+- **`words-count`** - Count words and text statistics in markdown files
+- **`chapter-info`** - Extract chapter metadata from database
+- **`chapter-refresh`** - Refresh chapter metadata and word counts from file
+- **`chapter-insert`** - Insert new chapter with automatic renumbering
+- **`chapter-delete`** - Delete chapter from database and optionally from filesystem
 
-Available tools will be listed by your MCP client.
+### Episode Operations
+- **`episode-info`** - Get episode information and list of chapters
+- **`episode-update`** - Update episode metadata (description, title, slug)
+
+### Timeline Operations
+- **`timeline-sync`** - Synchronize filesystem content with database
 
 ## Development
 
@@ -73,9 +79,23 @@ npm run lint:fix
 ### Tech Stack
 
 - **Language**: TypeScript (strict mode)
-- **Testing**: Vitest
+- **Testing**: Vitest (97%+ coverage)
 - **Linting**: Biome
 - **Build**: TypeScript compiler
+
+### Architecture
+
+- **MCP Protocol**: Standard Model Context Protocol implementation
+- **Database**: SQLite via @echoes-io/tracker (singleton pattern)
+- **Validation**: Zod schemas for type-safe inputs
+- **Testing**: Comprehensive unit and integration tests
+
+## Roadmap
+
+### Planned Features
+- **Statistics tools** - Aggregate statistics for timelines/arcs/episodes
+- **Book generation** - LaTeX/PDF compilation (when ready)
+- **Performance optimizations** - Caching and batch operations
 
 ## License
 

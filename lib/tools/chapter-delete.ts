@@ -1,3 +1,5 @@
+import { unlinkSync } from 'node:fs';
+
 import type { Tracker } from '@echoes-io/tracker';
 import { z } from 'zod';
 
@@ -6,6 +8,7 @@ export const chapterDeleteSchema = z.object({
   arc: z.string().describe('Arc name'),
   episode: z.number().describe('Episode number'),
   chapter: z.number().describe('Chapter number'),
+  file: z.string().optional().describe('Path to markdown file to delete from filesystem'),
 });
 
 export async function chapterDelete(args: z.infer<typeof chapterDeleteSchema>, tracker: Tracker) {
@@ -19,8 +22,15 @@ export async function chapterDelete(args: z.infer<typeof chapterDeleteSchema>, t
       );
     }
 
-    // Delete the chapter
+    // Delete from database
     await tracker.deleteChapter(args.timeline, args.arc, args.episode, args.chapter);
+
+    // Delete file if path provided
+    let fileDeleted = false;
+    if (args.file) {
+      unlinkSync(args.file);
+      fileDeleted = true;
+    }
 
     return {
       content: [
@@ -37,7 +47,10 @@ export async function chapterDelete(args: z.infer<typeof chapterDeleteSchema>, t
                 title: existing.title,
                 words: existing.words,
               },
-              message: 'Chapter successfully deleted from database',
+              fileDeleted,
+              message: fileDeleted
+                ? 'Chapter deleted from database and filesystem'
+                : 'Chapter deleted from database only',
             },
             null,
             2,

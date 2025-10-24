@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { chapterDelete, chapterDeleteSchema } from '../../lib/tools/chapter-delete.js';
 
 describe('chapter-delete tool', () => {
-  it('should delete existing chapter', async () => {
+  it('should delete existing chapter from database only', async () => {
     // Mock tracker with existing chapter
     const mockChapter = {
       pov: 'Alice',
@@ -37,7 +37,8 @@ describe('chapter-delete tool', () => {
     expect(info.chapter).toBe(1);
     expect(info.deleted.pov).toBe('Alice');
     expect(info.deleted.title).toBe('Test Chapter');
-    expect(info.message).toBe('Chapter successfully deleted from database');
+    expect(info.fileDeleted).toBe(false);
+    expect(info.message).toBe('Chapter deleted from database only');
 
     expect(mockTracker.getChapter).toHaveBeenCalledWith('test-timeline', 'test-arc', 1, 1);
     expect(mockTracker.deleteChapter).toHaveBeenCalledWith('test-timeline', 'test-arc', 1, 1);

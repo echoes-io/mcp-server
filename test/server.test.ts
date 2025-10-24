@@ -145,6 +145,33 @@ describe('MCP Server', () => {
     await tracker.close();
   });
 
+  it('should handle chapter-insert tool call', async () => {
+    const tracker = new Tracker(':memory:');
+    await tracker.init();
+    const server = createServer(tracker);
+
+    const handler = server['_requestHandlers'].get('tools/call');
+
+    await expect(
+      handler({
+        method: 'tools/call',
+        params: {
+          name: 'chapter-insert',
+          arguments: {
+            timeline: 'test',
+            arc: 'test',
+            episode: 1,
+            after: 1,
+            pov: 'Alice',
+            title: 'New Chapter',
+          },
+        },
+      }),
+    ).rejects.toThrow('Episode not found');
+
+    await tracker.close();
+  });
+
   it('should handle timeline-sync tool call', async () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
@@ -199,13 +226,15 @@ describe('MCP Server', () => {
       params: {},
     });
 
-    expect(result.tools).toHaveLength(6);
-    expect(result.tools.map((t) => t.name)).toEqual([
+    expect(result.tools).toHaveLength(8);
+    expect(result.tools.map((t: { name: string }) => t.name)).toEqual([
       'words-count',
       'chapter-info',
       'episode-info',
+      'episode-update',
       'chapter-refresh',
       'chapter-delete',
+      'chapter-insert',
       'timeline-sync',
     ]);
 

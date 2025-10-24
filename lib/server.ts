@@ -13,10 +13,14 @@ import {
   chapterDeleteSchema,
   chapterInfo,
   chapterInfoSchema,
+  chapterInsert,
+  chapterInsertSchema,
   chapterRefresh,
   chapterRefreshSchema,
   episodeInfo,
   episodeInfoSchema,
+  episodeUpdate,
+  episodeUpdateSchema,
   timelineSync,
   timelineSyncSchema,
   wordsCount,
@@ -58,14 +62,24 @@ export function createServer(tracker: Tracker) {
           inputSchema: zodToJsonSchema(episodeInfoSchema),
         },
         {
+          name: 'episode-update',
+          description: 'Update episode metadata (description, title, slug)',
+          inputSchema: zodToJsonSchema(episodeUpdateSchema),
+        },
+        {
           name: 'chapter-refresh',
           description: 'Refresh chapter metadata and statistics from file',
           inputSchema: zodToJsonSchema(chapterRefreshSchema),
         },
         {
           name: 'chapter-delete',
-          description: 'Delete chapter from database',
+          description: 'Delete chapter from database and optionally from filesystem',
           inputSchema: zodToJsonSchema(chapterDeleteSchema),
+        },
+        {
+          name: 'chapter-insert',
+          description: 'Insert new chapter and automatically renumber subsequent chapters',
+          inputSchema: zodToJsonSchema(chapterInsertSchema),
         },
         {
           name: 'timeline-sync',
@@ -88,8 +102,12 @@ export function createServer(tracker: Tracker) {
         return await chapterRefresh(chapterRefreshSchema.parse(args), tracker);
       case 'chapter-delete':
         return await chapterDelete(chapterDeleteSchema.parse(args), tracker);
+      case 'chapter-insert':
+        return await chapterInsert(chapterInsertSchema.parse(args), tracker);
       case 'episode-info':
         return await episodeInfo(episodeInfoSchema.parse(args), tracker);
+      case 'episode-update':
+        return await episodeUpdate(episodeUpdateSchema.parse(args), tracker);
       case 'timeline-sync':
         return await timelineSync(timelineSyncSchema.parse(args), tracker);
       default:

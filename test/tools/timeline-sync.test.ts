@@ -63,12 +63,14 @@ describe('timeline-sync tool', () => {
 
     // Mock readFileSync to throw error for .md files
     const originalReadFileSync = require('fs').readFileSync;
-    vi.spyOn(require('fs'), 'readFileSync').mockImplementation((path, encoding) => {
-      if (path.toString().includes('.md')) {
-        throw new Error('File read error');
-      }
-      return originalReadFileSync(path, encoding);
-    });
+    vi.spyOn(require('fs'), 'readFileSync').mockImplementation(
+      (path: unknown, encoding: unknown) => {
+        if (String(path).includes('.md')) {
+          throw new Error('File read error');
+        }
+        return originalReadFileSync(path, encoding);
+      },
+    );
 
     const contentPath = join(process.cwd(), 'test/content');
     const result = await timelineSync(
@@ -253,8 +255,8 @@ describe('timeline-sync tool', () => {
 
     // Mock readdirSync to throw error
     const originalReaddirSync = require('fs').readdirSync;
-    vi.spyOn(require('fs'), 'readdirSync').mockImplementation((path) => {
-      if (path.toString().includes('test-arc')) {
+    vi.spyOn(require('fs'), 'readdirSync').mockImplementation((path: unknown) => {
+      if (String(path).includes('test-arc')) {
         throw new Error('Permission denied');
       }
       return originalReaddirSync(path);
