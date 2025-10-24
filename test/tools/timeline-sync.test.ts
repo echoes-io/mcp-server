@@ -62,8 +62,8 @@ describe('timeline-sync tool', () => {
     await tracker.init();
 
     // Mock readFileSync to throw error for .md files
-    const originalReadFileSync = require('fs').readFileSync;
-    vi.spyOn(require('fs'), 'readFileSync').mockImplementation(
+    const originalReadFileSync = require('node:fs').readFileSync;
+    vi.spyOn(require('node:fs'), 'readFileSync').mockImplementation(
       (path: unknown, encoding: unknown) => {
         if (String(path).includes('.md')) {
           throw new Error('File read error');
@@ -254,8 +254,8 @@ describe('timeline-sync tool', () => {
     vi.spyOn(tracker, 'deleteChapter').mockResolvedValue(undefined);
 
     // Mock readdirSync to throw error
-    const originalReaddirSync = require('fs').readdirSync;
-    vi.spyOn(require('fs'), 'readdirSync').mockImplementation((path: unknown) => {
+    const originalReaddirSync = require('node:fs').readdirSync;
+    vi.spyOn(require('node:fs'), 'readdirSync').mockImplementation((path: unknown) => {
       if (String(path).includes('test-arc')) {
         throw new Error('Permission denied');
       }

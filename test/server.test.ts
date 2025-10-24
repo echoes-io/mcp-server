@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { Tracker } from '@echoes-io/tracker';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createServer, runServer } from '../lib/server.js';
+import { createServer } from '../lib/server.js';
 
 describe('MCP Server', () => {
   it('should create server instance', async () => {
@@ -46,7 +46,7 @@ describe('MCP Server', () => {
     const server = createServer(tracker);
 
     // Mock the handler directly
-    const handler = server['_requestHandlers'].get('tools/call');
+    const handler = server._requestHandlers.get('tools/call');
     expect(handler).toBeDefined();
 
     const testFile = join(process.cwd(), 'test/example.md');
@@ -69,7 +69,7 @@ describe('MCP Server', () => {
     await tracker.init();
     const server = createServer(tracker);
 
-    const handler = server['_requestHandlers'].get('tools/call');
+    const handler = server._requestHandlers.get('tools/call');
 
     await expect(
       handler({
@@ -89,7 +89,7 @@ describe('MCP Server', () => {
     await tracker.init();
     const server = createServer(tracker);
 
-    const handler = server['_requestHandlers'].get('tools/call');
+    const handler = server._requestHandlers.get('tools/call');
 
     await expect(
       handler({
@@ -109,7 +109,7 @@ describe('MCP Server', () => {
     await tracker.init();
     const server = createServer(tracker);
 
-    const handler = server['_requestHandlers'].get('tools/call');
+    const handler = server._requestHandlers.get('tools/call');
     const testFile = join(process.cwd(), 'test/example.md');
 
     await expect(
@@ -130,7 +130,7 @@ describe('MCP Server', () => {
     await tracker.init();
     const server = createServer(tracker);
 
-    const handler = server['_requestHandlers'].get('tools/call');
+    const handler = server._requestHandlers.get('tools/call');
 
     await expect(
       handler({
@@ -150,7 +150,7 @@ describe('MCP Server', () => {
     await tracker.init();
     const server = createServer(tracker);
 
-    const handler = server['_requestHandlers'].get('tools/call');
+    const handler = server._requestHandlers.get('tools/call');
 
     await expect(
       handler({
@@ -177,7 +177,7 @@ describe('MCP Server', () => {
     await tracker.init();
     const server = createServer(tracker);
 
-    const handler = server['_requestHandlers'].get('tools/call');
+    const handler = server._requestHandlers.get('tools/call');
     const contentPath = join(process.cwd(), 'test/content');
 
     const result = await handler({
@@ -200,7 +200,7 @@ describe('MCP Server', () => {
     await tracker.init();
     const server = createServer(tracker);
 
-    const handler = server['_requestHandlers'].get('tools/call');
+    const handler = server._requestHandlers.get('tools/call');
 
     await expect(
       handler({
@@ -220,7 +220,7 @@ describe('MCP Server', () => {
     await tracker.init();
     const server = createServer(tracker);
 
-    const handler = server['_requestHandlers'].get('tools/list');
+    const handler = server._requestHandlers.get('tools/list');
     const result = await handler({
       method: 'tools/list',
       params: {},
@@ -246,7 +246,7 @@ describe('MCP Server', () => {
     await tracker.init();
     const server = createServer(tracker);
 
-    const handler = server['_requestHandlers'].get('tools/call');
+    const handler = server._requestHandlers.get('tools/call');
 
     await expect(
       handler({

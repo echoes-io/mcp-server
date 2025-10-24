@@ -1,4 +1,3 @@
-import { Tracker } from '@echoes-io/tracker';
 import { describe, expect, it, vi } from 'vitest';
 
 import { chapterInsert, chapterInsertSchema } from '../../lib/tools/chapter-insert.js';

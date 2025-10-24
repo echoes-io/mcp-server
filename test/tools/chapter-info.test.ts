@@ -1,5 +1,3 @@
-import { join } from 'node:path';
-
 import { Tracker } from '@echoes-io/tracker';
 import { describe, expect, it, vi } from 'vitest';
 

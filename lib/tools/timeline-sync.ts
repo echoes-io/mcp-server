@@ -52,7 +52,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
         .filter((entry) => entry.isDirectory() && entry.name.startsWith('ep'))
         .map((entry) => ({
           name: entry.name,
-          number: parseInt(entry.name.match(/ep(\d+)/)?.[1] || '0'),
+          number: parseInt(entry.name.match(/ep(\d+)/)?.[1] || '0', 10),
         }));
 
       for (const ep of episodes) {
@@ -78,7 +78,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
           .map((file) => {
             try {
               const filePath = join(episodePath, file);
-              const content = require('fs').readFileSync(filePath, 'utf-8');
+              const content = require('node:fs').readFileSync(filePath, 'utf-8');
               const { metadata, content: markdownContent } = parseMarkdown(content);
               const stats = getTextStats(markdownContent);
 
@@ -88,7 +88,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
                 metadata,
                 stats,
               };
-            } catch (error) {
+            } catch (_error) {
               errors++;
               return null;
             }
@@ -132,7 +132,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
               await tracker.createChapter(chapterData);
               added++;
             }
-          } catch (error) {
+          } catch (_error) {
             errors++;
           }
         }
@@ -178,7 +178,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
                   }
                 }
               }
-            } catch (error) {
+            } catch (_error) {
               // If we can't check, assume file doesn't exist
               fileExists = false;
             }
@@ -193,14 +193,14 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
                   dbChapter.number,
                 );
                 deleted++;
-              } catch (error) {
+              } catch (_error) {
                 errors++;
               }
             }
           }
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // If we can't get chapters list, skip deletion phase
       errors++;
     }

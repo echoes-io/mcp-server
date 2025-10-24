@@ -1,6 +1,5 @@
 import { join } from 'node:path';
 
-import { Tracker } from '@echoes-io/tracker';
 import { describe, expect, it, vi } from 'vitest';
 
 import { chapterRefresh, chapterRefreshSchema } from '../../lib/tools/chapter-refresh.js';

@@ -1,4 +1,3 @@
-import { Tracker } from '@echoes-io/tracker';
 import { describe, expect, it, vi } from 'vitest';
 
 import { chapterDelete, chapterDeleteSchema } from '../../lib/tools/chapter-delete.js';
