@@ -19,6 +19,10 @@ describe('words-count tool', () => {
     expect(stats.paragraphs).toBeGreaterThan(0);
   });
 
+  it('should handle file not found', async () => {
+    await expect(wordsCount({ file: 'nonexistent.md' })).rejects.toThrow('Failed to count words');
+  });
+
   it('should validate input schema', () => {
     expect(() => wordsCountSchema.parse({ file: 'test.md' })).not.toThrow();
     expect(() => wordsCountSchema.parse({})).toThrow();
