@@ -9,6 +9,8 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 import {
+  chapterDelete,
+  chapterDeleteSchema,
   chapterInfo,
   chapterInfoSchema,
   chapterRefresh,
@@ -61,6 +63,11 @@ export function createServer(tracker: Tracker) {
           inputSchema: zodToJsonSchema(chapterRefreshSchema),
         },
         {
+          name: 'chapter-delete',
+          description: 'Delete chapter from database',
+          inputSchema: zodToJsonSchema(chapterDeleteSchema),
+        },
+        {
           name: 'timeline-sync',
           description: 'Synchronize timeline content with database',
           inputSchema: zodToJsonSchema(timelineSyncSchema),
@@ -79,6 +86,8 @@ export function createServer(tracker: Tracker) {
         return await chapterInfo(chapterInfoSchema.parse(args), tracker);
       case 'chapter-refresh':
         return await chapterRefresh(chapterRefreshSchema.parse(args), tracker);
+      case 'chapter-delete':
+        return await chapterDelete(chapterDeleteSchema.parse(args), tracker);
       case 'episode-info':
         return await episodeInfo(episodeInfoSchema.parse(args), tracker);
       case 'timeline-sync':

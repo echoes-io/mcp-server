@@ -1,3 +1,4 @@
+export { chapterDelete, chapterDeleteSchema } from './chapter-delete.js';
 export { chapterInfo, chapterInfoSchema } from './chapter-info.js';
 export { chapterRefresh, chapterRefreshSchema } from './chapter-refresh.js';
 export { episodeInfo, episodeInfoSchema } from './episode-info.js';

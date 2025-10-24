@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { extname, join } from 'node:path';
 
 import type { Tracker } from '@echoes-io/tracker';
@@ -14,6 +14,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
   try {
     let added = 0,
       updated = 0,
+      deleted = 0,
       errors = 0;
 
     // Ensure timeline exists
@@ -26,7 +27,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
       added++;
     }
 
-    // Scan arcs
+    // PHASE 1: Scan filesystem and add/update chapters
     const arcs = readdirSync(args.contentPath, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name);
@@ -138,6 +139,61 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
       }
     }
 
+    // PHASE 2: Check for deleted files and remove from database
+    try {
+      const allChapters = await tracker.getChapters(args.timeline);
+
+      for (const dbChapter of allChapters) {
+        // Check if any file matching the chapter pattern exists
+        let fileExists = false;
+        try {
+          const arcPath = join(args.contentPath, dbChapter.arcName);
+          if (existsSync(arcPath)) {
+            const episodeDirs = readdirSync(arcPath, { withFileTypes: true }).filter(
+              (entry) =>
+                entry.isDirectory() &&
+                entry.name.startsWith(`ep${dbChapter.episodeNumber.toString().padStart(2, '0')}-`),
+            );
+
+            for (const episodeDir of episodeDirs) {
+              const episodePath = join(arcPath, episodeDir.name);
+              const chapterFiles = readdirSync(episodePath).filter(
+                (file) =>
+                  file.includes(`ch${dbChapter.number.toString().padStart(3, '0')}`) &&
+                  file.endsWith('.md'),
+              );
+
+              if (chapterFiles.length > 0) {
+                fileExists = true;
+                break;
+              }
+            }
+          }
+        } catch (error) {
+          // If we can't check, assume file doesn't exist
+          fileExists = false;
+        }
+
+        // If file doesn't exist, delete from database
+        if (!fileExists) {
+          try {
+            await tracker.deleteChapter(
+              dbChapter.timelineName,
+              dbChapter.arcName,
+              dbChapter.episodeNumber,
+              dbChapter.number,
+            );
+            deleted++;
+          } catch (error) {
+            errors++;
+          }
+        }
+      }
+    } catch (error) {
+      // If we can't get chapters list, skip deletion phase
+      errors++;
+    }
+
     return {
       content: [
         {
@@ -149,6 +205,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
               summary: {
                 added,
                 updated,
+                deleted,
                 errors,
               },
             },

@@ -26,6 +26,7 @@ describe('timeline-sync tool', () => {
     expect(info.timeline).toBe('test-timeline');
     expect(info.contentPath).toBe(contentPath);
     expect(info.summary.added).toBeGreaterThan(0);
+    expect(info.summary.deleted).toBeGreaterThanOrEqual(0); // May or may not have deletions
     expect(info.summary.errors).toBeLessThanOrEqual(2); // Accept some errors for now
 
     await tracker.close();
@@ -138,6 +139,140 @@ describe('timeline-sync tool', () => {
       ),
     ).rejects.toThrow('Failed to sync timeline');
 
+    await tracker.close();
+  });
+
+  it('should handle chapter deletions', async () => {
+    const tracker = new Tracker(':memory:');
+    await tracker.init();
+
+    // Mock tracker.getChapters to return chapters that don't exist in filesystem
+    const mockChapters = [
+      {
+        timelineName: 'test-timeline',
+        arcName: 'nonexistent-arc',
+        episodeNumber: 99,
+        number: 1,
+        pov: 'Ghost',
+        title: 'Deleted Chapter',
+      },
+    ];
+
+    vi.spyOn(tracker, 'getChapters').mockResolvedValue(mockChapters as any);
+    vi.spyOn(tracker, 'deleteChapter').mockResolvedValue(undefined);
+
+    const contentPath = join(process.cwd(), 'test/content');
+    const result = await timelineSync(
+      {
+        timeline: 'test-timeline',
+        contentPath,
+      },
+      tracker,
+    );
+
+    const info = JSON.parse(result.content[0].text);
+    expect(info.summary.deleted).toBeGreaterThan(0);
+    expect(tracker.deleteChapter).toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+    await tracker.close();
+  });
+
+  it('should handle getChapters error gracefully', async () => {
+    const tracker = new Tracker(':memory:');
+    await tracker.init();
+
+    // Mock getChapters to throw error
+    vi.spyOn(tracker, 'getChapters').mockRejectedValue(new Error('DB error'));
+
+    const contentPath = join(process.cwd(), 'test/content');
+    const result = await timelineSync(
+      {
+        timeline: 'test-timeline',
+        contentPath,
+      },
+      tracker,
+    );
+
+    const info = JSON.parse(result.content[0].text);
+    expect(info.summary.errors).toBeGreaterThan(0);
+
+    vi.restoreAllMocks();
+    await tracker.close();
+  });
+
+  it('should handle deleteChapter error gracefully', async () => {
+    const tracker = new Tracker(':memory:');
+    await tracker.init();
+
+    // Mock chapters that don't exist in filesystem
+    const mockChapters = [
+      {
+        timelineName: 'test-timeline',
+        arcName: 'nonexistent-arc',
+        episodeNumber: 99,
+        number: 1,
+      },
+    ];
+
+    vi.spyOn(tracker, 'getChapters').mockResolvedValue(mockChapters as any);
+    vi.spyOn(tracker, 'deleteChapter').mockRejectedValue(new Error('Delete error'));
+
+    const contentPath = join(process.cwd(), 'test/content');
+    const result = await timelineSync(
+      {
+        timeline: 'test-timeline',
+        contentPath,
+      },
+      tracker,
+    );
+
+    const info = JSON.parse(result.content[0].text);
+    expect(info.summary.errors).toBeGreaterThan(0);
+
+    vi.restoreAllMocks();
+    await tracker.close();
+  });
+
+  it('should handle filesystem check errors', async () => {
+    const tracker = new Tracker(':memory:');
+    await tracker.init();
+
+    // Mock chapters with problematic paths
+    const mockChapters = [
+      {
+        timelineName: 'test-timeline',
+        arcName: 'test-arc',
+        episodeNumber: 1,
+        number: 1,
+      },
+    ];
+
+    vi.spyOn(tracker, 'getChapters').mockResolvedValue(mockChapters as any);
+    vi.spyOn(tracker, 'deleteChapter').mockResolvedValue(undefined);
+
+    // Mock readdirSync to throw error
+    const originalReaddirSync = require('fs').readdirSync;
+    vi.spyOn(require('fs'), 'readdirSync').mockImplementation((path) => {
+      if (path.toString().includes('test-arc')) {
+        throw new Error('Permission denied');
+      }
+      return originalReaddirSync(path);
+    });
+
+    const contentPath = join(process.cwd(), 'test/content');
+    const result = await timelineSync(
+      {
+        timeline: 'test-timeline',
+        contentPath,
+      },
+      tracker,
+    );
+
+    const info = JSON.parse(result.content[0].text);
+    expect(info.summary).toBeDefined(); // Just check it completes
+
+    vi.restoreAllMocks();
     await tracker.close();
   });
 
