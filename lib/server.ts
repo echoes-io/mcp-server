@@ -11,6 +11,8 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 import {
   chapterInfo,
   chapterInfoSchema,
+  chapterRefresh,
+  chapterRefreshSchema,
   episodeInfo,
   episodeInfoSchema,
   timelineSync,
@@ -54,6 +56,11 @@ export function createServer(tracker: Tracker) {
           inputSchema: zodToJsonSchema(episodeInfoSchema),
         },
         {
+          name: 'chapter-refresh',
+          description: 'Refresh chapter metadata and statistics from file',
+          inputSchema: zodToJsonSchema(chapterRefreshSchema),
+        },
+        {
           name: 'timeline-sync',
           description: 'Synchronize timeline content with database',
           inputSchema: zodToJsonSchema(timelineSyncSchema),
@@ -70,6 +77,8 @@ export function createServer(tracker: Tracker) {
         return await wordsCount(wordsCountSchema.parse(args));
       case 'chapter-info':
         return await chapterInfo(chapterInfoSchema.parse(args), tracker);
+      case 'chapter-refresh':
+        return await chapterRefresh(chapterRefreshSchema.parse(args), tracker);
       case 'episode-info':
         return await episodeInfo(episodeInfoSchema.parse(args), tracker);
       case 'timeline-sync':

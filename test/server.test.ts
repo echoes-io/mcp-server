@@ -104,6 +104,27 @@ describe('MCP Server', () => {
     await tracker.close();
   });
 
+  it('should handle chapter-refresh tool call', async () => {
+    const tracker = new Tracker(':memory:');
+    await tracker.init();
+    const server = createServer(tracker);
+
+    const handler = server['_requestHandlers'].get('tools/call');
+    const testFile = join(process.cwd(), 'test/example.md');
+
+    await expect(
+      handler({
+        method: 'tools/call',
+        params: {
+          name: 'chapter-refresh',
+          arguments: { file: testFile },
+        },
+      }),
+    ).rejects.toThrow('Chapter not found in database');
+
+    await tracker.close();
+  });
+
   it('should handle timeline-sync tool call', async () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
@@ -158,11 +179,12 @@ describe('MCP Server', () => {
       params: {},
     });
 
-    expect(result.tools).toHaveLength(4);
+    expect(result.tools).toHaveLength(5);
     expect(result.tools.map((t) => t.name)).toEqual([
       'words-count',
       'chapter-info',
       'episode-info',
+      'chapter-refresh',
       'timeline-sync',
     ]);
 
