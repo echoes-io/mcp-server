@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/echoes-io/mcp-server/compare/v1.1.0...v1.2.0) (2025-10-27)
+
+
+### Features
+
+* :sparkles: Added the rag system ([04e8956](https://github.com/echoes-io/mcp-server/commit/04e895643b0f5dd18a611a7bf49e9383a2fb6780))
+
 # [1.1.0](https://github.com/echoes-io/mcp-server/compare/v1.0.0...v1.1.0) (2025-10-24)
 
 
