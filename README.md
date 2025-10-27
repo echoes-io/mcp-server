@@ -38,7 +38,9 @@ Then configure:
     "echoes": {
       "command": "echoes-mcp-server",
       "env": {
-        "ECHOES_TIMELINE": "your-timeline-name"
+        "ECHOES_TIMELINE": "your-timeline-name",
+        "ECHOES_RAG_PROVIDER": "e5-small",
+        "ECHOES_CHROMA_URL": "./rag_data"
       }
     }
   }
@@ -46,6 +48,11 @@ Then configure:
 ```
 
 **Important:** The `ECHOES_TIMELINE` environment variable must be set to specify which timeline to work with. All tools operate on this timeline.
+
+**Optional RAG Configuration:**
+- `ECHOES_RAG_PROVIDER`: Embedding provider (`e5-small`, `e5-large`, or `gemini`). Default: `e5-small`
+- `ECHOES_GEMINI_API_KEY`: Required if using `gemini` provider
+- `ECHOES_CHROMA_URL`: ChromaDB storage path. Default: `./rag_data`
 
 ## Available Tools
 
@@ -88,6 +95,19 @@ All tools operate on the timeline specified by the `ECHOES_TIMELINE` environment
     - `arc: "arc1", episode: 1`: Statistics for specific episode
     - `pov: "Alice"`: Statistics for specific POV across timeline
 
+### RAG (Semantic Search)
+- **`rag-index`** - Index chapters into vector database for semantic search
+  - Input: optional: `arc`, `episode` (to index specific content)
+  - Output: Number of chapters indexed
+  
+- **`rag-search`** - Semantic search across timeline content
+  - Input: `query`, optional: `arc`, `pov`, `maxResults`
+  - Output: Relevant chapters with similarity scores and previews
+  
+- **`rag-context`** - Retrieve relevant context for AI interactions
+  - Input: `query`, optional: `arc`, `pov`, `maxChapters`
+  - Output: Full chapter content for AI context
+
 ## Development
 
 ### Scripts
@@ -128,7 +148,6 @@ npm run lint:fix
 
 ### Planned Features
 - **Book generation** - LaTeX/PDF compilation tools for creating publishable books from timeline content
-- **RAG system** - Retrieval-Augmented Generation integration for AI-assisted writing and content analysis
 
 ## License
 

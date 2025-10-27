@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { RAGSystem } from '@echoes-io/rag';
 import { Tracker } from '@echoes-io/tracker';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -21,6 +22,12 @@ import {
   episodeInfoSchema,
   episodeUpdate,
   episodeUpdateSchema,
+  ragContext,
+  ragContextSchema,
+  ragIndex,
+  ragIndexSchema,
+  ragSearch,
+  ragSearchSchema,
   stats,
   statsSchema,
   timelineSync,
@@ -32,7 +39,7 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
 
-export function createServer(tracker: Tracker) {
+export function createServer(tracker: Tracker, rag: RAGSystem) {
   const server = new Server(
     {
       name: pkg.name,
@@ -93,6 +100,21 @@ export function createServer(tracker: Tracker) {
           description: 'Get statistics for timeline, arc, episode, or POV',
           inputSchema: zodToJsonSchema(statsSchema),
         },
+        {
+          name: 'rag-index',
+          description: 'Index chapters into RAG vector database for semantic search',
+          inputSchema: zodToJsonSchema(ragIndexSchema),
+        },
+        {
+          name: 'rag-search',
+          description: 'Semantic search across timeline content',
+          inputSchema: zodToJsonSchema(ragSearchSchema),
+        },
+        {
+          name: 'rag-context',
+          description: 'Retrieve relevant context for AI interactions',
+          inputSchema: zodToJsonSchema(ragContextSchema),
+        },
       ],
     };
   });
@@ -119,6 +141,12 @@ export function createServer(tracker: Tracker) {
         return await timelineSync(timelineSyncSchema.parse(args), tracker);
       case 'stats':
         return await stats(statsSchema.parse(args), tracker);
+      case 'rag-index':
+        return await ragIndex(ragIndexSchema.parse(args), tracker, rag);
+      case 'rag-search':
+        return await ragSearch(ragSearchSchema.parse(args), rag);
+      case 'rag-context':
+        return await ragContext(ragContextSchema.parse(args), rag);
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
@@ -134,7 +162,21 @@ export async function runServer() {
   await tracker.init();
   console.error(`Tracker database initialized: ${dbPath}`);
 
-  const server = createServer(tracker);
+  // Initialize RAG system
+  const chromaUrl =
+    process.env.ECHOES_CHROMA_URL || (process.env.NODE_ENV === 'test' ? ':memory:' : './rag_data');
+  const provider = (process.env.ECHOES_RAG_PROVIDER || 'e5-small') as
+    | 'e5-small'
+    | 'e5-large'
+    | 'gemini';
+  const rag = new RAGSystem({
+    provider,
+    chromaUrl,
+    geminiApiKey: process.env.ECHOES_GEMINI_API_KEY,
+  });
+  console.error(`RAG system initialized: ${chromaUrl} (provider: ${provider})`);
+
+  const server = createServer(tracker, rag);
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('Echoes MCP Server running on stdio');
