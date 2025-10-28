@@ -134,7 +134,7 @@ npm run build
 npm run lint
 
 # Fix linting issues
-npm run lint:fix
+npm run lint:format
 ```
 
 ### Tech Stack
