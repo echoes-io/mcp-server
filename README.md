@@ -108,6 +108,13 @@ All tools operate on the timeline specified by the `ECHOES_TIMELINE` environment
   - Input: `query`, optional: `arc`, `pov`, `maxChapters`
   - Output: Full chapter content for AI context
 
+### Book Generation
+- **`book-generate`** - Generate PDF book from timeline content using LaTeX
+  - Input: `contentPath`, `outputPath`, optional: `episodes`, `format`
+  - Output: PDF book with Victoria Regia template
+  - Formats: `a4` (default), `a5`
+  - Requirements: pandoc, LaTeX distribution (pdflatex/xelatex/lualatex)
+
 ## Development
 
 ### Scripts
@@ -143,11 +150,6 @@ npm run lint:fix
 - **Validation**: Zod schemas for type-safe inputs
 - **Testing**: Comprehensive unit and integration tests
 - **Environment**: Uses `ECHOES_TIMELINE` env var for timeline context
-
-## Roadmap
-
-### Planned Features
-- **Book generation** - LaTeX/PDF compilation tools for creating publishable books from timeline content
 
 ## License
 

@@ -42,7 +42,7 @@ export async function ragSearch(args: z.infer<typeof ragSearchSchema>, rag: RAGS
                   title: r.metadata.title,
                 },
                 similarity: r.similarity,
-                preview: r.content.substring(0, 200) + '...',
+                preview: `${r.content.substring(0, 200)}...`,
               })),
             },
             null,

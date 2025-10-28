@@ -10,6 +10,8 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 import {
+  bookGenerate,
+  bookGenerateSchema,
   chapterDelete,
   chapterDeleteSchema,
   chapterInfo,
@@ -115,6 +117,11 @@ export function createServer(tracker: Tracker, rag: RAGSystem) {
           description: 'Retrieve relevant context for AI interactions',
           inputSchema: zodToJsonSchema(ragContextSchema),
         },
+        {
+          name: 'book-generate',
+          description: 'Generate PDF book from timeline content using LaTeX',
+          inputSchema: zodToJsonSchema(bookGenerateSchema),
+        },
       ],
     };
   });
@@ -147,6 +154,8 @@ export function createServer(tracker: Tracker, rag: RAGSystem) {
         return await ragSearch(ragSearchSchema.parse(args), rag);
       case 'rag-context':
         return await ragContext(ragContextSchema.parse(args), rag);
+      case 'book-generate':
+        return await bookGenerate(bookGenerateSchema.parse(args));
       default:
         throw new Error(`Unknown tool: ${name}`);
     }

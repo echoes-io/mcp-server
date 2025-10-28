@@ -251,7 +251,7 @@ describe('MCP Server', () => {
       params: {},
     });
 
-    expect(result.tools).toHaveLength(12);
+    expect(result.tools).toHaveLength(13);
     expect(result.tools.map((t: { name: string }) => t.name)).toEqual([
       'words-count',
       'chapter-info',
@@ -265,6 +265,7 @@ describe('MCP Server', () => {
       'rag-index',
       'rag-search',
       'rag-context',
+      'book-generate',
     ]);
 
     await tracker.close();

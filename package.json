@@ -81,6 +81,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@echoes-io/books-generator": "^1.0.0",
     "@echoes-io/models": "^1.0.0",
     "@echoes-io/rag": "^1.0.0",
     "@echoes-io/tracker": "^1.0.0",

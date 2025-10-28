@@ -1,3 +1,4 @@
+export { bookGenerate, bookGenerateSchema } from './book-generate.js';
 export { chapterDelete, chapterDeleteSchema } from './chapter-delete.js';
 export { chapterInfo, chapterInfoSchema } from './chapter-info.js';
 export { chapterInsert, chapterInsertSchema } from './chapter-insert.js';
