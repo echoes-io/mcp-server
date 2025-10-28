@@ -1,3 +1,10 @@
+## [1.3.2](https://github.com/echoes-io/mcp-server/compare/v1.3.1...v1.3.2) (2025-10-28)
+
+
+### Bug Fixes
+
+* :bug: Fixed the rag indexing with multi-arc in mind ([f2f47c8](https://github.com/echoes-io/mcp-server/commit/f2f47c8da30ac1141601060373fc4ad2e1d62319))
+
 ## [1.3.1](https://github.com/echoes-io/mcp-server/compare/v1.3.0...v1.3.1) (2025-10-28)
 
 
