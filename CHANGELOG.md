@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/echoes-io/mcp-server/compare/v1.3.0...v1.3.1) (2025-10-28)
+
+
+### Bug Fixes
+
+* :bug: Fixed a bug preventing to create chapters ([f782718](https://github.com/echoes-io/mcp-server/commit/f7827186b48a79dc21b8462cf2e24c3b5acd2c76))
+
 # [1.3.0](https://github.com/echoes-io/mcp-server/compare/v1.2.0...v1.3.0) (2025-10-28)
 
 
