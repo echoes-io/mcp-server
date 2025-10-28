@@ -1,3 +1,15 @@
+# [1.3.0](https://github.com/echoes-io/mcp-server/compare/v1.2.0...v1.3.0) (2025-10-28)
+
+
+### Features
+
+* :sparkles: Added the `book-generate` tool ([2922659](https://github.com/echoes-io/mcp-server/commit/292265933dd9729a9dca37b16a684363207a92fd))
+
+
+### Performance Improvements
+
+* :sparkles: Using rag with sqlite ([cd4e746](https://github.com/echoes-io/mcp-server/commit/cd4e746cd265cc848a020f10f6466b16df8807ab))
+
 # [1.2.0](https://github.com/echoes-io/mcp-server/compare/v1.1.0...v1.2.0) (2025-10-27)
 
 

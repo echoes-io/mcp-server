@@ -1,7 +1,7 @@
 {
   "name": "@echoes-io/mcp-server",
   "type": "module",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Model Context Protocol server for AI integration with Echoes storytelling platform",
   "scripts": {
     "dev": "tsx cli/index.ts",
