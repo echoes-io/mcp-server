@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 
 import type { Tracker } from '@echoes-io/tracker';
@@ -58,15 +58,24 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
 
         let episode = await tracker.getEpisode(timeline, arcName, ep.number);
         if (!episode) {
-          episode = await tracker.createEpisode({
-            timelineName: timeline,
-            arcName: arcName,
-            number: ep.number,
-            slug: ep.name,
-            title: ep.name,
-            description: `Episode ${ep.number}`,
-          });
-          added++;
+          try {
+            episode = await tracker.createEpisode({
+              timelineName: timeline,
+              arcName: arcName,
+              number: ep.number,
+              slug: ep.name,
+              title: ep.name,
+              description: `Episode ${ep.number}`,
+            });
+            added++;
+          } catch (error) {
+            console.error(
+              `Error creating episode ${arcName}/ep${ep.number}:`,
+              error instanceof Error ? error.message : error,
+            );
+            errors++;
+            continue; // Skip chapters if episode creation failed
+          }
         }
 
         const chapters = readdirSync(episodePath)
@@ -74,7 +83,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
           .map((file) => {
             try {
               const filePath = join(episodePath, file);
-              const content = require('node:fs').readFileSync(filePath, 'utf-8');
+              const content = readFileSync(filePath, 'utf-8');
               const { metadata, content: markdownContent } = parseMarkdown(content);
               const stats = getTextStats(markdownContent);
 
@@ -89,6 +98,34 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
             }
           })
           .filter((ch) => ch !== null);
+
+        // Collect unique part numbers
+        const partNumbers = new Set(chapters.map((ch) => ch?.metadata.part || 1));
+
+        // Create parts if they don't exist
+        for (const partNum of partNumbers) {
+          try {
+            const existingPart = await tracker.getPart(timeline, arcName, ep.number, partNum);
+            if (!existingPart) {
+              await tracker.createPart({
+                timelineName: timeline,
+                arcName: arcName,
+                episodeNumber: ep.number,
+                number: partNum,
+                slug: `part-${partNum}`,
+                title: `Part ${partNum}`,
+                description: `Part ${partNum} of Episode ${ep.number}`,
+              });
+              added++;
+            }
+          } catch (error) {
+            console.error(
+              `Error creating part ${arcName}/ep${ep.number}/part${partNum}:`,
+              error instanceof Error ? error.message : error,
+            );
+            errors++;
+          }
+        }
 
         for (const chapterData of chapters) {
           if (!chapterData) continue;

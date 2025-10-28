@@ -68,21 +68,21 @@ describe('timeline-sync tool', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
 
-    // Mock readFileSync to throw error for .md files
-    const originalReadFileSync = require('node:fs').readFileSync;
-    vi.spyOn(require('node:fs'), 'readFileSync').mockImplementation(
-      (path: unknown, encoding: unknown) => {
-        if (String(path).includes('.md')) {
-          throw new Error('File read error');
-        }
-        return originalReadFileSync(path, encoding);
-      },
-    );
+    // Create a temporary directory with invalid markdown
+    const { mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const tempDir = join(tmpdir(), 'echoes-test-invalid');
+    const arcDir = join(tempDir, 'test-arc');
+    const epDir = join(arcDir, 'ep01-test');
 
-    const contentPath = join(process.cwd(), 'test/content');
+    mkdirSync(epDir, { recursive: true });
+
+    // Write invalid YAML frontmatter
+    writeFileSync(join(epDir, 'ep01-ch001-test.md'), '---\ninvalid: yaml: content:\n---\n# Test');
+
     const result = await timelineSync(
       {
-        contentPath,
+        contentPath: tempDir,
       },
       tracker,
     );
@@ -90,7 +90,8 @@ describe('timeline-sync tool', () => {
     const info = JSON.parse(result.content[0].text);
     expect(info.summary.errors).toBeGreaterThan(0);
 
-    vi.restoreAllMocks();
+    // Cleanup
+    rmSync(tempDir, { recursive: true, force: true });
     await tracker.close();
   });
 
