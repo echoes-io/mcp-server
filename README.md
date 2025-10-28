@@ -40,7 +40,7 @@ Then configure:
       "env": {
         "ECHOES_TIMELINE": "your-timeline-name",
         "ECHOES_RAG_PROVIDER": "e5-small",
-        "ECHOES_CHROMA_URL": "./rag_data"
+        "ECHOES_RAG_DB_PATH": "./rag_data.db"
       }
     }
   }
@@ -52,7 +52,7 @@ Then configure:
 **Optional RAG Configuration:**
 - `ECHOES_RAG_PROVIDER`: Embedding provider (`e5-small`, `e5-large`, or `gemini`). Default: `e5-small`
 - `ECHOES_GEMINI_API_KEY`: Required if using `gemini` provider
-- `ECHOES_CHROMA_URL`: ChromaDB storage path. Default: `./rag_data`
+- `ECHOES_RAG_DB_PATH`: SQLite database path. Default: `./rag_data.db`
 
 ## Available Tools
 

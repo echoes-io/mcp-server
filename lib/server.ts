@@ -172,18 +172,19 @@ export async function runServer() {
   console.error(`Tracker database initialized: ${dbPath}`);
 
   // Initialize RAG system
-  const chromaUrl =
-    process.env.ECHOES_CHROMA_URL || (process.env.NODE_ENV === 'test' ? ':memory:' : './rag_data');
+  const ragDbPath =
+    process.env.ECHOES_RAG_DB_PATH ||
+    (process.env.NODE_ENV === 'test' ? ':memory:' : './rag_data.db');
   const provider = (process.env.ECHOES_RAG_PROVIDER || 'e5-small') as
     | 'e5-small'
     | 'e5-large'
     | 'gemini';
   const rag = new RAGSystem({
     provider,
-    chromaUrl,
+    dbPath: ragDbPath,
     geminiApiKey: process.env.ECHOES_GEMINI_API_KEY,
   });
-  console.error(`RAG system initialized: ${chromaUrl} (provider: ${provider})`);
+  console.error(`RAG system initialized: ${ragDbPath} (provider: ${provider})`);
 
   const server = createServer(tracker, rag);
   const transport = new StdioServerTransport();
