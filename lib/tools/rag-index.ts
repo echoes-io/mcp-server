@@ -1,10 +1,15 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import type { RAGSystem } from '@echoes-io/rag';
 import type { Tracker } from '@echoes-io/tracker';
+import { parseMarkdown } from '@echoes-io/utils';
 import { z } from 'zod';
 
 import { getTimeline } from '../utils.js';
 
 export const ragIndexSchema = z.object({
+  contentPath: z.string().optional().describe('Path to content directory (required for indexing)'),
   arc: z.string().optional().describe('Index specific arc only'),
   episode: z.number().optional().describe('Index specific episode only (requires arc)'),
 });
@@ -39,11 +44,66 @@ export async function ragIndex(
     }
 
     // Convert to embedding format and add to RAG
-    const embeddingChapters = chapters.map((ch) => ({
-      id: `${ch.timelineName}-${ch.arcName}-${ch.episodeNumber}-${ch.number}`,
-      metadata: ch,
-      content: '', // Content will be loaded by RAG system if needed
-    }));
+    const embeddingChapters = chapters
+      .map((ch) => {
+        // If contentPath is provided, read actual file content
+        if (args.contentPath) {
+          try {
+            // Reconstruct file path from chapter metadata
+            const episodeDir = `ep${String(ch.episodeNumber).padStart(2, '0')}`;
+            const chapterFile = `ep${String(ch.episodeNumber).padStart(2, '0')}-ch${String(ch.number).padStart(3, '0')}-${ch.pov}`;
+
+            // Try to find the file (we don't know the exact title part)
+            const arcPath = join(args.contentPath, ch.arcName);
+            const episodePath = readdirSync(arcPath, { withFileTypes: true })
+              .filter(
+                (e: { isDirectory: () => boolean; name: string }) =>
+                  e.isDirectory() && e.name.startsWith(episodeDir),
+              )
+              .map((e: { name: string }) => join(arcPath, e.name))[0];
+
+            if (!episodePath) {
+              console.error(`Episode directory not found for ${ch.arcName}/ep${ch.episodeNumber}`);
+              return null;
+            }
+
+            const chapterFiles = readdirSync(episodePath).filter(
+              (f: string) => f.startsWith(chapterFile) && f.endsWith('.md'),
+            );
+
+            if (chapterFiles.length === 0) {
+              console.error(
+                `Chapter file not found for ${ch.arcName}/ep${ch.episodeNumber}/ch${ch.number}`,
+              );
+              return null;
+            }
+
+            const filePath = join(episodePath, chapterFiles[0]);
+            const fileContent = readFileSync(filePath, 'utf-8');
+            const { content } = parseMarkdown(fileContent);
+
+            return {
+              id: `${ch.timelineName}-${ch.arcName}-${ch.episodeNumber}-${ch.number}`,
+              metadata: ch,
+              content,
+            };
+          } catch (error) {
+            console.error(
+              `Error reading chapter ${ch.arcName}/ep${ch.episodeNumber}/ch${ch.number}:`,
+              error,
+            );
+            return null;
+          }
+        }
+
+        // Fallback: no content (for tests or when contentPath not provided)
+        return {
+          id: `${ch.timelineName}-${ch.arcName}-${ch.episodeNumber}-${ch.number}`,
+          metadata: ch,
+          content: '',
+        };
+      })
+      .filter((ch) => ch !== null);
 
     await rag.addChapters(embeddingChapters);
 

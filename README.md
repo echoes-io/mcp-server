@@ -97,8 +97,9 @@ All tools operate on the timeline specified by the `ECHOES_TIMELINE` environment
 
 ### RAG (Semantic Search)
 - **`rag-index`** - Index chapters into vector database for semantic search
-  - Input: optional: `arc`, `episode` (to index specific content)
+  - Input: `contentPath` (path to content directory, required for full content indexing), optional: `arc`, `episode` (to index specific content)
   - Output: Number of chapters indexed
+  - Note: Requires `contentPath` to read and index actual chapter content. Without it, only metadata is indexed.
   
 - **`rag-search`** - Semantic search across timeline content
   - Input: `query`, optional: `arc`, `pov`, `maxResults`
