@@ -1,3 +1,10 @@
+## [1.3.4](https://github.com/echoes-io/mcp-server/compare/v1.3.3...v1.3.4) (2025-10-29)
+
+
+### Performance Improvements
+
+* :truck: Moved `chapter.excerpt` to `chapter.summary` and `chapter.date` type from `Date` to `string` ([8c0a1c9](https://github.com/echoes-io/mcp-server/commit/8c0a1c9b2921513f38e2cd9a21f196f1a83ade67))
+
 ## [1.3.3](https://github.com/echoes-io/mcp-server/compare/v1.3.2...v1.3.3) (2025-10-29)
 
 
