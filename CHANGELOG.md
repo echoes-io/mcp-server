@@ -1,3 +1,10 @@
+## [1.3.3](https://github.com/echoes-io/mcp-server/compare/v1.3.2...v1.3.3) (2025-10-29)
+
+
+### Bug Fixes
+
+* :bug: Fixing bad filename template and episode 0 ([42eded5](https://github.com/echoes-io/mcp-server/commit/42eded5cb0f4c4129e463bf5595af563aa6ebf53))
+
 ## [1.3.2](https://github.com/echoes-io/mcp-server/compare/v1.3.1...v1.3.2) (2025-10-28)
 
 
