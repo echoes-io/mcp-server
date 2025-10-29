@@ -7,7 +7,7 @@ arc: test-arc
 episode: 1
 part: 1
 chapter: 1
-excerpt: A test chapter for word counting
+summary: A test chapter for word counting
 location: Test Location
 ---
 

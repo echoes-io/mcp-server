@@ -34,7 +34,7 @@ export async function chapterInfo(args: z.infer<typeof chapterInfoSchema>, track
                 pov: chapter.pov,
                 title: chapter.title,
                 date: chapter.date,
-                excerpt: chapter.excerpt,
+                summary: chapter.summary,
                 location: chapter.location,
                 outfit: chapter.outfit,
                 kink: chapter.kink,

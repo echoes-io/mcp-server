@@ -7,7 +7,7 @@ arc: test-arc
 episode: 1
 part: 1
 chapter: 2
-excerpt: Bob's perspective
+summary: Bob's perspective
 location: Test Location
 ---
 

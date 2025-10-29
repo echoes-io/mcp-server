@@ -36,7 +36,7 @@ describe('chapter-insert tool', () => {
         after: 2,
         pov: 'Charlie',
         title: 'New Chapter',
-        excerpt: 'A new chapter',
+        summary: 'A new chapter',
         location: 'Castle',
       },
       mockTracker,

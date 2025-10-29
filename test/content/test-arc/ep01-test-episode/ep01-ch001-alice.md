@@ -7,7 +7,7 @@ arc: test-arc
 episode: 1
 part: 1
 chapter: 1
-excerpt: Alice's perspective
+summary: Alice's perspective
 location: Test Location
 ---
 

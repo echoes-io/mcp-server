@@ -20,8 +20,8 @@ describe('chapter-info tool', () => {
       getChapter: vi.fn().mockResolvedValue({
         pov: 'TestPOV',
         title: 'Test Chapter',
-        date: new Date('2024-01-01'),
-        excerpt: 'Test excerpt',
+        date: '2024-01-01',
+        summary: 'Test excerpt',
         location: 'Test location',
         outfit: 'Test outfit',
         kink: 'Test kink',

@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 
+import type { ChapterSchema } from '@echoes-io/models';
 import type { Tracker } from '@echoes-io/tracker';
 import { getTextStats, parseMarkdown } from '@echoes-io/utils';
 import { z } from 'zod';
@@ -144,8 +145,8 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
               number: chNumber,
               pov: chapterData.metadata.pov || 'Unknown',
               title: chapterData.metadata.title || 'Untitled',
-              date: new Date(chapterData.metadata.date || Date.now()),
-              excerpt: chapterData.metadata.excerpt || '',
+              date: new Date(chapterData.metadata.date || Date.now()).toISOString(),
+              summary: chapterData.metadata.summary || '',
               location: chapterData.metadata.location || '',
               outfit: chapterData.metadata.outfit || '',
               kink: chapterData.metadata.kink || '',
@@ -161,7 +162,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
               await tracker.updateChapter(timeline, arcName, ep.number, chNumber, data);
               updated++;
             } else {
-              await tracker.createChapter(data);
+              await tracker.createChapter(data as any);
               added++;
             }
           } catch (_error) {

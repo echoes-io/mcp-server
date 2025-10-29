@@ -1,3 +1,4 @@
+import type { ChapterSchema } from '@echoes-io/models';
 import type { Tracker } from '@echoes-io/tracker';
 import { getTextStats, parseMarkdown } from '@echoes-io/utils';
 import { z } from 'zod';
@@ -10,7 +11,7 @@ export const chapterInsertSchema = z.object({
   after: z.number().describe('Insert after this chapter number'),
   pov: z.string().describe('Point of view character'),
   title: z.string().describe('Chapter title'),
-  excerpt: z.string().optional().describe('Chapter excerpt'),
+  summary: z.string().optional().describe('Chapter summary'),
   location: z.string().optional().describe('Chapter location'),
   outfit: z.string().optional().describe('Character outfit'),
   kink: z.string().optional().describe('Content tags'),
@@ -69,8 +70,8 @@ export async function chapterInsert(args: z.infer<typeof chapterInsertSchema>, t
       number: newChapterNumber,
       pov: args.pov,
       title: args.title,
-      date: new Date(),
-      excerpt: args.excerpt || '',
+      date: new Date().toISOString(),
+      summary: args.summary || '',
       location: args.location || '',
       outfit: args.outfit || '',
       kink: args.kink || '',
@@ -80,7 +81,7 @@ export async function chapterInsert(args: z.infer<typeof chapterInsertSchema>, t
       paragraphs,
       sentences,
       readingTimeMinutes: Math.ceil(words / 200),
-    });
+    } as any);
 
     return {
       content: [

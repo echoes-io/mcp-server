@@ -69,7 +69,7 @@ All tools operate on the timeline specified by the `ECHOES_TIMELINE` environment
   - Input: `file` (path to chapter file)
   
 - **`chapter-insert`** - Insert new chapter with automatic renumbering
-  - Input: `arc`, `episode`, `after`, `pov`, `title`, optional: `excerpt`, `location`, `outfit`, `kink`, `file`
+  - Input: `arc`, `episode`, `after`, `pov`, `title`, optional: `summary`, `location`, `outfit`, `kink`, `file`
   
 - **`chapter-delete`** - Delete chapter from database and optionally from filesystem
   - Input: `arc`, `episode`, `chapter`, optional: `file` (to delete from filesystem)
