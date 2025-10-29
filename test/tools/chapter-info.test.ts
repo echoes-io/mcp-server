@@ -76,7 +76,6 @@ describe('chapter-info tool', () => {
     await expect(
       chapterInfo(
         {
-          timeline: 'nonexistent',
           arc: 'nonexistent',
           episode: 1,
           chapter: 1,

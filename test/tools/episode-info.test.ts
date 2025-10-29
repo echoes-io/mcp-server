@@ -73,7 +73,6 @@ describe('episode-info tool', () => {
     await expect(
       episodeInfo(
         {
-          timeline: 'nonexistent',
           arc: 'nonexistent',
           episode: 1,
         },

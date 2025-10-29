@@ -49,11 +49,8 @@ export async function ragIndex(
         // If contentPath is provided, read actual file content
         if (args.contentPath) {
           try {
-            // Reconstruct file path from chapter metadata
+            // Find episode directory
             const episodeDir = `ep${String(ch.episodeNumber).padStart(2, '0')}`;
-            const chapterFile = `ep${String(ch.episodeNumber).padStart(2, '0')}-ch${String(ch.number).padStart(3, '0')}-${ch.pov}`;
-
-            // Try to find the file (we don't know the exact title part)
             const arcPath = join(args.contentPath, ch.arcName);
             const episodePath = readdirSync(arcPath, { withFileTypes: true })
               .filter(
@@ -67,8 +64,10 @@ export async function ragIndex(
               return null;
             }
 
+            // Find chapter file by episode and chapter number (filename-agnostic for title/pov)
+            const chapterPattern = `ep${String(ch.episodeNumber).padStart(2, '0')}-ch${String(ch.number).padStart(3, '0')}-`;
             const chapterFiles = readdirSync(episodePath).filter(
-              (f: string) => f.startsWith(chapterFile) && f.endsWith('.md'),
+              (f: string) => f.startsWith(chapterPattern) && f.endsWith('.md'),
             );
 
             if (chapterFiles.length === 0) {

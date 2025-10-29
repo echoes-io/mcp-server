@@ -2,7 +2,7 @@ import { join } from 'node:path';
 
 import type { RAGSystem } from '@echoes-io/rag';
 import { Tracker } from '@echoes-io/tracker';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createServer } from '../lib/server.js';
 import { clearTestTimeline, setTestTimeline } from './helpers.js';
@@ -25,37 +25,6 @@ describe('MCP Server', () => {
     await tracker.close();
   });
 
-  it.skip('should run server with mocked transport', async () => {
-    // Mock console.error to avoid noise
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    // Mock RAGSystem
-    vi.doMock('@echoes-io/rag', () => ({
-      RAGSystem: vi.fn().mockImplementation(() => ({})),
-    }));
-
-    // Mock StdioServerTransport
-    const mockConnect = vi.fn().mockResolvedValue(undefined);
-    vi.doMock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
-      StdioServerTransport: vi.fn().mockImplementation(() => ({
-        connect: mockConnect,
-      })),
-    }));
-
-    // Set test environment
-    process.env.NODE_ENV = 'test';
-
-    // Import and run server after mocking
-    const { runServer: mockedRunServer } = await import('../lib/server.js');
-    await mockedRunServer();
-
-    expect(consoleSpy).toHaveBeenCalledWith('Tracker database initialized: :memory:');
-    expect(consoleSpy).toHaveBeenCalled();
-
-    consoleSpy.mockRestore();
-    vi.clearAllMocks();
-  });
-
   it('should handle words-count tool call', async () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
@@ -63,6 +32,7 @@ describe('MCP Server', () => {
     const server = createServer(tracker, rag);
 
     // Mock the handler directly
+    //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
     expect(handler).toBeDefined();
 
@@ -87,6 +57,7 @@ describe('MCP Server', () => {
     const rag = {} as RAGSystem;
     const server = createServer(tracker, rag);
 
+    //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
 
     await expect(
@@ -108,6 +79,7 @@ describe('MCP Server', () => {
     const rag = {} as RAGSystem;
     const server = createServer(tracker, rag);
 
+    //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
 
     await expect(
@@ -129,6 +101,7 @@ describe('MCP Server', () => {
     const rag = {} as RAGSystem;
     const server = createServer(tracker, rag);
 
+    //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
     const testFile = join(process.cwd(), 'test/example.md');
 
@@ -151,6 +124,7 @@ describe('MCP Server', () => {
     const rag = {} as RAGSystem;
     const server = createServer(tracker, rag);
 
+    //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
 
     await expect(
@@ -172,6 +146,7 @@ describe('MCP Server', () => {
     const rag = {} as RAGSystem;
     const server = createServer(tracker, rag);
 
+    //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
 
     await expect(
@@ -200,6 +175,7 @@ describe('MCP Server', () => {
     const rag = {} as RAGSystem;
     const server = createServer(tracker, rag);
 
+    //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
     const contentPath = join(process.cwd(), 'test/content');
 
@@ -224,6 +200,7 @@ describe('MCP Server', () => {
     const rag = {} as RAGSystem;
     const server = createServer(tracker, rag);
 
+    //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
 
     await expect(
@@ -245,6 +222,7 @@ describe('MCP Server', () => {
     const rag = {} as RAGSystem;
     const server = createServer(tracker, rag);
 
+    //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/list');
     const result = await handler({
       method: 'tools/list',
@@ -277,6 +255,7 @@ describe('MCP Server', () => {
     const rag = {} as RAGSystem;
     const server = createServer(tracker, rag);
 
+    //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
 
     await expect(
