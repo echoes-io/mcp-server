@@ -173,8 +173,7 @@ export async function runServer() {
 
   // Initialize RAG system
   const ragDbPath =
-    process.env.ECHOES_RAG_DB_PATH ||
-    (process.env.NODE_ENV === 'test' ? ':memory:' : './rag_data.db');
+    process.env.ECHOES_RAG_DB_PATH || (process.env.NODE_ENV === 'test' ? ':memory:' : './rag.db');
   const provider = (process.env.ECHOES_RAG_PROVIDER || 'e5-small') as
     | 'e5-small'
     | 'e5-large'
