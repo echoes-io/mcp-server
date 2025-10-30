@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/echoes-io/mcp-server/compare/v1.4.0...v1.4.1) (2025-10-30)
+
+
+### Performance Improvements
+
+* :truck: Renamed raf_data to rag ([af367f5](https://github.com/echoes-io/mcp-server/commit/af367f5336c678c7670214cad2be4ecd728aa96d))
+
 # [1.4.0](https://github.com/echoes-io/mcp-server/compare/v1.3.4...v1.4.0) (2025-10-30)
 
 
