@@ -1,3 +1,10 @@
+## [1.4.2](https://github.com/echoes-io/mcp-server/compare/v1.4.1...v1.4.2) (2025-10-30)
+
+
+### Bug Fixes
+
+* :ambulance: Fixed string parsing and error display ([bbde118](https://github.com/echoes-io/mcp-server/commit/bbde1183b6cec0fc08e6a85342042db479da76b0))
+
 ## [1.4.1](https://github.com/echoes-io/mcp-server/compare/v1.4.0...v1.4.1) (2025-10-30)
 
 
