@@ -2,16 +2,11 @@ import type { RAGSystem } from '@echoes-io/rag';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ragContext } from '../../lib/tools/rag-context.js';
-import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('rag-context tool', () => {
-  beforeEach(() => {
-    setTestTimeline();
-  });
+  beforeEach(() => {});
 
-  afterEach(() => {
-    clearTestTimeline();
-  });
+  afterEach(() => {});
 
   it('should get context for query', async () => {
     const mockResults = [
@@ -33,7 +28,10 @@ describe('rag-context tool', () => {
       getContext: vi.fn().mockResolvedValue(mockResults),
     } as unknown as RAGSystem;
 
-    const result = await ragContext({ query: 'character development' }, mockRag);
+    const result = await ragContext(
+      { timeline: 'test-timeline', query: 'character development' },
+      mockRag,
+    );
 
     expect(mockRag.getContext).toHaveBeenCalledWith({
       query: 'character development',
@@ -54,7 +52,7 @@ describe('rag-context tool', () => {
       getContext: vi.fn().mockResolvedValue([]),
     } as unknown as RAGSystem;
 
-    await ragContext({ query: 'test', maxChapters: 3 }, mockRag);
+    await ragContext({ timeline: 'test-timeline', query: 'test', maxChapters: 3 }, mockRag);
 
     expect(mockRag.getContext).toHaveBeenCalledWith({
       query: 'test',
@@ -70,7 +68,7 @@ describe('rag-context tool', () => {
       getContext: vi.fn().mockResolvedValue([]),
     } as unknown as RAGSystem;
 
-    await ragContext({ query: 'test', pov: 'Alice' }, mockRag);
+    await ragContext({ timeline: 'test-timeline', query: 'test', pov: 'Alice' }, mockRag);
 
     expect(mockRag.getContext).toHaveBeenCalledWith({
       query: 'test',

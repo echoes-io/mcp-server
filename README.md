@@ -15,10 +15,7 @@ Add to your MCP client configuration (e.g., `~/.config/q/mcp.json` for Amazon Q)
   "mcpServers": {
     "echoes": {
       "command": "npx",
-      "args": ["-y", "@echoes-io/mcp-server"],
-      "env": {
-        "ECHOES_TIMELINE": "your-timeline-name"
-      }
+      "args": ["-y", "@echoes-io/mcp-server"]
     }
   }
 }
@@ -38,7 +35,6 @@ Then configure:
     "echoes": {
       "command": "echoes-mcp-server",
       "env": {
-        "ECHOES_TIMELINE": "your-timeline-name",
         "ECHOES_RAG_PROVIDER": "e5-small",
         "ECHOES_RAG_DB_PATH": "./rag_data.db"
       }
@@ -47,8 +43,6 @@ Then configure:
 }
 ```
 
-**Important:** The `ECHOES_TIMELINE` environment variable must be set to specify which timeline to work with. All tools operate on this timeline.
-
 **Optional RAG Configuration:**
 - `ECHOES_RAG_PROVIDER`: Embedding provider (`e5-small`, `e5-large`, or `gemini`). Default: `e5-small`
 - `ECHOES_GEMINI_API_KEY`: Required if using `gemini` provider
@@ -56,7 +50,7 @@ Then configure:
 
 ## Available Tools
 
-All tools operate on the timeline specified by the `ECHOES_TIMELINE` environment variable.
+All tools require a `timeline` parameter to specify which timeline to operate on.
 
 ### Content Operations
 - **`words-count`** - Count words and text statistics in markdown files
@@ -150,7 +144,7 @@ npm run lint:format
 - **Database**: SQLite via @echoes-io/tracker (singleton pattern)
 - **Validation**: Zod schemas for type-safe inputs
 - **Testing**: Comprehensive unit and integration tests
-- **Environment**: Uses `ECHOES_TIMELINE` env var for timeline context
+- **Timeline Parameter**: All tools accept timeline as a required parameter
 
 ## License
 

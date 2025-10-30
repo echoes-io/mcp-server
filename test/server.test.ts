@@ -41,7 +41,7 @@ describe('MCP Server', () => {
       method: 'tools/call',
       params: {
         name: 'words-count',
-        arguments: { file: testFile },
+        arguments: { timeline: 'test-timeline', file: testFile },
       },
     });
 
@@ -110,7 +110,7 @@ describe('MCP Server', () => {
         method: 'tools/call',
         params: {
           name: 'chapter-refresh',
-          arguments: { file: testFile },
+          arguments: { timeline: 'test-timeline', file: testFile },
         },
       }),
     ).rejects.toThrow('Chapter not found in database');

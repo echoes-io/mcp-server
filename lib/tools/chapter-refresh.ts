@@ -4,9 +4,8 @@ import type { Tracker } from '@echoes-io/tracker';
 import { getTextStats, parseMarkdown } from '@echoes-io/utils';
 import { z } from 'zod';
 
-import { getTimeline } from '../utils.js';
-
 export const chapterRefreshSchema = z.object({
+  timeline: z.string().describe('Timeline name'),
   file: z.string().describe('Path to chapter markdown file'),
 });
 
@@ -16,7 +15,6 @@ export async function chapterRefresh(args: z.infer<typeof chapterRefreshSchema>,
     const { metadata, content: markdownContent } = parseMarkdown(content);
     const stats = getTextStats(markdownContent);
 
-    const timeline = getTimeline();
     const arc = metadata.arc;
     const episode = metadata.episode;
     const chapter = metadata.chapter;
@@ -25,16 +23,16 @@ export async function chapterRefresh(args: z.infer<typeof chapterRefreshSchema>,
       throw new Error('Missing required metadata: arc, episode, or chapter');
     }
 
-    const existing = await tracker.getChapter(timeline, arc, episode, chapter);
+    const existing = await tracker.getChapter(args.timeline, arc, episode, chapter);
 
     if (!existing) {
       throw new Error(
-        `Chapter not found in database: ${timeline}/${arc}/ep${episode}/ch${chapter}`,
+        `Chapter not found in database: ${args.timeline}/${arc}/ep${episode}/ch${chapter}`,
       );
     }
 
     const chapterData = {
-      timelineName: timeline,
+      timelineName: args.timeline,
       arcName: arc,
       episodeNumber: episode,
       partNumber: metadata.part || 1,
@@ -54,7 +52,7 @@ export async function chapterRefresh(args: z.infer<typeof chapterRefreshSchema>,
       readingTimeMinutes: Math.ceil(stats.words / 200),
     };
 
-    await tracker.updateChapter(timeline, arc, episode, chapter, chapterData);
+    await tracker.updateChapter(args.timeline, arc, episode, chapter, chapterData);
 
     return {
       content: [
@@ -63,7 +61,7 @@ export async function chapterRefresh(args: z.infer<typeof chapterRefreshSchema>,
           text: JSON.stringify(
             {
               file: args.file,
-              timeline,
+              timeline: args.timeline,
               arc,
               episode,
               chapter,

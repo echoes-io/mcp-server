@@ -1,9 +1,8 @@
 import type { RAGSystem } from '@echoes-io/rag';
 import { z } from 'zod';
 
-import { getTimeline } from '../utils.js';
-
 export const ragContextSchema = z.object({
+  timeline: z.string().describe('Timeline name'),
   query: z.string().describe('Context query'),
   arc: z.string().optional().describe('Filter by arc name'),
   pov: z.string().optional().describe('Filter by POV character'),
@@ -12,11 +11,9 @@ export const ragContextSchema = z.object({
 
 export async function ragContext(args: z.infer<typeof ragContextSchema>, rag: RAGSystem) {
   try {
-    const timeline = getTimeline();
-
     const results = await rag.getContext({
       query: args.query,
-      timeline,
+      timeline: args.timeline,
       arc: args.arc,
       pov: args.pov,
       maxChapters: args.maxChapters,
@@ -29,7 +26,7 @@ export async function ragContext(args: z.infer<typeof ragContextSchema>, rag: RA
           text: JSON.stringify(
             {
               query: args.query,
-              timeline,
+              timeline: args.timeline,
               filters: {
                 arc: args.arc || null,
                 pov: args.pov || null,

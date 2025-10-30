@@ -31,6 +31,7 @@ describe('chapter-insert tool', () => {
 
     const result = await chapterInsert(
       {
+        timeline: 'test-timeline',
         arc: 'test-arc',
         episode: 1,
         after: 2,
@@ -80,6 +81,7 @@ describe('chapter-insert tool', () => {
 
     const result = await chapterInsert(
       {
+        timeline: 'test-timeline',
         arc: 'test-arc',
         episode: 1,
         after: 2,
@@ -108,6 +110,7 @@ describe('chapter-insert tool', () => {
       chapterInsert(
         {
           arc: 'test-arc',
+          timeline: 'test-timeline',
           episode: 999,
           after: 1,
           pov: 'Alice',
@@ -141,6 +144,7 @@ describe('chapter-insert tool', () => {
           episode: 1,
           after: 1,
           pov: 'Alice',
+          timeline: 'test-timeline',
           title: 'Test',
         },
         mockTracker,

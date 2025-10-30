@@ -4,16 +4,11 @@ import { Tracker } from '@echoes-io/tracker';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { episodeInfo, episodeInfoSchema } from '../../lib/tools/episode-info.js';
-import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('episode-info tool', () => {
-  beforeEach(() => {
-    setTestTimeline();
-  });
+  beforeEach(() => {});
 
-  afterEach(() => {
-    clearTestTimeline();
-  });
+  afterEach(() => {});
   it('should get episode info from database', async () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
@@ -25,6 +20,7 @@ describe('episode-info tool', () => {
     // Sync data first
     const syncResult = await timelineSync(
       {
+        timeline: 'test-timeline',
         contentPath,
       },
       tracker,
@@ -36,10 +32,7 @@ describe('episode-info tool', () => {
       // Try to get episode info
       try {
         const result = await episodeInfo(
-          {
-            arc: 'test-arc',
-            episode: 1,
-          },
+          { timeline: 'test-timeline', arc: 'test-arc', episode: 1 },
           tracker,
         );
 
@@ -58,10 +51,7 @@ describe('episode-info tool', () => {
 
   it('should validate input schema', () => {
     expect(() =>
-      episodeInfoSchema.parse({
-        arc: 'test-arc',
-        episode: 1,
-      }),
+      episodeInfoSchema.parse({ timeline: 'test-timeline', arc: 'test-arc', episode: 1 }),
     ).not.toThrow();
     expect(() => episodeInfoSchema.parse({})).toThrow();
   });
@@ -71,13 +61,7 @@ describe('episode-info tool', () => {
     await tracker.init();
 
     await expect(
-      episodeInfo(
-        {
-          arc: 'nonexistent',
-          episode: 1,
-        },
-        tracker,
-      ),
+      episodeInfo({ timeline: 'test-timeline', arc: 'nonexistent', episode: 1 }, tracker),
     ).rejects.toThrow('Episode not found');
 
     await tracker.close();

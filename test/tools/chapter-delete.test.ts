@@ -2,20 +2,16 @@ import type { Tracker } from '@echoes-io/tracker';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { chapterDelete, chapterDeleteSchema } from '../../lib/tools/chapter-delete.js';
-import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('chapter-delete tool', () => {
-  beforeEach(() => {
-    setTestTimeline();
-  });
+  beforeEach(() => {});
 
-  afterEach(() => {
-    clearTestTimeline();
-  });
+  afterEach(() => {});
 
   it('should delete existing chapter from database only', async () => {
     // Mock tracker with existing chapter
     const mockChapter = {
+      timeline: 'test-timeline',
       pov: 'Alice',
       title: 'Test Chapter',
       words: 150,
@@ -27,11 +23,7 @@ describe('chapter-delete tool', () => {
     } as unknown as Tracker;
 
     const result = await chapterDelete(
-      {
-        arc: 'test-arc',
-        episode: 1,
-        chapter: 1,
-      },
+      { timeline: 'test-timeline', arc: 'test-arc', episode: 1, chapter: 1 },
       mockTracker,
     );
 
@@ -60,11 +52,7 @@ describe('chapter-delete tool', () => {
 
     await expect(
       chapterDelete(
-        {
-          arc: 'test-arc',
-          episode: 1,
-          chapter: 999,
-        },
+        { timeline: 'test-timeline', arc: 'test-arc', episode: 1, chapter: 999 },
         mockTracker,
       ),
     ).rejects.toThrow('Chapter not found: test-timeline/test-arc/ep1/ch999');
@@ -74,17 +62,15 @@ describe('chapter-delete tool', () => {
 
   it('should handle database errors', async () => {
     const mockTracker = {
-      getChapter: vi.fn().mockResolvedValue({ pov: 'Alice', title: 'Test' }),
+      getChapter: vi
+        .fn()
+        .mockResolvedValue({ timeline: 'test-timeline', pov: 'Alice', title: 'Test' }),
       deleteChapter: vi.fn().mockRejectedValue(new Error('Database error')),
     } as unknown as Tracker;
 
     await expect(
       chapterDelete(
-        {
-          arc: 'test-arc',
-          episode: 1,
-          chapter: 1,
-        },
+        { timeline: 'test-timeline', arc: 'test-arc', episode: 1, chapter: 1 },
         mockTracker,
       ),
     ).rejects.toThrow('Failed to delete chapter: Database error');

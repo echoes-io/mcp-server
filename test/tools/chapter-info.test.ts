@@ -2,22 +2,18 @@ import { Tracker } from '@echoes-io/tracker';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { chapterInfo, chapterInfoSchema } from '../../lib/tools/chapter-info.js';
-import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('chapter-info tool', () => {
-  beforeEach(() => {
-    setTestTimeline();
-  });
+  beforeEach(() => {});
 
-  afterEach(() => {
-    clearTestTimeline();
-  });
+  afterEach(() => {});
   it('should get chapter info from database', async () => {
     // Create a mock tracker that returns a chapter
     const mockTracker = {
       init: vi.fn(),
       close: vi.fn(),
       getChapter: vi.fn().mockResolvedValue({
+        timeline: 'test-timeline',
         pov: 'TestPOV',
         title: 'Test Chapter',
         date: '2024-01-01',
@@ -34,11 +30,7 @@ describe('chapter-info tool', () => {
     } as unknown as Tracker;
 
     const result = await chapterInfo(
-      {
-        arc: 'test-arc',
-        episode: 1,
-        chapter: 1,
-      },
+      { timeline: 'test-timeline', arc: 'test-arc', episode: 1, chapter: 1 },
       mockTracker,
     );
 
@@ -61,6 +53,7 @@ describe('chapter-info tool', () => {
   it('should validate input schema', () => {
     expect(() =>
       chapterInfoSchema.parse({
+        timeline: 'test-timeline',
         arc: 'test-arc',
         episode: 1,
         chapter: 1,
@@ -75,11 +68,7 @@ describe('chapter-info tool', () => {
 
     await expect(
       chapterInfo(
-        {
-          arc: 'nonexistent',
-          episode: 1,
-          chapter: 1,
-        },
+        { timeline: 'test-timeline', arc: 'nonexistent', episode: 1, chapter: 1 },
         tracker,
       ),
     ).rejects.toThrow('Chapter not found');

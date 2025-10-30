@@ -1,30 +1,18 @@
 import { join } from 'node:path';
 
 import { Tracker } from '@echoes-io/tracker';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { timelineSync, timelineSyncSchema } from '../../lib/tools/timeline-sync.js';
-import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('timeline-sync tool', () => {
-  beforeEach(() => {
-    setTestTimeline();
-  });
-
-  afterEach(() => {
-    clearTestTimeline();
-  });
+  afterEach(() => {});
   it('should sync timeline content to database', async () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
 
     const contentPath = join(process.cwd(), 'test/content');
-    const result = await timelineSync(
-      {
-        contentPath,
-      },
-      tracker,
-    );
+    const result = await timelineSync({ timeline: 'test-timeline', contentPath }, tracker);
 
     expect(result.content).toHaveLength(1);
     expect(result.content[0].type).toBe('text');
@@ -40,26 +28,20 @@ describe('timeline-sync tool', () => {
   });
 
   it('should handle existing timeline (update path)', async () => {
-    setTestTimeline('existing-timeline');
     const tracker = new Tracker(':memory:');
     await tracker.init();
 
     // Create timeline first to test the "already exists" branch
     await tracker.createTimeline({
-      name: 'existing-timeline',
+      name: 'test-timeline',
       description: 'Existing timeline',
     });
 
     const contentPath = join(process.cwd(), 'test/content');
-    const result = await timelineSync(
-      {
-        contentPath,
-      },
-      tracker,
-    );
+    const result = await timelineSync({ timeline: 'test-timeline', contentPath }, tracker);
 
     const info = JSON.parse(result.content[0].text);
-    expect(info.timeline).toBe('existing-timeline');
+    expect(info.timeline).toBe('test-timeline');
 
     await tracker.close();
   });
@@ -80,12 +62,7 @@ describe('timeline-sync tool', () => {
     // Write invalid YAML frontmatter
     writeFileSync(join(epDir, 'ep01-ch001-test.md'), '---\ninvalid: yaml: content:\n---\n# Test');
 
-    const result = await timelineSync(
-      {
-        contentPath: tempDir,
-      },
-      tracker,
-    );
+    const result = await timelineSync({ timeline: 'test-timeline', contentPath: tempDir }, tracker);
 
     const info = JSON.parse(result.content[0].text);
     expect(info.summary.errors).toBeGreaterThan(0);
@@ -120,6 +97,7 @@ describe('timeline-sync tool', () => {
     const { timelineSync: mockedTimelineSync } = await import('../../lib/tools/timeline-sync.js');
     const result = await mockedTimelineSync(
       {
+        timeline: 'test-timeline',
         contentPath,
       },
       tracker,
@@ -138,12 +116,7 @@ describe('timeline-sync tool', () => {
 
     // Test with non-existent directory to trigger error handling
     await expect(
-      timelineSync(
-        {
-          contentPath: '/nonexistent/path',
-        },
-        tracker,
-      ),
+      timelineSync({ timeline: 'test-timeline', contentPath: '/nonexistent/path' }, tracker),
     ).rejects.toThrow('Failed to sync timeline');
 
     await tracker.close();
@@ -171,12 +144,7 @@ describe('timeline-sync tool', () => {
     vi.spyOn(tracker, 'deleteChapter').mockResolvedValue(undefined);
 
     const contentPath = join(process.cwd(), 'test/content');
-    const result = await timelineSync(
-      {
-        contentPath,
-      },
-      tracker,
-    );
+    const result = await timelineSync({ timeline: 'test-timeline', contentPath }, tracker);
 
     const info = JSON.parse(result.content[0].text);
     expect(info.summary.deleted).toBeGreaterThan(0);
@@ -194,12 +162,7 @@ describe('timeline-sync tool', () => {
     vi.spyOn(tracker, 'getChapters').mockRejectedValue(new Error('DB error'));
 
     const contentPath = join(process.cwd(), 'test/content');
-    const result = await timelineSync(
-      {
-        contentPath,
-      },
-      tracker,
-    );
+    const result = await timelineSync({ timeline: 'test-timeline', contentPath }, tracker);
 
     const info = JSON.parse(result.content[0].text);
     expect(info.summary.errors).toBeGreaterThan(0);
@@ -228,12 +191,7 @@ describe('timeline-sync tool', () => {
     vi.spyOn(tracker, 'deleteChapter').mockRejectedValue(new Error('Delete error'));
 
     const contentPath = join(process.cwd(), 'test/content');
-    const result = await timelineSync(
-      {
-        contentPath,
-      },
-      tracker,
-    );
+    const result = await timelineSync({ timeline: 'test-timeline', contentPath }, tracker);
 
     const info = JSON.parse(result.content[0].text);
     expect(info.summary.errors).toBeGreaterThan(0);
@@ -271,12 +229,7 @@ describe('timeline-sync tool', () => {
     });
 
     const contentPath = join(process.cwd(), 'test/content');
-    const result = await timelineSync(
-      {
-        contentPath,
-      },
-      tracker,
-    );
+    const result = await timelineSync({ timeline: 'test-timeline', contentPath }, tracker);
 
     const info = JSON.parse(result.content[0].text);
     expect(info.summary).toBeDefined(); // Just check it completes

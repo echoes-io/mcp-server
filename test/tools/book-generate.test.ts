@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { bookGenerate } from '../../lib/tools/book-generate.js';
-import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 // Mock the books-generator module
 vi.mock('@echoes-io/books-generator', () => ({
@@ -9,12 +8,9 @@ vi.mock('@echoes-io/books-generator', () => ({
 }));
 
 describe('book-generate tool', () => {
-  beforeEach(() => {
-    setTestTimeline();
-  });
+  beforeEach(() => {});
 
   afterEach(() => {
-    clearTestTimeline();
     vi.clearAllMocks();
   });
 
@@ -22,14 +18,15 @@ describe('book-generate tool', () => {
     const { generateBook } = await import('@echoes-io/books-generator');
 
     const result = await bookGenerate({
+      timeline: 'test-timeline',
       contentPath: './content',
       outputPath: './output/book.pdf',
     });
 
     expect(generateBook).toHaveBeenCalledWith({
+      timeline: 'test-timeline',
       contentPath: './content',
       outputPath: './output/book.pdf',
-      timeline: 'test-timeline',
       episodes: undefined,
       format: 'a4',
     });
@@ -44,15 +41,16 @@ describe('book-generate tool', () => {
     const { generateBook } = await import('@echoes-io/books-generator');
 
     const result = await bookGenerate({
+      timeline: 'test-timeline',
       contentPath: './content',
       outputPath: './output/book.pdf',
       episodes: '1,2,3',
     });
 
     expect(generateBook).toHaveBeenCalledWith({
+      timeline: 'test-timeline',
       contentPath: './content',
       outputPath: './output/book.pdf',
-      timeline: 'test-timeline',
       episodes: '1,2,3',
       format: 'a4',
     });
@@ -65,15 +63,16 @@ describe('book-generate tool', () => {
     const { generateBook } = await import('@echoes-io/books-generator');
 
     const result = await bookGenerate({
+      timeline: 'test-timeline',
       contentPath: './content',
       outputPath: './output/book.pdf',
       format: 'a5',
     });
 
     expect(generateBook).toHaveBeenCalledWith({
+      timeline: 'test-timeline',
       contentPath: './content',
       outputPath: './output/book.pdf',
-      timeline: 'test-timeline',
       episodes: undefined,
       format: 'a5',
     });
@@ -88,6 +87,7 @@ describe('book-generate tool', () => {
 
     await expect(
       bookGenerate({
+        timeline: 'test-timeline',
         contentPath: './content',
         outputPath: './output/book.pdf',
       }),

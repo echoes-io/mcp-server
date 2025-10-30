@@ -6,9 +6,8 @@ import type { Tracker } from '@echoes-io/tracker';
 import { parseMarkdown } from '@echoes-io/utils';
 import { z } from 'zod';
 
-import { getTimeline } from '../utils.js';
-
 export const ragIndexSchema = z.object({
+  timeline: z.string().describe('Timeline name'),
   contentPath: z.string().optional().describe('Path to content directory (required for indexing)'),
   arc: z.string().optional().describe('Index specific arc only'),
   episode: z.number().optional().describe('Index specific episode only (requires arc)'),
@@ -20,24 +19,23 @@ export async function ragIndex(
   rag: RAGSystem,
 ) {
   try {
-    const timeline = getTimeline();
     let chapters: Awaited<ReturnType<typeof tracker.getChapters>> = [];
 
     // Get chapters based on filters
     if (args.arc && args.episode) {
-      chapters = await tracker.getChapters(timeline, args.arc, args.episode);
+      chapters = await tracker.getChapters(args.timeline, args.arc, args.episode);
     } else if (args.arc) {
-      const episodes = await tracker.getEpisodes(timeline, args.arc);
+      const episodes = await tracker.getEpisodes(args.timeline, args.arc);
       for (const ep of episodes) {
-        const epChapters = await tracker.getChapters(timeline, args.arc, ep.number);
+        const epChapters = await tracker.getChapters(args.timeline, args.arc, ep.number);
         chapters.push(...epChapters);
       }
     } else {
-      const arcs = await tracker.getArcs(timeline);
+      const arcs = await tracker.getArcs(args.timeline);
       for (const arc of arcs) {
-        const episodes = await tracker.getEpisodes(timeline, arc.name);
+        const episodes = await tracker.getEpisodes(args.timeline, arc.name);
         for (const ep of episodes) {
-          const epChapters = await tracker.getChapters(timeline, arc.name, ep.number);
+          const epChapters = await tracker.getChapters(args.timeline, arc.name, ep.number);
           chapters.push(...epChapters);
         }
       }
@@ -113,7 +111,7 @@ export async function ragIndex(
           text: JSON.stringify(
             {
               indexed: embeddingChapters.length,
-              timeline,
+              timeline: args.timeline,
               arc: args.arc || 'all',
               episode: args.episode || 'all',
             },

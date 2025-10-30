@@ -2,16 +2,11 @@ import type { RAGSystem } from '@echoes-io/rag';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ragSearch } from '../../lib/tools/rag-search.js';
-import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('rag-search tool', () => {
-  beforeEach(() => {
-    setTestTimeline();
-  });
+  beforeEach(() => {});
 
-  afterEach(() => {
-    clearTestTimeline();
-  });
+  afterEach(() => {});
 
   it('should search with query', async () => {
     const mockResults = [
@@ -33,7 +28,10 @@ describe('rag-search tool', () => {
       search: vi.fn().mockResolvedValue(mockResults),
     } as unknown as RAGSystem;
 
-    const result = await ragSearch({ query: 'relevant information' }, mockRag);
+    const result = await ragSearch(
+      { timeline: 'test-timeline', query: 'relevant information' },
+      mockRag,
+    );
 
     expect(mockRag.search).toHaveBeenCalledWith('relevant information', {
       timeline: 'test-timeline',
@@ -53,7 +51,7 @@ describe('rag-search tool', () => {
       search: vi.fn().mockResolvedValue([]),
     } as unknown as RAGSystem;
 
-    await ragSearch({ query: 'test', arc: 'arc1' }, mockRag);
+    await ragSearch({ timeline: 'test-timeline', query: 'test', arc: 'arc1' }, mockRag);
 
     expect(mockRag.search).toHaveBeenCalledWith('test', {
       timeline: 'test-timeline',
@@ -68,7 +66,7 @@ describe('rag-search tool', () => {
       search: vi.fn().mockResolvedValue([]),
     } as unknown as RAGSystem;
 
-    await ragSearch({ query: 'test', maxResults: 5 }, mockRag);
+    await ragSearch({ timeline: 'test-timeline', query: 'test', maxResults: 5 }, mockRag);
 
     expect(mockRag.search).toHaveBeenCalledWith('test', {
       timeline: 'test-timeline',

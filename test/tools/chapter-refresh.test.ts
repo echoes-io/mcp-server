@@ -4,20 +4,16 @@ import type { Tracker } from '@echoes-io/tracker';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { chapterRefresh, chapterRefreshSchema } from '../../lib/tools/chapter-refresh.js';
-import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('chapter-refresh tool', () => {
-  beforeEach(() => {
-    setTestTimeline();
-  });
+  beforeEach(() => {});
 
-  afterEach(() => {
-    clearTestTimeline();
-  });
+  afterEach(() => {});
   it('should refresh chapter from file', async () => {
     // Mock tracker with existing chapter
     const mockTracker = {
       getChapter: vi.fn().mockResolvedValue({
+        timeline: 'test-timeline',
         pov: 'OldPOV',
         title: 'Old Title',
         words: 50,
@@ -26,7 +22,7 @@ describe('chapter-refresh tool', () => {
     } as unknown as Tracker;
 
     const testFile = join(process.cwd(), 'test/example.md');
-    const result = await chapterRefresh({ file: testFile }, mockTracker);
+    const result = await chapterRefresh({ timeline: 'test-timeline', file: testFile }, mockTracker);
 
     expect(result.content).toHaveLength(1);
     expect(result.content[0].type).toBe('text');
@@ -49,9 +45,9 @@ describe('chapter-refresh tool', () => {
 
     const testFile = join(process.cwd(), 'test/example.md');
 
-    await expect(chapterRefresh({ file: testFile }, mockTracker)).rejects.toThrow(
-      'Chapter not found in database',
-    );
+    await expect(
+      chapterRefresh({ timeline: 'test-timeline', file: testFile }, mockTracker),
+    ).rejects.toThrow('Chapter not found in database');
 
     expect(mockTracker.updateChapter).not.toHaveBeenCalled();
   });
@@ -73,9 +69,9 @@ describe('chapter-refresh tool', () => {
       '../../lib/tools/chapter-refresh.js'
     );
 
-    await expect(mockedChapterRefresh({ file: testFile }, mockTracker)).rejects.toThrow(
-      'Failed to refresh chapter',
-    );
+    await expect(
+      mockedChapterRefresh({ timeline: 'test-timeline', file: testFile }, mockTracker),
+    ).rejects.toThrow('Failed to refresh chapter');
 
     vi.clearAllMocks();
   });
@@ -83,13 +79,15 @@ describe('chapter-refresh tool', () => {
   it('should handle file read errors', async () => {
     const mockTracker = { getChapter: vi.fn(), updateChapter: vi.fn() } as unknown as Tracker;
 
-    await expect(chapterRefresh({ file: 'nonexistent.md' }, mockTracker)).rejects.toThrow(
-      'Failed to refresh chapter',
-    );
+    await expect(
+      chapterRefresh({ timeline: 'test-timeline', file: 'nonexistent.md' }, mockTracker),
+    ).rejects.toThrow('Failed to refresh chapter');
   });
 
   it('should validate input schema', () => {
-    expect(() => chapterRefreshSchema.parse({ file: 'test.md' })).not.toThrow();
+    expect(() =>
+      chapterRefreshSchema.parse({ timeline: 'test-timeline', file: 'test.md' }),
+    ).not.toThrow();
     expect(() => chapterRefreshSchema.parse({})).toThrow();
   });
 });

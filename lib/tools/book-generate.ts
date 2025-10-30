@@ -1,9 +1,8 @@
 import { generateBook } from '@echoes-io/books-generator';
 import { z } from 'zod';
 
-import { getTimeline } from '../utils.js';
-
 export const bookGenerateSchema = z.object({
+  timeline: z.string().describe('Timeline name'),
   contentPath: z.string().describe('Path to timeline content folder'),
   outputPath: z.string().describe('Output PDF file path'),
   episodes: z.string().optional().describe('Comma-separated episode numbers (e.g., "1,2,3")'),
@@ -12,12 +11,10 @@ export const bookGenerateSchema = z.object({
 
 export async function bookGenerate(args: z.infer<typeof bookGenerateSchema>) {
   try {
-    const timeline = getTimeline();
-
     await generateBook({
       contentPath: args.contentPath,
       outputPath: args.outputPath,
-      timeline,
+      timeline: args.timeline,
       episodes: args.episodes,
       format: args.format || 'a4',
     });
@@ -29,7 +26,7 @@ export async function bookGenerate(args: z.infer<typeof bookGenerateSchema>) {
           text: JSON.stringify(
             {
               success: true,
-              timeline,
+              timeline: args.timeline,
               outputPath: args.outputPath,
               episodes: args.episodes || 'all',
               format: args.format || 'a4',

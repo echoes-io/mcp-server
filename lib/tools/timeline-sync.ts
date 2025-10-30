@@ -1,30 +1,28 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 
-import type { ChapterSchema } from '@echoes-io/models';
+import type { Chapter } from '@echoes-io/models';
 import type { Tracker } from '@echoes-io/tracker';
 import { getTextStats, parseMarkdown } from '@echoes-io/utils';
 import { z } from 'zod';
 
-import { getTimeline } from '../utils.js';
-
 export const timelineSyncSchema = z.object({
+  timeline: z.string().describe('Timeline name'),
   contentPath: z.string().describe('Path to content directory'),
 });
 
 export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tracker: Tracker) {
   try {
-    const timeline = getTimeline();
     let added = 0,
       updated = 0,
       deleted = 0,
       errors = 0;
 
-    let timelineRecord = await tracker.getTimeline(timeline);
+    let timelineRecord = await tracker.getTimeline(args.timeline);
     if (!timelineRecord) {
       timelineRecord = await tracker.createTimeline({
-        name: timeline,
-        description: `Timeline ${timeline}`,
+        name: args.timeline,
+        description: `Timeline ${args.timeline}`,
       });
       added++;
     }
@@ -36,10 +34,10 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
     for (const arcName of arcs) {
       const arcPath = join(args.contentPath, arcName);
 
-      let arc = await tracker.getArc(timeline, arcName);
+      let arc = await tracker.getArc(args.timeline, arcName);
       if (!arc) {
         arc = await tracker.createArc({
-          timelineName: timeline,
+          timelineName: args.timeline,
           name: arcName,
           number: 1,
           description: `Arc ${arcName}`,
@@ -57,11 +55,11 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
       for (const ep of episodes) {
         const episodePath = join(arcPath, ep.name);
 
-        let episode = await tracker.getEpisode(timeline, arcName, ep.number);
+        let episode = await tracker.getEpisode(args.timeline, arcName, ep.number);
         if (!episode) {
           try {
             episode = await tracker.createEpisode({
-              timelineName: timeline,
+              timelineName: args.timeline,
               arcName: arcName,
               number: ep.number,
               slug: ep.name,
@@ -75,7 +73,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
               error instanceof Error ? error.message : error,
             );
             errors++;
-            continue; // Skip chapters if episode creation failed
+            continue;
           }
         }
 
@@ -100,16 +98,14 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
           })
           .filter((ch) => ch !== null);
 
-        // Collect unique part numbers
         const partNumbers = new Set(chapters.map((ch) => ch?.metadata.part || 1));
 
-        // Create parts if they don't exist
         for (const partNum of partNumbers) {
           try {
-            const existingPart = await tracker.getPart(timeline, arcName, ep.number, partNum);
+            const existingPart = await tracker.getPart(args.timeline, arcName, ep.number, partNum);
             if (!existingPart) {
               await tracker.createPart({
-                timelineName: timeline,
+                timelineName: args.timeline,
                 arcName: arcName,
                 episodeNumber: ep.number,
                 number: partNum,
@@ -135,14 +131,19 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
           if (!chNumber) continue;
 
           try {
-            const existing = await tracker.getChapter(timeline, arcName, ep.number, chNumber);
+            const existing = await tracker.getChapter(args.timeline, arcName, ep.number, chNumber);
 
-            const data = {
-              timelineName: timeline,
+            const data: Chapter = {
+              timelineName: args.timeline,
               arcName: arcName,
               episodeNumber: ep.number,
               partNumber: chapterData.metadata.part || 1,
               number: chNumber,
+              timeline: args.timeline,
+              arc: arcName,
+              episode: ep.number,
+              part: chapterData.metadata.part || 1,
+              chapter: chNumber,
               pov: chapterData.metadata.pov || 'Unknown',
               title: chapterData.metadata.title || 'Untitled',
               date: new Date(chapterData.metadata.date || Date.now()).toISOString(),
@@ -159,10 +160,10 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
             };
 
             if (existing) {
-              await tracker.updateChapter(timeline, arcName, ep.number, chNumber, data);
+              await tracker.updateChapter(args.timeline, arcName, ep.number, chNumber, data);
               updated++;
             } else {
-              await tracker.createChapter(data as any);
+              await tracker.createChapter(data);
               added++;
             }
           } catch (_error) {
@@ -173,13 +174,13 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
     }
 
     try {
-      const dbArcs = await tracker.getArcs(timeline);
+      const dbArcs = await tracker.getArcs(args.timeline);
 
       for (const arc of dbArcs) {
-        const dbEpisodes = await tracker.getEpisodes(timeline, arc.name);
+        const dbEpisodes = await tracker.getEpisodes(args.timeline, arc.name);
 
         for (const episode of dbEpisodes) {
-          const allChapters = await tracker.getChapters(timeline, arc.name, episode.number);
+          const allChapters = await tracker.getChapters(args.timeline, arc.name, episode.number);
 
           for (const dbChapter of allChapters) {
             let fileExists = false;
@@ -238,7 +239,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
           type: 'text' as const,
           text: JSON.stringify(
             {
-              timeline,
+              timeline: args.timeline,
               contentPath: args.contentPath,
               summary: {
                 added,

@@ -1,9 +1,8 @@
 import type { Tracker } from '@echoes-io/tracker';
 import { z } from 'zod';
 
-import { getTimeline } from '../utils.js';
-
 export const statsSchema = z.object({
+  timeline: z.string().describe('Timeline name'),
   arc: z.string().optional().describe('Filter by arc name'),
   episode: z.number().optional().describe('Filter by episode number'),
   pov: z.string().optional().describe('Filter by POV character'),
@@ -11,24 +10,23 @@ export const statsSchema = z.object({
 
 export async function stats(args: z.infer<typeof statsSchema>, tracker: Tracker) {
   try {
-    const timeline = getTimeline();
     let chapters: Awaited<ReturnType<typeof tracker.getChapters>> = [];
 
     // Get chapters based on filters
     if (args.arc && args.episode) {
-      chapters = await tracker.getChapters(timeline, args.arc, args.episode);
+      chapters = await tracker.getChapters(args.timeline, args.arc, args.episode);
     } else if (args.arc) {
-      const episodes = await tracker.getEpisodes(timeline, args.arc);
+      const episodes = await tracker.getEpisodes(args.timeline, args.arc);
       for (const ep of episodes) {
-        const epChapters = await tracker.getChapters(timeline, args.arc, ep.number);
+        const epChapters = await tracker.getChapters(args.timeline, args.arc, ep.number);
         chapters.push(...epChapters);
       }
     } else {
-      const arcs = await tracker.getArcs(timeline);
+      const arcs = await tracker.getArcs(args.timeline);
       for (const arc of arcs) {
-        const episodes = await tracker.getEpisodes(timeline, arc.name);
+        const episodes = await tracker.getEpisodes(args.timeline, arc.name);
         for (const ep of episodes) {
-          const epChapters = await tracker.getChapters(timeline, arc.name, ep.number);
+          const epChapters = await tracker.getChapters(args.timeline, arc.name, ep.number);
           chapters.push(...epChapters);
         }
       }
@@ -79,7 +77,7 @@ export async function stats(args: z.infer<typeof statsSchema>, tracker: Tracker)
     }
 
     const result: Record<string, unknown> = {
-      timeline,
+      timeline: args.timeline,
       filters: {
         arc: args.arc || null,
         episode: args.episode || null,

@@ -2,13 +2,11 @@ import { Tracker } from '@echoes-io/tracker';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { episodeUpdate } from '../../lib/tools/episode-update.js';
-import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('episode-update', () => {
   let tracker: Tracker;
 
   beforeEach(async () => {
-    setTestTimeline();
     tracker = new Tracker(':memory:');
     await tracker.init();
 
@@ -29,17 +27,11 @@ describe('episode-update', () => {
     });
   });
 
-  afterEach(() => {
-    clearTestTimeline();
-  });
+  afterEach(() => {});
 
   it('should update episode description', async () => {
     const result = await episodeUpdate(
-      {
-        arc: 'arc1',
-        episode: 1,
-        description: 'New description',
-      },
+      { timeline: 'test-timeline', arc: 'arc1', episode: 1, description: 'New description' },
       tracker,
     );
 
@@ -50,12 +42,7 @@ describe('episode-update', () => {
 
   it('should update episode title and slug', async () => {
     const result = await episodeUpdate(
-      {
-        arc: 'arc1',
-        episode: 1,
-        title: 'New Title',
-        slug: 'ep01-new',
-      },
+      { timeline: 'test-timeline', arc: 'arc1', episode: 1, title: 'New Title', slug: 'ep01-new' },
       tracker,
     );
 
@@ -67,11 +54,7 @@ describe('episode-update', () => {
   it('should throw error if episode not found', async () => {
     await expect(
       episodeUpdate(
-        {
-          arc: 'arc1',
-          episode: 999,
-          description: 'Test',
-        },
+        { timeline: 'test-timeline', arc: 'arc1', episode: 999, description: 'Test' },
         tracker,
       ),
     ).rejects.toThrow('Episode not found');

@@ -3,16 +3,11 @@ import type { Tracker } from '@echoes-io/tracker';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ragIndex } from '../../lib/tools/rag-index.js';
-import { clearTestTimeline, setTestTimeline } from '../helpers.js';
 
 describe('rag-index tool', () => {
-  beforeEach(() => {
-    setTestTimeline();
-  });
+  beforeEach(() => {});
 
-  afterEach(() => {
-    clearTestTimeline();
-  });
+  afterEach(() => {});
 
   it('should index all chapters', async () => {
     const mockChapters = [
@@ -37,7 +32,7 @@ describe('rag-index tool', () => {
       addChapters: vi.fn().mockResolvedValue(undefined),
     } as unknown as RAGSystem;
 
-    const result = await ragIndex({}, mockTracker, mockRag);
+    const result = await ragIndex({ timeline: 'test-timeline' }, mockTracker, mockRag);
 
     expect(mockRag.addChapters).toHaveBeenCalledWith([
       {
@@ -73,7 +68,7 @@ describe('rag-index tool', () => {
       addChapters: vi.fn().mockResolvedValue(undefined),
     } as unknown as RAGSystem;
 
-    const result = await ragIndex({ arc: 'arc1' }, mockTracker, mockRag);
+    const result = await ragIndex({ timeline: 'test-timeline', arc: 'arc1' }, mockTracker, mockRag);
 
     const data = JSON.parse(result.content[0].text);
     expect(data.arc).toBe('arc1');
@@ -99,7 +94,11 @@ describe('rag-index tool', () => {
       addChapters: vi.fn().mockResolvedValue(undefined),
     } as unknown as RAGSystem;
 
-    const result = await ragIndex({ arc: 'arc1', episode: 1 }, mockTracker, mockRag);
+    const result = await ragIndex(
+      { timeline: 'test-timeline', arc: 'arc1', episode: 1 },
+      mockTracker,
+      mockRag,
+    );
 
     const data = JSON.parse(result.content[0].text);
     expect(data.episode).toBe(1);

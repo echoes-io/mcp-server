@@ -1,11 +1,10 @@
-import type { ChapterSchema } from '@echoes-io/models';
+import type { Chapter } from '@echoes-io/models';
 import type { Tracker } from '@echoes-io/tracker';
 import { getTextStats, parseMarkdown } from '@echoes-io/utils';
 import { z } from 'zod';
 
-import { getTimeline } from '../utils.js';
-
 export const chapterInsertSchema = z.object({
+  timeline: z.string().describe('Timeline name'),
   arc: z.string().describe('Arc name'),
   episode: z.number().describe('Episode number'),
   after: z.number().describe('Insert after this chapter number'),
@@ -20,21 +19,20 @@ export const chapterInsertSchema = z.object({
 
 export async function chapterInsert(args: z.infer<typeof chapterInsertSchema>, tracker: Tracker) {
   try {
-    const timeline = getTimeline();
-    const episode = await tracker.getEpisode(timeline, args.arc, args.episode);
+    const episode = await tracker.getEpisode(args.timeline, args.arc, args.episode);
 
     if (!episode) {
-      throw new Error(`Episode not found: ${timeline}/${args.arc}/ep${args.episode}`);
+      throw new Error(`Episode not found: ${args.timeline}/${args.arc}/ep${args.episode}`);
     }
 
-    const existingChapters = await tracker.getChapters(timeline, args.arc, args.episode);
+    const existingChapters = await tracker.getChapters(args.timeline, args.arc, args.episode);
     const newChapterNumber = args.after + 1;
 
     const chaptersToRenumber = existingChapters.filter((ch) => ch.number >= newChapterNumber);
 
     for (const chapter of chaptersToRenumber) {
       try {
-        await tracker.updateChapter(timeline, args.arc, args.episode, chapter.number, {
+        await tracker.updateChapter(args.timeline, args.arc, args.episode, chapter.number, {
           number: chapter.number + 1,
         });
       } catch (error) {
@@ -62,12 +60,17 @@ export async function chapterInsert(args: z.infer<typeof chapterInsertSchema>, t
       sentences = stats.sentences;
     }
 
-    await tracker.createChapter({
-      timelineName: timeline,
+    const chapterData: Chapter = {
+      timelineName: args.timeline,
       arcName: args.arc,
       episodeNumber: args.episode,
       partNumber: 1,
       number: newChapterNumber,
+      timeline: args.timeline,
+      arc: args.arc,
+      episode: args.episode,
+      part: 1,
+      chapter: newChapterNumber,
       pov: args.pov,
       title: args.title,
       date: new Date().toISOString(),
@@ -81,7 +84,9 @@ export async function chapterInsert(args: z.infer<typeof chapterInsertSchema>, t
       paragraphs,
       sentences,
       readingTimeMinutes: Math.ceil(words / 200),
-    } as any);
+    };
+
+    await tracker.createChapter(chapterData);
 
     return {
       content: [
@@ -89,7 +94,7 @@ export async function chapterInsert(args: z.infer<typeof chapterInsertSchema>, t
           type: 'text' as const,
           text: JSON.stringify(
             {
-              timeline,
+              timeline: args.timeline,
               arc: args.arc,
               episode: args.episode,
               inserted: {
