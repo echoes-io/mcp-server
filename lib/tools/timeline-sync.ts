@@ -92,6 +92,10 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
                 stats,
               };
             } catch (_error) {
+              console.error(
+                `Error parsing chapter file ${file}:`,
+                _error instanceof Error ? _error.message : _error,
+              );
               errors++;
               return null;
             }
@@ -146,7 +150,7 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
               chapter: chNumber,
               pov: chapterData.metadata.pov || 'Unknown',
               title: chapterData.metadata.title || 'Untitled',
-              date: new Date(chapterData.metadata.date || Date.now()).toISOString(),
+              date: chapterData.metadata.date || '',
               summary: chapterData.metadata.summary || '',
               location: chapterData.metadata.location || '',
               outfit: chapterData.metadata.outfit || '',
@@ -167,6 +171,10 @@ export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tra
               added++;
             }
           } catch (_error) {
+            console.error(
+              `Error creating/updating chapter ${arcName}/ep${ep.number}/ch${chNumber}:`,
+              _error instanceof Error ? _error.message : _error,
+            );
             errors++;
           }
         }
