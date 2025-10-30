@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/echoes-io/mcp-server/compare/v1.3.4...v1.4.0) (2025-10-30)
+
+
+### Features
+
+* :sparkles: Moving the `timeline` config from env var to param ([0abb622](https://github.com/echoes-io/mcp-server/commit/0abb62256a4f4136f4a1904eb870b10ffca4f955))
+
 ## [1.3.4](https://github.com/echoes-io/mcp-server/compare/v1.3.3...v1.3.4) (2025-10-29)
 
 
