@@ -8,13 +8,15 @@ import { z } from 'zod';
 
 export const ragIndexSchema = z.object({
   timeline: z.string().describe('Timeline name'),
-  contentPath: z.string().optional().describe('Path to content directory (required for indexing)'),
   arc: z.string().optional().describe('Index specific arc only'),
   episode: z.number().optional().describe('Index specific episode only (requires arc)'),
 });
 
+// Internal type that includes contentPath (injected by server)
+type RagIndexArgs = z.infer<typeof ragIndexSchema> & { contentPath: string };
+
 export async function ragIndex(
-  args: z.infer<typeof ragIndexSchema>,
+  args: RagIndexArgs,
   tracker: Tracker,
   rag: RAGSystem,
 ) {
@@ -44,18 +46,17 @@ export async function ragIndex(
     // Convert to embedding format and add to RAG
     const embeddingChapters = chapters
       .map((ch) => {
-        // If contentPath is provided, read actual file content
-        if (args.contentPath) {
-          try {
-            // Find episode directory
-            const episodeDir = `ep${String(ch.episodeNumber).padStart(2, '0')}`;
-            const arcPath = join(args.contentPath, ch.arcName);
-            const episodePath = readdirSync(arcPath, { withFileTypes: true })
-              .filter(
-                (e: { isDirectory: () => boolean; name: string }) =>
-                  e.isDirectory() && e.name.startsWith(episodeDir),
-              )
-              .map((e: { name: string }) => join(arcPath, e.name))[0];
+        // Read actual file content
+        try {
+          // Find episode directory
+          const episodeDir = `ep${String(ch.episodeNumber).padStart(2, '0')}`;
+          const arcPath = join(args.contentPath, ch.arcName);
+          const episodePath = readdirSync(arcPath, { withFileTypes: true })
+            .filter(
+              (e: { isDirectory: () => boolean; name: string }) =>
+                e.isDirectory() && e.name.startsWith(episodeDir),
+            )
+            .map((e: { name: string }) => join(arcPath, e.name))[0];
 
             if (!episodePath) {
               console.error(`Episode directory not found for ${ch.arcName}/ep${ch.episodeNumber}`);
@@ -91,14 +92,6 @@ export async function ragIndex(
             );
             return null;
           }
-        }
-
-        // Fallback: no content (for tests or when contentPath not provided)
-        return {
-          id: `${ch.timelineName}-${ch.arcName}-${ch.episodeNumber}-${ch.number}`,
-          metadata: ch,
-          content: '',
-        };
       })
       .filter((ch) => ch !== null);
 

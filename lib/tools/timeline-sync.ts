@@ -8,10 +8,12 @@ import { z } from 'zod';
 
 export const timelineSyncSchema = z.object({
   timeline: z.string().describe('Timeline name'),
-  contentPath: z.string().describe('Path to content directory'),
 });
 
-export async function timelineSync(args: z.infer<typeof timelineSyncSchema>, tracker: Tracker) {
+// Internal type that includes contentPath (injected by server)
+type TimelineSyncArgs = z.infer<typeof timelineSyncSchema> & { contentPath: string };
+
+export async function timelineSync(args: TimelineSyncArgs, tracker: Tracker) {
   try {
     let added = 0,
       updated = 0,

@@ -20,7 +20,8 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(tracker, rag);
+    const timelines = new Map([['test', { tracker, rag, contentPath: './test-content' }]]);
+    const server = createServer(timelines);
     expect(server).toBeDefined();
     await tracker.close();
   });
@@ -29,7 +30,8 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(tracker, rag);
+    const timelines = new Map([['test', { tracker, rag, contentPath: './test-content' }]]);
+    const server = createServer(timelines);
 
     // Mock the handler directly
     //@ts-expect-error accessing a private method for testing purposes
@@ -55,7 +57,7 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(tracker, rag);
+    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -77,7 +79,7 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(tracker, rag);
+    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -99,7 +101,7 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(tracker, rag);
+    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -122,7 +124,7 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(tracker, rag);
+    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -144,7 +146,7 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(tracker, rag);
+    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -173,7 +175,7 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(tracker, rag);
+    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -198,7 +200,7 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(tracker, rag);
+    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -220,7 +222,7 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(tracker, rag);
+    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/list');
@@ -253,7 +255,7 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(tracker, rag);
+    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');

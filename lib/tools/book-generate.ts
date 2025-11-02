@@ -3,13 +3,15 @@ import { z } from 'zod';
 
 export const bookGenerateSchema = z.object({
   timeline: z.string().describe('Timeline name'),
-  contentPath: z.string().describe('Path to timeline content folder'),
   outputPath: z.string().describe('Output PDF file path'),
   episodes: z.string().optional().describe('Comma-separated episode numbers (e.g., "1,2,3")'),
   format: z.enum(['a4', 'a5']).optional().describe('Page format (default: a4)'),
 });
 
-export async function bookGenerate(args: z.infer<typeof bookGenerateSchema>) {
+// Internal type that includes contentPath (injected by server)
+type BookGenerateArgs = z.infer<typeof bookGenerateSchema> & { contentPath: string };
+
+export async function bookGenerate(args: BookGenerateArgs) {
   try {
     await generateBook({
       contentPath: args.contentPath,

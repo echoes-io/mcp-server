@@ -8,6 +8,8 @@ The server is distributed as an npm package and can be used without cloning the 
 
 ### Using with MCP Clients
 
+**Important:** The server must be run from the `.github` directory of your Echoes project.
+
 Add to your MCP client configuration (e.g., `~/.config/q/mcp.json` for Amazon Q):
 
 ```json
@@ -15,7 +17,8 @@ Add to your MCP client configuration (e.g., `~/.config/q/mcp.json` for Amazon Q)
   "mcpServers": {
     "echoes": {
       "command": "npx",
-      "args": ["-y", "@echoes-io/mcp-server"]
+      "args": ["-y", "@echoes-io/mcp-server"],
+      "cwd": "/path/to/echoes-io/.github"
     }
   }
 }
@@ -34,9 +37,9 @@ Then configure:
   "mcpServers": {
     "echoes": {
       "command": "echoes-mcp-server",
+      "cwd": "/path/to/echoes-io/.github",
       "env": {
-        "ECHOES_RAG_PROVIDER": "e5-small",
-        "ECHOES_RAG_DB_PATH": "./rag.db"
+        "ECHOES_RAG_PROVIDER": "e5-small"
       }
     }
   }
@@ -46,7 +49,30 @@ Then configure:
 **Optional RAG Configuration:**
 - `ECHOES_RAG_PROVIDER`: Embedding provider (`e5-small`, `e5-large`, or `gemini`). Default: `e5-small`
 - `ECHOES_GEMINI_API_KEY`: Required if using `gemini` provider
-- `ECHOES_RAG_DB_PATH`: SQLite database path. Default: `./rag.db`
+
+## Multi-Timeline Architecture
+
+The server automatically discovers and manages multiple timelines:
+
+```
+echoes-io/
+  .github/              # Server runs from here
+  timeline-eros/        # Private timeline repo
+    tracker.db          # Timeline-specific database
+    rag.db              # Timeline-specific RAG index
+    content/...
+  timeline-other/       # Another private timeline
+    tracker.db
+    rag.db
+    content/...
+```
+
+**Benefits:**
+- Each timeline has isolated databases in its own repository
+- Timeline repositories can be private while `.github` is public
+- No need to specify `contentPath` - auto-discovered from directory structure
+- Easy to manage access: just share/don't share specific timeline repos
+
 
 ## Available Tools
 
@@ -77,11 +103,12 @@ All tools require a `timeline` parameter to specify which timeline to operate on
 
 ### Timeline Operations
 - **`timeline-sync`** - Synchronize filesystem content with database
-  - Input: `contentPath` (path to content directory)
+  - Input: `timeline` (timeline name)
+  - Note: Content path is auto-discovered from timeline directory structure
 
 ### Statistics
 - **`stats`** - Get aggregate statistics with optional filters
-  - Input: optional: `arc`, `episode`, `pov`
+  - Input: `timeline`, optional: `arc`, `episode`, `pov`
   - Output: Total words/chapters, POV distribution, arc/episode breakdown, longest/shortest chapters
   - Examples:
     - No filters: Overall timeline statistics
@@ -91,24 +118,25 @@ All tools require a `timeline` parameter to specify which timeline to operate on
 
 ### RAG (Semantic Search)
 - **`rag-index`** - Index chapters into vector database for semantic search
-  - Input: `contentPath` (path to content directory, required for full content indexing), optional: `arc`, `episode` (to index specific content)
+  - Input: `timeline`, optional: `arc`, `episode` (to index specific content)
   - Output: Number of chapters indexed
-  - Note: Requires `contentPath` to read and index actual chapter content. Without it, only metadata is indexed.
+  - Note: Content path is auto-discovered from timeline directory structure
   
 - **`rag-search`** - Semantic search across timeline content
-  - Input: `query`, optional: `arc`, `pov`, `maxResults`
+  - Input: `timeline`, `query`, optional: `arc`, `pov`, `maxResults`
   - Output: Relevant chapters with similarity scores and previews
   
 - **`rag-context`** - Retrieve relevant context for AI interactions
-  - Input: `query`, optional: `arc`, `pov`, `maxChapters`
+  - Input: `timeline`, `query`, optional: `arc`, `pov`, `maxChapters`
   - Output: Full chapter content for AI context
 
 ### Book Generation
 - **`book-generate`** - Generate PDF book from timeline content using LaTeX
-  - Input: `contentPath`, `outputPath`, optional: `episodes`, `format`
+  - Input: `timeline`, `outputPath`, optional: `episodes`, `format`
   - Output: PDF book with Victoria Regia template
   - Formats: `a4` (default), `a5`
   - Requirements: pandoc, LaTeX distribution (pdflatex/xelatex/lualatex)
+  - Note: Content path is auto-discovered from timeline directory structure
 
 ## Development
 

@@ -41,7 +41,13 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
 
-export function createServer(tracker: Tracker, rag: RAGSystem) {
+interface TimelineContext {
+  tracker: Tracker;
+  rag: RAGSystem;
+  contentPath: string;
+}
+
+export function createServer(timelines: Map<string, TimelineContext>) {
   const server = new Server(
     {
       name: pkg.name,
@@ -129,33 +135,78 @@ export function createServer(tracker: Tracker, rag: RAGSystem) {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
+    // Helper to get timeline context
+    const getContext = (timeline: string) => {
+      const ctx = timelines.get(timeline);
+      if (!ctx) {
+        throw new Error(`Timeline "${timeline}" not found. Available: ${Array.from(timelines.keys()).join(', ')}`);
+      }
+      return ctx;
+    };
+
     switch (name) {
       case 'words-count':
         return await wordsCount(wordsCountSchema.parse(args));
-      case 'chapter-info':
-        return await chapterInfo(chapterInfoSchema.parse(args), tracker);
-      case 'chapter-refresh':
-        return await chapterRefresh(chapterRefreshSchema.parse(args), tracker);
-      case 'chapter-delete':
-        return await chapterDelete(chapterDeleteSchema.parse(args), tracker);
-      case 'chapter-insert':
-        return await chapterInsert(chapterInsertSchema.parse(args), tracker);
-      case 'episode-info':
-        return await episodeInfo(episodeInfoSchema.parse(args), tracker);
-      case 'episode-update':
-        return await episodeUpdate(episodeUpdateSchema.parse(args), tracker);
-      case 'timeline-sync':
-        return await timelineSync(timelineSyncSchema.parse(args), tracker);
-      case 'stats':
-        return await stats(statsSchema.parse(args), tracker);
-      case 'rag-index':
-        return await ragIndex(ragIndexSchema.parse(args), tracker, rag);
-      case 'rag-search':
-        return await ragSearch(ragSearchSchema.parse(args), rag);
-      case 'rag-context':
-        return await ragContext(ragContextSchema.parse(args), rag);
-      case 'book-generate':
-        return await bookGenerate(bookGenerateSchema.parse(args));
+      case 'chapter-info': {
+        const parsed = chapterInfoSchema.parse(args);
+        const { tracker } = getContext(parsed.timeline);
+        return await chapterInfo(parsed, tracker);
+      }
+      case 'chapter-refresh': {
+        const parsed = chapterRefreshSchema.parse(args);
+        const { tracker } = getContext(parsed.timeline);
+        return await chapterRefresh(parsed, tracker);
+      }
+      case 'chapter-delete': {
+        const parsed = chapterDeleteSchema.parse(args);
+        const { tracker } = getContext(parsed.timeline);
+        return await chapterDelete(parsed, tracker);
+      }
+      case 'chapter-insert': {
+        const parsed = chapterInsertSchema.parse(args);
+        const { tracker } = getContext(parsed.timeline);
+        return await chapterInsert(parsed, tracker);
+      }
+      case 'episode-info': {
+        const parsed = episodeInfoSchema.parse(args);
+        const { tracker } = getContext(parsed.timeline);
+        return await episodeInfo(parsed, tracker);
+      }
+      case 'episode-update': {
+        const parsed = episodeUpdateSchema.parse(args);
+        const { tracker } = getContext(parsed.timeline);
+        return await episodeUpdate(parsed, tracker);
+      }
+      case 'timeline-sync': {
+        const parsed = timelineSyncSchema.parse(args);
+        const { tracker, contentPath } = getContext(parsed.timeline);
+        return await timelineSync({ ...parsed, contentPath }, tracker);
+      }
+      case 'stats': {
+        const parsed = statsSchema.parse(args);
+        const { tracker } = getContext(parsed.timeline);
+        return await stats(parsed, tracker);
+      }
+      case 'rag-index': {
+        const parsed = ragIndexSchema.parse(args);
+        const { tracker, rag, contentPath } = getContext(parsed.timeline);
+        return await ragIndex({ ...parsed, contentPath }, tracker, rag);
+      }
+      case 'rag-search': {
+        const parsed = ragSearchSchema.parse(args);
+        const { rag } = getContext(parsed.timeline);
+        return await ragSearch(parsed, rag);
+      }
+      case 'rag-context': {
+        const parsed = ragContextSchema.parse(args);
+        const { rag } = getContext(parsed.timeline);
+        return await ragContext(parsed, rag);
+      }
+      case 'book-generate': {
+        const parsed = bookGenerateSchema.parse(args);
+        const { contentPath } = getContext(parsed.timeline);
+        return await bookGenerate({ ...parsed, contentPath });
+      }
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
@@ -164,29 +215,78 @@ export function createServer(tracker: Tracker, rag: RAGSystem) {
   return server;
 }
 
+interface TimelineContext {
+  tracker: Tracker;
+  rag: RAGSystem;
+  contentPath: string;
+}
+
 export async function runServer() {
-  // Initialize tracker database in appropriate location
-  const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : './tracker.db';
-  const tracker = new Tracker(dbPath);
-  await tracker.init();
-  console.error(`Tracker database initialized: ${dbPath}`);
+  // Validate we're running from .github directory
+  if (process.env.NODE_ENV !== 'test' && !process.cwd().endsWith('/.github')) {
+    throw new Error('Server must be run from .github directory');
+  }
 
-  // Initialize RAG system
-  const ragDbPath =
-    process.env.ECHOES_RAG_DB_PATH || (process.env.NODE_ENV === 'test' ? ':memory:' : './rag.db');
-  const provider = (process.env.ECHOES_RAG_PROVIDER || 'e5-small') as
-    | 'e5-small'
-    | 'e5-large'
-    | 'gemini';
-  const rag = new RAGSystem({
-    provider,
-    dbPath: ragDbPath,
-    geminiApiKey: process.env.ECHOES_GEMINI_API_KEY,
-  });
-  console.error(`RAG system initialized: ${ragDbPath} (provider: ${provider})`);
+  const timelines = new Map<string, TimelineContext>();
 
-  const server = createServer(tracker, rag);
+  if (process.env.NODE_ENV === 'test') {
+    // Test mode: single in-memory database
+    const tracker = new Tracker(':memory:');
+    await tracker.init();
+    const rag = new RAGSystem({
+      provider: 'e5-small',
+      dbPath: ':memory:',
+    });
+    timelines.set('test', { tracker, rag, contentPath: './test-content' });
+    console.error('Test mode: in-memory databases');
+  } else {
+    // Production: discover timelines and create separate databases
+    const { readdirSync, existsSync, mkdirSync } = await import('node:fs');
+    const { join } = await import('node:path');
+
+    const parentDir = join(process.cwd(), '..');
+    const entries = readdirSync(parentDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (entry.isDirectory() && entry.name.startsWith('timeline-')) {
+        const timelineName = entry.name.replace('timeline-', '');
+        const timelinePath = join(parentDir, entry.name);
+        const contentPath = join(timelinePath, 'content');
+
+        if (!existsSync(contentPath)) {
+          console.error(`Skipping ${entry.name}: no content directory`);
+          continue;
+        }
+
+        // Initialize tracker
+        const trackerPath = join(timelinePath, 'tracker.db');
+        const tracker = new Tracker(trackerPath);
+        await tracker.init();
+
+        // Initialize RAG
+        const ragPath = join(timelinePath, 'rag.db');
+        const provider = (process.env.ECHOES_RAG_PROVIDER || 'e5-small') as
+          | 'e5-small'
+          | 'e5-large'
+          | 'gemini';
+        const rag = new RAGSystem({
+          provider,
+          dbPath: ragPath,
+          geminiApiKey: process.env.ECHOES_GEMINI_API_KEY,
+        });
+
+        timelines.set(timelineName, { tracker, rag, contentPath });
+        console.error(`Timeline "${timelineName}" initialized: ${trackerPath}`);
+      }
+    }
+
+    if (timelines.size === 0) {
+      throw new Error('No timelines found in parent directory');
+    }
+  }
+
+  const server = createServer(timelines);
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('Echoes MCP Server running on stdio');
+  console.error(`Echoes MCP Server running on stdio (${timelines.size} timelines)`);
 }

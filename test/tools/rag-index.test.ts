@@ -32,13 +32,13 @@ describe('rag-index tool', () => {
       addChapters: vi.fn().mockResolvedValue(undefined),
     } as unknown as RAGSystem;
 
-    const result = await ragIndex({ timeline: 'test-timeline' }, mockTracker, mockRag);
+    const result = await ragIndex({ timeline: 'test-timeline', contentPath: './test-content' }, mockTracker, mockRag);
 
     expect(mockRag.addChapters).toHaveBeenCalledWith([
       {
         id: 'test-timeline-arc1-1-1',
         metadata: mockChapters[0],
-        content: '',
+        content: expect.any(String),
       },
     ]);
 
@@ -68,7 +68,7 @@ describe('rag-index tool', () => {
       addChapters: vi.fn().mockResolvedValue(undefined),
     } as unknown as RAGSystem;
 
-    const result = await ragIndex({ timeline: 'test-timeline', arc: 'arc1' }, mockTracker, mockRag);
+    const result = await ragIndex({ timeline: 'test-timeline', contentPath: './test-content', arc: 'arc1' }, mockTracker, mockRag);
 
     const data = JSON.parse(result.content[0].text);
     expect(data.arc).toBe('arc1');
@@ -95,7 +95,7 @@ describe('rag-index tool', () => {
     } as unknown as RAGSystem;
 
     const result = await ragIndex(
-      { timeline: 'test-timeline', arc: 'arc1', episode: 1 },
+      { timeline: 'test-timeline', contentPath: './test-content', arc: 'arc1', episode: 1 },
       mockTracker,
       mockRag,
     );
