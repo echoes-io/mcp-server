@@ -57,7 +57,9 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
+    const server = createServer(
+      new Map([['test', { tracker, rag, contentPath: './test-content' }]]),
+    );
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -79,7 +81,9 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
+    const server = createServer(
+      new Map([['test', { tracker, rag, contentPath: './test-content' }]]),
+    );
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -101,7 +105,9 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
+    const server = createServer(
+      new Map([['test', { tracker, rag, contentPath: './test-content' }]]),
+    );
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -112,7 +118,7 @@ describe('MCP Server', () => {
         method: 'tools/call',
         params: {
           name: 'chapter-refresh',
-          arguments: { timeline: 'test-timeline', file: testFile },
+          arguments: { timeline: 'test', file: testFile },
         },
       }),
     ).rejects.toThrow('Chapter not found in database');
@@ -124,7 +130,9 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
+    const server = createServer(
+      new Map([['test', { tracker, rag, contentPath: './test-content' }]]),
+    );
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -146,7 +154,9 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
+    const server = createServer(
+      new Map([['test', { tracker, rag, contentPath: './test-content' }]]),
+    );
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -175,23 +185,23 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
+    const contentPath = join(process.cwd(), 'test/content');
+    const server = createServer(new Map([['test', { tracker, rag, contentPath }]]));
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
-    const contentPath = join(process.cwd(), 'test/content');
 
     const result = await handler({
       method: 'tools/call',
       params: {
         name: 'timeline-sync',
-        arguments: { timeline: 'test-timeline', contentPath },
+        arguments: { timeline: 'test' },
       },
     });
 
     expect(result.content).toHaveLength(1);
     const info = JSON.parse(result.content[0].text);
-    expect(info.timeline).toBe('test-timeline');
+    expect(info.timeline).toBe('test');
 
     await tracker.close();
   });
@@ -200,7 +210,9 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
+    const server = createServer(
+      new Map([['test', { tracker, rag, contentPath: './test-content' }]]),
+    );
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');
@@ -222,7 +234,9 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
+    const server = createServer(
+      new Map([['test', { tracker, rag, contentPath: './test-content' }]]),
+    );
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/list');
@@ -231,7 +245,7 @@ describe('MCP Server', () => {
       params: {},
     });
 
-    expect(result.tools).toHaveLength(13);
+    expect(result.tools).toHaveLength(14);
     expect(result.tools.map((t: { name: string }) => t.name)).toEqual([
       'words-count',
       'chapter-info',
@@ -245,6 +259,7 @@ describe('MCP Server', () => {
       'rag-index',
       'rag-search',
       'rag-context',
+      'rag-characters',
       'book-generate',
     ]);
 
@@ -255,7 +270,9 @@ describe('MCP Server', () => {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = {} as RAGSystem;
-    const server = createServer(new Map([["test", { tracker, rag, contentPath: "./test-content" }]]));
+    const server = createServer(
+      new Map([['test', { tracker, rag, contentPath: './test-content' }]]),
+    );
 
     //@ts-expect-error accessing a private method for testing purposes
     const handler = server._requestHandlers.get('tools/call');

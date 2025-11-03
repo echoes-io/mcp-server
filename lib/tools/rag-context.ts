@@ -7,6 +7,10 @@ export const ragContextSchema = z.object({
   arc: z.string().optional().describe('Filter by arc name'),
   pov: z.string().optional().describe('Filter by POV character'),
   maxChapters: z.number().optional().describe('Maximum number of chapters (default: 5)'),
+  characters: z
+    .array(z.string())
+    .optional()
+    .describe('Filter by character names present in chapter'),
 });
 
 export async function ragContext(args: z.infer<typeof ragContextSchema>, rag: RAGSystem) {
@@ -17,6 +21,7 @@ export async function ragContext(args: z.infer<typeof ragContextSchema>, rag: RA
       arc: args.arc,
       pov: args.pov,
       maxChapters: args.maxChapters,
+      characters: args.characters,
     });
 
     return {
@@ -38,6 +43,7 @@ export async function ragContext(args: z.infer<typeof ragContextSchema>, rag: RA
                   chapter: r.metadata.number,
                   pov: r.metadata.pov,
                   title: r.metadata.title,
+                  characters: r.metadata.characterNames || [],
                 },
                 similarity: r.similarity,
                 content: r.content,

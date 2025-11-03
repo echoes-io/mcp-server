@@ -7,6 +7,16 @@ export const ragSearchSchema = z.object({
   arc: z.string().optional().describe('Filter by arc name'),
   pov: z.string().optional().describe('Filter by POV character'),
   maxResults: z.number().optional().describe('Maximum number of results (default: 10)'),
+  characters: z
+    .array(z.string())
+    .optional()
+    .describe('Filter by character names present in chapter'),
+  allCharacters: z
+    .boolean()
+    .optional()
+    .describe(
+      'If true, all characters must be present (AND). If false, at least one (OR). Default: false',
+    ),
 });
 
 export async function ragSearch(args: z.infer<typeof ragSearchSchema>, rag: RAGSystem) {
@@ -16,6 +26,8 @@ export async function ragSearch(args: z.infer<typeof ragSearchSchema>, rag: RAGS
       arc: args.arc,
       pov: args.pov,
       maxResults: args.maxResults,
+      characters: args.characters,
+      allCharacters: args.allCharacters,
     });
 
     return {
@@ -37,6 +49,7 @@ export async function ragSearch(args: z.infer<typeof ragSearchSchema>, rag: RAGS
                   chapter: r.metadata.number,
                   pov: r.metadata.pov,
                   title: r.metadata.title,
+                  characters: r.metadata.characterNames || [],
                 },
                 similarity: r.similarity,
                 preview: `${r.content.substring(0, 200)}...`,

@@ -5,6 +5,7 @@ export { chapterInsert, chapterInsertSchema } from './chapter-insert.js';
 export { chapterRefresh, chapterRefreshSchema } from './chapter-refresh.js';
 export { episodeInfo, episodeInfoSchema } from './episode-info.js';
 export { episodeUpdate, episodeUpdateSchema } from './episode-update.js';
+export { ragCharacters, ragCharactersSchema } from './rag-characters.js';
 export { ragContext, ragContextSchema } from './rag-context.js';
 export { ragIndex, ragIndexSchema } from './rag-index.js';
 export { ragSearch, ragSearchSchema } from './rag-search.js';

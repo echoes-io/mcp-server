@@ -1,13 +1,34 @@
+import { readdirSync, readFileSync } from 'node:fs';
+
 import type { RAGSystem } from '@echoes-io/rag';
 import type { Tracker } from '@echoes-io/tracker';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ragIndex } from '../../lib/tools/rag-index.js';
 
-describe('rag-index tool', () => {
-  beforeEach(() => {});
+vi.mock('node:fs', () => ({
+  readFileSync: vi.fn(),
+  readdirSync: vi.fn(),
+}));
 
-  afterEach(() => {});
+describe('rag-index tool', () => {
+  beforeEach(() => {
+    vi.mocked(readdirSync).mockImplementation((path: any, options?: any) => {
+      if (typeof path === 'string' && path.includes('arc1')) {
+        if (options?.withFileTypes) {
+          return [{ isDirectory: () => true, name: 'ep01-episode-title' }] as any;
+        }
+        return ['ep01-ch001-alice-title.md'];
+      }
+      return [];
+    });
+
+    vi.mocked(readFileSync).mockReturnValue('---\npov: Alice\n---\nChapter content');
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('should index all chapters', async () => {
     const mockChapters = [
@@ -32,7 +53,11 @@ describe('rag-index tool', () => {
       addChapters: vi.fn().mockResolvedValue(undefined),
     } as unknown as RAGSystem;
 
-    const result = await ragIndex({ timeline: 'test-timeline', contentPath: './test-content' }, mockTracker, mockRag);
+    const result = await ragIndex(
+      { timeline: 'test-timeline', contentPath: './test-content' },
+      mockTracker,
+      mockRag,
+    );
 
     expect(mockRag.addChapters).toHaveBeenCalledWith([
       {
@@ -68,7 +93,11 @@ describe('rag-index tool', () => {
       addChapters: vi.fn().mockResolvedValue(undefined),
     } as unknown as RAGSystem;
 
-    const result = await ragIndex({ timeline: 'test-timeline', contentPath: './test-content', arc: 'arc1' }, mockTracker, mockRag);
+    const result = await ragIndex(
+      { timeline: 'test-timeline', contentPath: './test-content', arc: 'arc1' },
+      mockTracker,
+      mockRag,
+    );
 
     const data = JSON.parse(result.content[0].text);
     expect(data.arc).toBe('arc1');

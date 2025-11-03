@@ -121,14 +121,27 @@ All tools require a `timeline` parameter to specify which timeline to operate on
   - Input: `timeline`, optional: `arc`, `episode` (to index specific content)
   - Output: Number of chapters indexed
   - Note: Content path is auto-discovered from timeline directory structure
+  - Note: Automatically extracts character names using NER (Named Entity Recognition)
   
 - **`rag-search`** - Semantic search across timeline content
-  - Input: `timeline`, `query`, optional: `arc`, `pov`, `maxResults`
-  - Output: Relevant chapters with similarity scores and previews
+  - Input: `timeline`, `query`, optional: `arc`, `pov`, `maxResults`, `characters`, `allCharacters`
+  - Output: Relevant chapters with similarity scores, previews, and character names
+  - Character filtering:
+    - `characters`: Array of character names to filter by
+    - `allCharacters`: If true, all characters must be present (AND). If false, at least one (OR). Default: false
+  - Examples:
+    - `characters: ["Alice", "Bob"], allCharacters: true` - Find chapters where both Alice AND Bob appear
+    - `characters: ["Alice", "Bob"]` - Find chapters where Alice OR Bob appear
   
 - **`rag-context`** - Retrieve relevant context for AI interactions
-  - Input: `timeline`, `query`, optional: `arc`, `pov`, `maxChapters`
-  - Output: Full chapter content for AI context
+  - Input: `timeline`, `query`, optional: `arc`, `pov`, `maxChapters`, `characters`
+  - Output: Full chapter content for AI context with character names
+  - Supports character filtering like `rag-search`
+  
+- **`rag-characters`** - Get all characters that appear in chapters with a specific character
+  - Input: `timeline`, `character` (character name)
+  - Output: List of co-occurring characters sorted alphabetically
+  - Use case: "Who does character X interact with?"
 
 ### Book Generation
 - **`book-generate`** - Generate PDF book from timeline content using LaTeX

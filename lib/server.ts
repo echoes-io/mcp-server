@@ -24,6 +24,8 @@ import {
   episodeInfoSchema,
   episodeUpdate,
   episodeUpdateSchema,
+  ragCharacters,
+  ragCharactersSchema,
   ragContext,
   ragContextSchema,
   ragIndex,
@@ -124,6 +126,11 @@ export function createServer(timelines: Map<string, TimelineContext>) {
           inputSchema: zodToJsonSchema(ragContextSchema),
         },
         {
+          name: 'rag-characters',
+          description: 'Get all characters that appear in chapters with a specific character',
+          inputSchema: zodToJsonSchema(ragCharactersSchema),
+        },
+        {
           name: 'book-generate',
           description: 'Generate PDF book from timeline content using LaTeX',
           inputSchema: zodToJsonSchema(bookGenerateSchema),
@@ -139,7 +146,9 @@ export function createServer(timelines: Map<string, TimelineContext>) {
     const getContext = (timeline: string) => {
       const ctx = timelines.get(timeline);
       if (!ctx) {
-        throw new Error(`Timeline "${timeline}" not found. Available: ${Array.from(timelines.keys()).join(', ')}`);
+        throw new Error(
+          `Timeline "${timeline}" not found. Available: ${Array.from(timelines.keys()).join(', ')}`,
+        );
       }
       return ctx;
     };
@@ -201,6 +210,11 @@ export function createServer(timelines: Map<string, TimelineContext>) {
         const parsed = ragContextSchema.parse(args);
         const { rag } = getContext(parsed.timeline);
         return await ragContext(parsed, rag);
+      }
+      case 'rag-characters': {
+        const parsed = ragCharactersSchema.parse(args);
+        const { rag } = getContext(parsed.timeline);
+        return await ragCharacters(parsed, rag);
       }
       case 'book-generate': {
         const parsed = bookGenerateSchema.parse(args);

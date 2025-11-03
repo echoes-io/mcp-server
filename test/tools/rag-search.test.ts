@@ -18,6 +18,7 @@ describe('rag-search tool', () => {
           number: 1,
           pov: 'Alice',
           title: 'Chapter 1',
+          characterNames: ['Alice', 'Bob'],
         },
         content: 'This is the chapter content with relevant information.',
         similarity: 0.95,
@@ -38,12 +39,15 @@ describe('rag-search tool', () => {
       arc: undefined,
       pov: undefined,
       maxResults: undefined,
+      characters: undefined,
+      allCharacters: undefined,
     });
 
     const data = JSON.parse(result.content[0].text);
     expect(data.query).toBe('relevant information');
     expect(data.results).toHaveLength(1);
     expect(data.results[0].similarity).toBe(0.95);
+    expect(data.results[0].chapter.characters).toEqual(['Alice', 'Bob']);
   });
 
   it('should filter by arc', async () => {
@@ -58,6 +62,8 @@ describe('rag-search tool', () => {
       arc: 'arc1',
       pov: undefined,
       maxResults: undefined,
+      characters: undefined,
+      allCharacters: undefined,
     });
   });
 
@@ -73,6 +79,33 @@ describe('rag-search tool', () => {
       arc: undefined,
       pov: undefined,
       maxResults: 5,
+      characters: undefined,
+      allCharacters: undefined,
+    });
+  });
+
+  it('should filter by characters', async () => {
+    const mockRag = {
+      search: vi.fn().mockResolvedValue([]),
+    } as unknown as RAGSystem;
+
+    await ragSearch(
+      {
+        timeline: 'test-timeline',
+        query: 'test',
+        characters: ['Alice', 'Bob'],
+        allCharacters: true,
+      },
+      mockRag,
+    );
+
+    expect(mockRag.search).toHaveBeenCalledWith('test', {
+      timeline: 'test-timeline',
+      arc: undefined,
+      pov: undefined,
+      maxResults: undefined,
+      characters: ['Alice', 'Bob'],
+      allCharacters: true,
     });
   });
 });
