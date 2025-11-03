@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/echoes-io/mcp-server/compare/v1.4.2...v1.5.0) (2025-11-03)
+
+
+### Features
+
+* :sparkles: Added the new version of rag to index characters ([bec4e90](https://github.com/echoes-io/mcp-server/commit/bec4e90ccd045d350c236b670743ae719ee64549))
+
 ## [1.4.2](https://github.com/echoes-io/mcp-server/compare/v1.4.1...v1.4.2) (2025-10-30)
 
 
