@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/echoes-io/mcp-server/compare/v1.5.0...v1.6.0) (2025-12-03)
+
+
+### Features
+
+* **kiro:** migrate from Amazon Q to Kiro agent configuration ([cb6860d](https://github.com/echoes-io/mcp-server/commit/cb6860d8aa1bbac138c1df7f20b68e4ca48e2145))
+
 # [1.5.0](https://github.com/echoes-io/mcp-server/compare/v1.4.2...v1.5.0) (2025-11-03)
 
 
