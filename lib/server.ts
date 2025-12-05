@@ -6,8 +6,8 @@ import { RAGSystem } from '@echoes-io/rag';
 import { Tracker } from '@echoes-io/tracker';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { toJsonSchemaCompat } from '@modelcontextprotocol/sdk/server/zod-json-schema-compat.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 
 import {
   bookGenerate,
@@ -68,72 +68,72 @@ export function createServer(timelines: Map<string, TimelineContext>) {
         {
           name: 'words-count',
           description: 'Count words and text statistics in a markdown file',
-          inputSchema: zodToJsonSchema(wordsCountSchema),
+          inputSchema: toJsonSchemaCompat(wordsCountSchema),
         },
         {
           name: 'chapter-info',
           description: 'Extract chapter metadata, content preview, and statistics',
-          inputSchema: zodToJsonSchema(chapterInfoSchema),
+          inputSchema: toJsonSchemaCompat(chapterInfoSchema),
         },
         {
           name: 'episode-info',
           description: 'Get episode information and list of chapters',
-          inputSchema: zodToJsonSchema(episodeInfoSchema),
+          inputSchema: toJsonSchemaCompat(episodeInfoSchema),
         },
         {
           name: 'episode-update',
           description: 'Update episode metadata (description, title, slug)',
-          inputSchema: zodToJsonSchema(episodeUpdateSchema),
+          inputSchema: toJsonSchemaCompat(episodeUpdateSchema),
         },
         {
           name: 'chapter-refresh',
           description: 'Refresh chapter metadata and statistics from file',
-          inputSchema: zodToJsonSchema(chapterRefreshSchema),
+          inputSchema: toJsonSchemaCompat(chapterRefreshSchema),
         },
         {
           name: 'chapter-delete',
           description: 'Delete chapter from database and optionally from filesystem',
-          inputSchema: zodToJsonSchema(chapterDeleteSchema),
+          inputSchema: toJsonSchemaCompat(chapterDeleteSchema),
         },
         {
           name: 'chapter-insert',
           description: 'Insert new chapter and automatically renumber subsequent chapters',
-          inputSchema: zodToJsonSchema(chapterInsertSchema),
+          inputSchema: toJsonSchemaCompat(chapterInsertSchema),
         },
         {
           name: 'timeline-sync',
           description: 'Synchronize timeline content with database',
-          inputSchema: zodToJsonSchema(timelineSyncSchema),
+          inputSchema: toJsonSchemaCompat(timelineSyncSchema),
         },
         {
           name: 'stats',
           description: 'Get statistics for timeline, arc, episode, or POV',
-          inputSchema: zodToJsonSchema(statsSchema),
+          inputSchema: toJsonSchemaCompat(statsSchema),
         },
         {
           name: 'rag-index',
           description: 'Index chapters into RAG vector database for semantic search',
-          inputSchema: zodToJsonSchema(ragIndexSchema),
+          inputSchema: toJsonSchemaCompat(ragIndexSchema),
         },
         {
           name: 'rag-search',
           description: 'Semantic search across timeline content',
-          inputSchema: zodToJsonSchema(ragSearchSchema),
+          inputSchema: toJsonSchemaCompat(ragSearchSchema),
         },
         {
           name: 'rag-context',
           description: 'Retrieve relevant context for AI interactions',
-          inputSchema: zodToJsonSchema(ragContextSchema),
+          inputSchema: toJsonSchemaCompat(ragContextSchema),
         },
         {
           name: 'rag-characters',
           description: 'Get all characters that appear in chapters with a specific character',
-          inputSchema: zodToJsonSchema(ragCharactersSchema),
+          inputSchema: toJsonSchemaCompat(ragCharactersSchema),
         },
         {
           name: 'book-generate',
           description: 'Generate PDF book from timeline content using LaTeX',
-          inputSchema: zodToJsonSchema(bookGenerateSchema),
+          inputSchema: toJsonSchemaCompat(bookGenerateSchema),
         },
       ],
     };
@@ -255,7 +255,7 @@ export async function runServer() {
     console.error('Test mode: in-memory databases');
   } else {
     // Production: discover timelines and create separate databases
-    const { readdirSync, existsSync, mkdirSync } = await import('node:fs');
+    const { readdirSync, existsSync } = await import('node:fs');
     const { join } = await import('node:path');
 
     const parentDir = join(process.cwd(), '..');

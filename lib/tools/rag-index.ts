@@ -15,11 +15,7 @@ export const ragIndexSchema = z.object({
 // Internal type that includes contentPath (injected by server)
 type RagIndexArgs = z.infer<typeof ragIndexSchema> & { contentPath: string };
 
-export async function ragIndex(
-  args: RagIndexArgs,
-  tracker: Tracker,
-  rag: RAGSystem,
-) {
+export async function ragIndex(args: RagIndexArgs, tracker: Tracker, rag: RAGSystem) {
   try {
     let chapters: Awaited<ReturnType<typeof tracker.getChapters>> = [];
 
@@ -58,40 +54,40 @@ export async function ragIndex(
             )
             .map((e: { name: string }) => join(arcPath, e.name))[0];
 
-            if (!episodePath) {
-              console.error(`Episode directory not found for ${ch.arcName}/ep${ch.episodeNumber}`);
-              return null;
-            }
+          if (!episodePath) {
+            console.error(`Episode directory not found for ${ch.arcName}/ep${ch.episodeNumber}`);
+            return null;
+          }
 
-            // Find chapter file by episode and chapter number (filename-agnostic for title/pov)
-            const chapterPattern = `ep${String(ch.episodeNumber).padStart(2, '0')}-ch${String(ch.number).padStart(3, '0')}-`;
-            const chapterFiles = readdirSync(episodePath).filter(
-              (f: string) => f.startsWith(chapterPattern) && f.endsWith('.md'),
-            );
+          // Find chapter file by episode and chapter number (filename-agnostic for title/pov)
+          const chapterPattern = `ep${String(ch.episodeNumber).padStart(2, '0')}-ch${String(ch.number).padStart(3, '0')}-`;
+          const chapterFiles = readdirSync(episodePath).filter(
+            (f: string) => f.startsWith(chapterPattern) && f.endsWith('.md'),
+          );
 
-            if (chapterFiles.length === 0) {
-              console.error(
-                `Chapter file not found for ${ch.arcName}/ep${ch.episodeNumber}/ch${ch.number}`,
-              );
-              return null;
-            }
-
-            const filePath = join(episodePath, chapterFiles[0]);
-            const fileContent = readFileSync(filePath, 'utf-8');
-            const { content } = parseMarkdown(fileContent);
-
-            return {
-              id: `${ch.timelineName}-${ch.arcName}-${ch.episodeNumber}-${ch.number}`,
-              metadata: ch,
-              content,
-            };
-          } catch (error) {
+          if (chapterFiles.length === 0) {
             console.error(
-              `Error reading chapter ${ch.arcName}/ep${ch.episodeNumber}/ch${ch.number}:`,
-              error,
+              `Chapter file not found for ${ch.arcName}/ep${ch.episodeNumber}/ch${ch.number}`,
             );
             return null;
           }
+
+          const filePath = join(episodePath, chapterFiles[0]);
+          const fileContent = readFileSync(filePath, 'utf-8');
+          const { content } = parseMarkdown(fileContent);
+
+          return {
+            id: `${ch.timelineName}-${ch.arcName}-${ch.episodeNumber}-${ch.number}`,
+            metadata: ch,
+            content,
+          };
+        } catch (error) {
+          console.error(
+            `Error reading chapter ${ch.arcName}/ep${ch.episodeNumber}/ch${ch.number}:`,
+            error,
+          );
+          return null;
+        }
       })
       .filter((ch) => ch !== null);
 

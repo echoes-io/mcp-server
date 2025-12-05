@@ -1,3 +1,4 @@
+import type { Dirent } from 'node:fs';
 import { readdirSync, readFileSync } from 'node:fs';
 
 import type { RAGSystem } from '@echoes-io/rag';
@@ -13,15 +14,20 @@ vi.mock('node:fs', () => ({
 
 describe('rag-index tool', () => {
   beforeEach(() => {
-    vi.mocked(readdirSync).mockImplementation((path: any, options?: any) => {
+    vi.mocked(readdirSync).mockImplementation(((path: unknown, options?: unknown) => {
       if (typeof path === 'string' && path.includes('arc1')) {
-        if (options?.withFileTypes) {
-          return [{ isDirectory: () => true, name: 'ep01-episode-title' }] as any;
+        if (
+          typeof options === 'object' &&
+          options !== null &&
+          'withFileTypes' in options &&
+          options.withFileTypes
+        ) {
+          return [{ isDirectory: () => true, name: 'ep01-episode-title' }] as Dirent[];
         }
-        return ['ep01-ch001-alice-title.md'];
+        return ['ep01-ch001-alice-title.md'] as string[];
       }
       return [];
-    });
+    }) as unknown as typeof readdirSync);
 
     vi.mocked(readFileSync).mockReturnValue('---\npov: Alice\n---\nChapter content');
   });
