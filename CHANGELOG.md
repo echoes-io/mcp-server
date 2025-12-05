@@ -1,3 +1,15 @@
+# [1.7.0](https://github.com/echoes-io/mcp-server/compare/v1.6.0...v1.7.0) (2025-12-05)
+
+
+### Features
+
+* :sparkles: Added the ability to be multi timeline ([6902de1](https://github.com/echoes-io/mcp-server/commit/6902de15fe5b83db6fd0912a1288fe01f62167b5))
+
+
+### Performance Improvements
+
+* :arrow_up: Upped deps ([838557b](https://github.com/echoes-io/mcp-server/commit/838557b3205ec95351a8de878cfd48d7e6d9e61b))
+
 # [1.6.0](https://github.com/echoes-io/mcp-server/compare/v1.5.0...v1.6.0) (2025-12-03)
 
 
