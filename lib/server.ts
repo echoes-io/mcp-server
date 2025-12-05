@@ -236,15 +236,17 @@ interface TimelineContext {
 }
 
 export async function runServer() {
-  // Validate we're running from .github directory
-  if (process.env.NODE_ENV !== 'test' && !process.cwd().endsWith('/.github')) {
-    throw new Error('Server must be run from .github directory');
-  }
+  const { readdirSync, existsSync } = await import('node:fs');
+  const { join, basename } = await import('node:path');
 
+  const cwd = process.cwd();
+  const cwdName = basename(cwd);
   const timelines = new Map<string, TimelineContext>();
 
+  console.error(`[DEBUG] Starting from: ${cwd}`);
+
   if (process.env.NODE_ENV === 'test') {
-    // Test mode: single in-memory database
+    // Test mode: in-memory databases
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = new RAGSystem({
@@ -252,14 +254,53 @@ export async function runServer() {
       dbPath: ':memory:',
     });
     timelines.set('test', { tracker, rag, contentPath: './test-content' });
-    console.error('Test mode: in-memory databases');
-  } else {
-    // Production: discover timelines and create separate databases
-    const { readdirSync, existsSync } = await import('node:fs');
-    const { join } = await import('node:path');
+    console.error('[DEBUG] Mode: test (in-memory)');
+  } else if (cwdName.startsWith('timeline-')) {
+    // Single timeline mode: running from timeline directory
+    const timelineName = cwdName.replace('timeline-', '');
+    const contentPath = join(cwd, 'content');
 
-    const parentDir = join(process.cwd(), '..');
+    if (!existsSync(contentPath)) {
+      throw new Error(`No content directory found in ${cwd}`);
+    }
+
+    const trackerPath = join(cwd, 'tracker.db');
+    const ragPath = join(cwd, 'rag.db');
+
+    const tracker = new Tracker(trackerPath);
+    await tracker.init();
+
+    const provider = (process.env.ECHOES_RAG_PROVIDER || 'e5-small') as
+      | 'e5-small'
+      | 'e5-large'
+      | 'gemini';
+    const rag = new RAGSystem({
+      provider,
+      dbPath: ragPath,
+      geminiApiKey: process.env.ECHOES_GEMINI_API_KEY,
+    });
+
+    timelines.set(timelineName, { tracker, rag, contentPath });
+    console.error(`[DEBUG] Mode: single-timeline "${timelineName}"`);
+    console.error(`[DEBUG] Content: ${contentPath}`);
+    console.error(`[DEBUG] Tracker: ${trackerPath}`);
+    console.error(`[DEBUG] RAG: ${ragPath}`);
+  } else if (cwdName === 'mcp-server') {
+    // Test mode from mcp-server directory: in-memory
+    const tracker = new Tracker(':memory:');
+    await tracker.init();
+    const rag = new RAGSystem({
+      provider: 'e5-small',
+      dbPath: ':memory:',
+    });
+    timelines.set('test', { tracker, rag, contentPath: './test-content' });
+    console.error('[DEBUG] Mode: test from mcp-server (in-memory)');
+  } else {
+    // Multi-timeline mode: discover from parent directory (backward compat for .github)
+    const parentDir = join(cwd, '..');
     const entries = readdirSync(parentDir, { withFileTypes: true });
+
+    console.error(`[DEBUG] Mode: multi-timeline (scanning ${parentDir})`);
 
     for (const entry of entries) {
       if (entry.isDirectory() && entry.name.startsWith('timeline-')) {
@@ -268,17 +309,16 @@ export async function runServer() {
         const contentPath = join(timelinePath, 'content');
 
         if (!existsSync(contentPath)) {
-          console.error(`Skipping ${entry.name}: no content directory`);
+          console.error(`[DEBUG] Skipping ${entry.name}: no content directory`);
           continue;
         }
 
-        // Initialize tracker
         const trackerPath = join(timelinePath, 'tracker.db');
+        const ragPath = join(timelinePath, 'rag.db');
+
         const tracker = new Tracker(trackerPath);
         await tracker.init();
 
-        // Initialize RAG
-        const ragPath = join(timelinePath, 'rag.db');
         const provider = (process.env.ECHOES_RAG_PROVIDER || 'e5-small') as
           | 'e5-small'
           | 'e5-large'
@@ -290,7 +330,7 @@ export async function runServer() {
         });
 
         timelines.set(timelineName, { tracker, rag, contentPath });
-        console.error(`Timeline "${timelineName}" initialized: ${trackerPath}`);
+        console.error(`[DEBUG] Timeline "${timelineName}": ${trackerPath}`);
       }
     }
 
@@ -302,5 +342,5 @@ export async function runServer() {
   const server = createServer(timelines);
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`Echoes MCP Server running on stdio (${timelines.size} timelines)`);
+  console.error(`[DEBUG] Server ready with ${timelines.size} timeline(s)`);
 }

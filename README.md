@@ -8,9 +8,27 @@ The server is distributed as an npm package and can be used without cloning the 
 
 ### Using with MCP Clients
 
-**Important:** The server must be run from the `.github` directory of your Echoes project.
+The server can run in three modes depending on the working directory:
 
-Add to your MCP client configuration (e.g., `~/.config/q/mcp.json` for Amazon Q):
+1. **Single Timeline Mode**: Run from a `timeline-*` directory to work with that specific timeline
+2. **Multi-Timeline Mode**: Run from `.github` directory to access all timelines
+3. **Test Mode**: Run from `mcp-server` directory for development
+
+#### Single Timeline Configuration (Recommended for Kiro CLI)
+
+```json
+{
+  "mcpServers": {
+    "echoes": {
+      "command": "npx",
+      "args": ["-y", "@echoes-io/mcp-server"],
+      "cwd": "/path/to/timeline-pulse"
+    }
+  }
+}
+```
+
+#### Multi-Timeline Configuration (Legacy/CAO)
 
 ```json
 {
@@ -37,7 +55,7 @@ Then configure:
   "mcpServers": {
     "echoes": {
       "command": "echoes-mcp-server",
-      "cwd": "/path/to/echoes-io/.github",
+      "cwd": "/path/to/timeline-pulse",
       "env": {
         "ECHOES_RAG_PROVIDER": "e5-small"
       }
@@ -50,13 +68,49 @@ Then configure:
 - `ECHOES_RAG_PROVIDER`: Embedding provider (`e5-small`, `e5-large`, or `gemini`). Default: `e5-small`
 - `ECHOES_GEMINI_API_KEY`: Required if using `gemini` provider
 
-## Multi-Timeline Architecture
+## Execution Modes
 
-The server automatically discovers and manages multiple timelines:
+### Single Timeline Mode (Recommended)
+Run from a timeline directory to work with that specific timeline:
+```bash
+cd timeline-pulse
+npx @echoes-io/mcp-server
+# [DEBUG] Mode: single-timeline "pulse"
+```
+
+**Benefits:**
+- Simpler configuration for single-timeline workflows
+- Direct access to timeline databases
+- Perfect for Kiro CLI integration
+
+### Multi-Timeline Mode (Legacy)
+Run from `.github` directory to access all timelines:
+```bash
+cd .github
+npx @echoes-io/mcp-server
+# [DEBUG] Mode: multi-timeline (scanning /path/to/echoes-io)
+```
+
+**Benefits:**
+- Manage multiple timelines simultaneously
+- Backward compatible with CAO agents
+- Timeline repositories can be private
+
+### Test Mode
+Run from `mcp-server` directory for development:
+```bash
+cd mcp-server
+npm run dev
+# [DEBUG] Mode: test from mcp-server (in-memory)
+```
+
+## Timeline Architecture
+
+Each timeline has isolated databases in its own repository:
 
 ```
 echoes-io/
-  .github/              # Server runs from here
+  .github/              # Multi-timeline mode runs from here
   timeline-eros/        # Private timeline repo
     tracker.db          # Timeline-specific database
     rag.db              # Timeline-specific RAG index
