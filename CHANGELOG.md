@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/echoes-io/mcp-server/compare/v1.7.0...v1.8.0) (2025-12-06)
+
+
+### Features
+
+* **prompts:** implement MCP prompts system for timeline content creation ([deb9b85](https://github.com/echoes-io/mcp-server/commit/deb9b85216523a85ebe392514091a0b01eddb639))
+
 # [1.7.0](https://github.com/echoes-io/mcp-server/compare/v1.6.0...v1.7.0) (2025-12-05)
 
 
