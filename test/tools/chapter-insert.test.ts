@@ -173,4 +173,37 @@ describe('chapter-insert tool', () => {
       }),
     ).toThrow();
   });
+
+  it('should insert chapter with file stats', async () => {
+    const mockEpisode = { number: 1, title: 'Test Episode' };
+    const mockChapters = [
+      { number: 1, title: 'Chapter 1', pov: 'Alice' },
+      { number: 2, title: 'Chapter 2', pov: 'Bob' },
+    ];
+
+    const mockTracker = {
+      getEpisode: vi.fn().mockResolvedValue(mockEpisode),
+      getChapters: vi.fn().mockResolvedValue(mockChapters),
+      updateChapter: vi.fn().mockResolvedValue(undefined),
+      createChapter: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Tracker;
+
+    const result = await chapterInsert(
+      {
+        timeline: 'test-timeline',
+        arc: 'test-arc',
+        episode: 1,
+        after: 1,
+        pov: 'Charlie',
+        title: 'New Chapter',
+        file: './test/example.md', // with file
+      },
+      mockTracker,
+    );
+
+    expect(result.content).toHaveLength(1);
+    const info = JSON.parse(result.content[0].text);
+    expect(info.inserted.chapter).toBe(2);
+    expect(mockTracker.createChapter).toHaveBeenCalled();
+  });
 });

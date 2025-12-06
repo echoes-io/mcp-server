@@ -289,4 +289,72 @@ describe('MCP Server', () => {
 
     await tracker.close();
   });
+
+  it('should list prompts', async () => {
+    const tracker = new Tracker(':memory:');
+    await tracker.init();
+    const rag = {} as RAGSystem;
+    const server = createServer(
+      new Map([['test', { tracker, rag, contentPath: './test-content' }]]),
+    );
+
+    //@ts-expect-error accessing a private method for testing purposes
+    const handler = server._requestHandlers.get('prompts/list');
+
+    const result = await handler({
+      method: 'prompts/list',
+      params: {},
+    });
+
+    expect(result.prompts).toBeDefined();
+    expect(result.prompts.length).toBeGreaterThan(0);
+    expect(result.prompts[0].name).toBeDefined();
+
+    await tracker.close();
+  });
+
+  it('should handle get prompt request', async () => {
+    const tracker = new Tracker(':memory:');
+    await tracker.init();
+    await tracker.createTimeline({ name: 'test', description: 'Test' });
+    await tracker.createArc({ timelineName: 'test', name: 'work', number: 1, description: 'Work' });
+
+    const rag = {} as RAGSystem;
+    const server = createServer(
+      new Map([['test', { tracker, rag, contentPath: './test-content' }]]),
+    );
+
+    //@ts-expect-error accessing a private method for testing purposes
+    const handler = server._requestHandlers.get('prompts/get');
+
+    const result = await handler({
+      method: 'prompts/get',
+      params: {
+        name: 'new-chapter',
+        arguments: { arc: 'work', chapter: '1' },
+      },
+    });
+
+    expect(result.messages).toBeDefined();
+    expect(result.messages[0].role).toBe('user');
+
+    await tracker.close();
+  });
+
+  it('should handle get prompt with no timelines', async () => {
+    const server = createServer(new Map());
+
+    //@ts-expect-error accessing a private method for testing purposes
+    const handler = server._requestHandlers.get('prompts/get');
+
+    await expect(
+      handler({
+        method: 'prompts/get',
+        params: {
+          name: 'new-chapter',
+          arguments: { arc: 'work', chapter: '1' },
+        },
+      }),
+    ).rejects.toThrow('No timelines available');
+  });
 });

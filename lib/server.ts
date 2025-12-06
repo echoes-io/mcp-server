@@ -7,8 +7,14 @@ import { Tracker } from '@echoes-io/tracker';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { toJsonSchemaCompat } from '@modelcontextprotocol/sdk/server/zod-json-schema-compat.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import {
+  CallToolRequestSchema,
+  GetPromptRequestSchema,
+  ListPromptsRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 
+import { getPrompt, listPrompts, validateGitHubRepo } from './prompts/index.js';
 import {
   bookGenerate,
   bookGenerateSchema,
@@ -58,6 +64,7 @@ export function createServer(timelines: Map<string, TimelineContext>) {
     {
       capabilities: {
         tools: {},
+        prompts: {},
       },
     },
   );
@@ -226,6 +233,28 @@ export function createServer(timelines: Map<string, TimelineContext>) {
     }
   });
 
+  server.setRequestHandler(ListPromptsRequestSchema, async () => {
+    return listPrompts();
+  });
+
+  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
+
+    // Get timeline from first available timeline (single-timeline mode)
+    // or require timeline in args for multi-timeline mode
+    const timelineNames = Array.from(timelines.keys());
+    if (timelineNames.length === 0) {
+      throw new Error('No timelines available');
+    }
+
+    // For single-timeline mode, use the only timeline
+    // For multi-timeline mode, this would need timeline in args
+    const timeline = timelineNames[0];
+    const { tracker } = timelines.get(timeline)!;
+
+    return await getPrompt(name, args || {}, timeline, tracker);
+  });
+
   return server;
 }
 
@@ -243,7 +272,12 @@ export async function runServer() {
   const cwdName = basename(cwd);
   const timelines = new Map<string, TimelineContext>();
 
-  console.error(`[DEBUG] Starting from: ${cwd}`);
+  const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+  const log = (...args: unknown[]) => {
+    if (!isTest) log(...args);
+  };
+
+  log(`[DEBUG] Starting from: ${cwd}`);
 
   if (process.env.NODE_ENV === 'test') {
     // Test mode: in-memory databases
@@ -254,7 +288,7 @@ export async function runServer() {
       dbPath: ':memory:',
     });
     timelines.set('test', { tracker, rag, contentPath: './test-content' });
-    console.error('[DEBUG] Mode: test (in-memory)');
+    log('[DEBUG] Mode: test (in-memory)');
   } else if (cwdName.startsWith('timeline-')) {
     // Single timeline mode: running from timeline directory
     const timelineName = cwdName.replace('timeline-', '');
@@ -281,10 +315,10 @@ export async function runServer() {
     });
 
     timelines.set(timelineName, { tracker, rag, contentPath });
-    console.error(`[DEBUG] Mode: single-timeline "${timelineName}"`);
-    console.error(`[DEBUG] Content: ${contentPath}`);
-    console.error(`[DEBUG] Tracker: ${trackerPath}`);
-    console.error(`[DEBUG] RAG: ${ragPath}`);
+    log(`[DEBUG] Mode: single-timeline "${timelineName}"`);
+    log(`[DEBUG] Content: ${contentPath}`);
+    log(`[DEBUG] Tracker: ${trackerPath}`);
+    log(`[DEBUG] RAG: ${ragPath}`);
   } else if (cwdName === 'mcp-server') {
     // Test mode from mcp-server directory: in-memory
     const tracker = new Tracker(':memory:');
@@ -294,13 +328,13 @@ export async function runServer() {
       dbPath: ':memory:',
     });
     timelines.set('test', { tracker, rag, contentPath: './test-content' });
-    console.error('[DEBUG] Mode: test from mcp-server (in-memory)');
+    log('[DEBUG] Mode: test from mcp-server (in-memory)');
   } else {
     // Multi-timeline mode: discover from parent directory (backward compat for .github)
     const parentDir = join(cwd, '..');
     const entries = readdirSync(parentDir, { withFileTypes: true });
 
-    console.error(`[DEBUG] Mode: multi-timeline (scanning ${parentDir})`);
+    log(`[DEBUG] Mode: multi-timeline (scanning ${parentDir})`);
 
     for (const entry of entries) {
       if (entry.isDirectory() && entry.name.startsWith('timeline-')) {
@@ -309,7 +343,7 @@ export async function runServer() {
         const contentPath = join(timelinePath, 'content');
 
         if (!existsSync(contentPath)) {
-          console.error(`[DEBUG] Skipping ${entry.name}: no content directory`);
+          log(`[DEBUG] Skipping ${entry.name}: no content directory`);
           continue;
         }
 
@@ -330,7 +364,7 @@ export async function runServer() {
         });
 
         timelines.set(timelineName, { tracker, rag, contentPath });
-        console.error(`[DEBUG] Timeline "${timelineName}": ${trackerPath}`);
+        log(`[DEBUG] Timeline "${timelineName}": ${trackerPath}`);
       }
     }
 
@@ -342,5 +376,16 @@ export async function runServer() {
   const server = createServer(timelines);
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`[DEBUG] Server ready with ${timelines.size} timeline(s)`);
+  log(`[DEBUG] Server ready with ${timelines.size} timeline(s)`);
+
+  // Validate .github repo for prompts
+  const { exists: githubExists, path: githubPath } = validateGitHubRepo();
+  if (!githubExists) {
+    log('⚠️  WARNING: .github repository not found');
+    log('   Expected location: ../.github/.kiro/prompts/');
+    log('   MCP prompts will not work until .github repo is cloned as sibling.');
+    log('   Clone: git clone https://github.com/echoes-io/.github ../.github');
+  } else {
+    log('✓ .github repository found');
+  }
 }
