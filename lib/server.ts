@@ -250,7 +250,7 @@ export function createServer(timelines: Map<string, TimelineContext>) {
     // For single-timeline mode, use the only timeline
     // For multi-timeline mode, this would need timeline in args
     const timeline = timelineNames[0];
-    const { tracker } = timelines.get(timeline)!;
+    const { tracker } = timelines.get(timeline) as TimelineContext;
 
     return await getPrompt(name, args || {}, timeline, tracker);
   });
@@ -274,7 +274,7 @@ export async function runServer() {
 
   const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
   const log = (...args: unknown[]) => {
-    if (!isTest) log(...args);
+    if (!isTest) console.error(...args);
   };
 
   log(`[DEBUG] Starting from: ${cwd}`);
@@ -379,7 +379,7 @@ export async function runServer() {
   log(`[DEBUG] Server ready with ${timelines.size} timeline(s)`);
 
   // Validate .github repo for prompts
-  const { exists: githubExists, path: githubPath } = validateGitHubRepo();
+  const { exists: githubExists } = validateGitHubRepo();
   if (!githubExists) {
     log('⚠️  WARNING: .github repository not found');
     log('   Expected location: ../.github/.kiro/prompts/');
