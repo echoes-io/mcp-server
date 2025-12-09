@@ -1,3 +1,10 @@
+## [1.8.1](https://github.com/echoes-io/mcp-server/compare/v1.8.0...v1.8.1) (2025-12-09)
+
+
+### Bug Fixes
+
+* :ambulance: Fixed a ricorsion ([6250563](https://github.com/echoes-io/mcp-server/commit/62505632c335d0b7530ce9827fbc1d54933bbc6c))
+
 # [1.8.0](https://github.com/echoes-io/mcp-server/compare/v1.7.0...v1.8.0) (2025-12-06)
 
 
