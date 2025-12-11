@@ -1,3 +1,10 @@
+## [1.8.2](https://github.com/echoes-io/mcp-server/compare/v1.8.1...v1.8.2) (2025-12-11)
+
+
+### Performance Improvements
+
+* :arrow_up: Upped `@echoes-io/utils` to better support word counting ([19f4e90](https://github.com/echoes-io/mcp-server/commit/19f4e90888deaf4d334d1c971d853bca65fda1c6))
+
 ## [1.8.1](https://github.com/echoes-io/mcp-server/compare/v1.8.0...v1.8.1) (2025-12-09)
 
 
