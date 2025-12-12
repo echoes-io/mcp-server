@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/echoes-io/mcp-server/compare/v1.8.2...v1.9.0) (2025-12-12)
+
+
+### Features
+
+* rename agent from 'default' to 'dev' and add code tool ([73abe4d](https://github.com/echoes-io/mcp-server/commit/73abe4de83b317cb0759aa9e91f587b13e522064))
+
 ## [1.8.2](https://github.com/echoes-io/mcp-server/compare/v1.8.1...v1.8.2) (2025-12-11)
 
 
