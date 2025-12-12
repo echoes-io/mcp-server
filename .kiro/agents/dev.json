@@ -1,10 +1,10 @@
 {
-  "name": "default",
+  "name": "dev",
   "description": "Agent for echoes-mcp-server - Model Context Protocol server for AI integration",
   "prompt": "file://../prompts/default-prompt.md",
-  "tools": ["read", "write", "shell", "web_search", "web_fetch", "introspect", "thinking"],
+  "tools": ["read", "write", "shell", "web_search", "web_fetch", "introspect", "thinking", "code"],
   "toolAliases": {},
-  "allowedTools": ["read", "shell", "web_search", "web_fetch", "introspect", "thinking"],
+  "allowedTools": ["read", "shell", "web_search", "web_fetch", "introspect", "thinking", "code"],
   "toolsSettings": {
     "write": {
       "allowedPaths": ["lib/**", "test/**", "*.md", "*.json", "*.ts"]
