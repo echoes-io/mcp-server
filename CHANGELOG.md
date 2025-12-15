@@ -1,3 +1,10 @@
+## [1.9.1](https://github.com/echoes-io/mcp-server/compare/v1.9.0...v1.9.1) (2025-12-15)
+
+
+### Performance Improvements
+
+* :arrow_up: Upped `rag`, moving to `llamaindex` and `lancedb` ([fe919f7](https://github.com/echoes-io/mcp-server/commit/fe919f776862f8e0148b967e59d20a1ee88938ad))
+
 # [1.9.0](https://github.com/echoes-io/mcp-server/compare/v1.8.2...v1.9.0) (2025-12-12)
 
 
