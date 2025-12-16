@@ -306,7 +306,7 @@ export async function runServer() {
 
     const provider = (process.env.ECHOES_RAG_PROVIDER || 'e5-small') as
       | 'e5-small'
-      | 'e5-large'
+      | 'embeddinggemma'
       | 'gemini';
     const rag = new RAGSystem({
       provider,
@@ -355,7 +355,7 @@ export async function runServer() {
 
         const provider = (process.env.ECHOES_RAG_PROVIDER || 'e5-small') as
           | 'e5-small'
-          | 'e5-large'
+          | 'embeddinggemma'
           | 'gemini';
         const rag = new RAGSystem({
           provider,

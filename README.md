@@ -65,8 +65,9 @@ Then configure:
 ```
 
 **Optional RAG Configuration:**
-- `ECHOES_RAG_PROVIDER`: Embedding provider (`e5-small`, `e5-large`, or `gemini`). Default: `e5-small`
+- `ECHOES_RAG_PROVIDER`: Embedding provider (`e5-small`, `embeddinggemma`, `gemini`, or `openai`). Default: `e5-small`
 - `ECHOES_GEMINI_API_KEY`: Required if using `gemini` provider
+- `ECHOES_OPENAI_API_KEY`: Required if using `openai` provider
 
 ## Execution Modes
 
