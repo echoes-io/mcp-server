@@ -1,3 +1,15 @@
+# [2.0.0](https://github.com/echoes-io/mcp-server/compare/v1.9.1...v2.0.0) (2025-12-16)
+
+
+### Bug Fixes
+
+* update RAG provider types to match @echoes-io/rag v1.3.1 ([b500adb](https://github.com/echoes-io/mcp-server/commit/b500adb59bb55540fd1babb1eb4c09f8fb3acd49))
+
+
+### BREAKING CHANGES
+
+* 'e5-large' provider no longer supported, use 'embeddinggemma' instead
+
 ## [1.9.1](https://github.com/echoes-io/mcp-server/compare/v1.9.0...v1.9.1) (2025-12-15)
 
 
