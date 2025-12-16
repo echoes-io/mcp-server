@@ -57,7 +57,7 @@ Then configure:
       "command": "echoes-mcp-server",
       "cwd": "/path/to/timeline-pulse",
       "env": {
-        "ECHOES_RAG_PROVIDER": "e5-small"
+        "ECHOES_RAG_PROVIDER": "qwen3"
       }
     }
   }
@@ -65,9 +65,8 @@ Then configure:
 ```
 
 **Optional RAG Configuration:**
-- `ECHOES_RAG_PROVIDER`: Embedding provider (`e5-small`, `embeddinggemma`, `gemini`, or `openai`). Default: `e5-small`
+- `ECHOES_RAG_PROVIDER`: Embedding provider (`qwen3`, `nomic-embed`, `bge-base`, `e5-large`, `e5-small`, or `gemini`). Default: `qwen3`
 - `ECHOES_GEMINI_API_KEY`: Required if using `gemini` provider
-- `ECHOES_OPENAI_API_KEY`: Required if using `openai` provider
 
 ## Execution Modes
 
@@ -114,11 +113,11 @@ echoes-io/
   .github/              # Multi-timeline mode runs from here
   timeline-eros/        # Private timeline repo
     tracker.db          # Timeline-specific database
-    rag.db              # Timeline-specific RAG index
+    lancedb/            # Timeline-specific RAG vector database
     content/...
   timeline-other/       # Another private timeline
     tracker.db
-    rag.db
+    lancedb/
     content/...
 ```
 
