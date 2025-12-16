@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/echoes-io/mcp-server/compare/v2.0.0...v2.1.0) (2025-12-16)
+
+
+### Features
+
+* enhance semantic search with advanced embedding models ([c822672](https://github.com/echoes-io/mcp-server/commit/c822672fac78cb2d290c476c318fe73d9f047a5a))
+
 # [2.0.0](https://github.com/echoes-io/mcp-server/compare/v1.9.1...v2.0.0) (2025-12-16)
 
 
