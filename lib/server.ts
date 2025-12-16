@@ -284,7 +284,7 @@ export async function runServer() {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = new RAGSystem({
-      provider: 'e5-small',
+      provider: 'qwen3',
       dbPath: ':memory:',
     });
     timelines.set('test', { tracker, rag, contentPath: './test-content' });
@@ -299,14 +299,17 @@ export async function runServer() {
     }
 
     const trackerPath = join(cwd, 'tracker.db');
-    const ragPath = join(cwd, 'rag.db');
+    const ragPath = join(cwd, 'lancedb');
 
     const tracker = new Tracker(trackerPath);
     await tracker.init();
 
-    const provider = (process.env.ECHOES_RAG_PROVIDER || 'e5-small') as
+    const provider = (process.env.ECHOES_RAG_PROVIDER || 'qwen3') as
+      | 'qwen3'
+      | 'nomic-embed'
+      | 'bge-base'
+      | 'e5-large'
       | 'e5-small'
-      | 'embeddinggemma'
       | 'gemini';
     const rag = new RAGSystem({
       provider,
@@ -324,7 +327,7 @@ export async function runServer() {
     const tracker = new Tracker(':memory:');
     await tracker.init();
     const rag = new RAGSystem({
-      provider: 'e5-small',
+      provider: 'qwen3',
       dbPath: ':memory:',
     });
     timelines.set('test', { tracker, rag, contentPath: './test-content' });
@@ -348,14 +351,17 @@ export async function runServer() {
         }
 
         const trackerPath = join(timelinePath, 'tracker.db');
-        const ragPath = join(timelinePath, 'rag.db');
+        const ragPath = join(timelinePath, 'lancedb');
 
         const tracker = new Tracker(trackerPath);
         await tracker.init();
 
-        const provider = (process.env.ECHOES_RAG_PROVIDER || 'e5-small') as
+        const provider = (process.env.ECHOES_RAG_PROVIDER || 'qwen3') as
+          | 'qwen3'
+          | 'nomic-embed'
+          | 'bge-base'
+          | 'e5-large'
           | 'e5-small'
-          | 'embeddinggemma'
           | 'gemini';
         const rag = new RAGSystem({
           provider,
