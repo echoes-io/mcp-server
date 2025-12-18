@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "tsx cli/index.ts",
     "start": "node cli/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
     "lint": "concurrently npm:lint:* --prefixColors auto",
     "lint:format": "biome check --write",
     "lint:lockfile": "lockfile-lint --path package-lock.json",
@@ -24,11 +27,12 @@
     "echoes-mcp-server": "./cli/index.js"
   },
   "exports": {
-    ".": "./lib/server.js"
+    ".": "./src/database/index.js"
   },
   "files": [
     "cli/**/*.{d.ts,js}",
-    "lib/**/*.{d.ts,js}"
+    "lib/**/*.{d.ts,js}",
+    "src/**/*.{d.ts,js}"
   ],
   "engines": {
     "node": ">= 20.3"
@@ -67,9 +71,11 @@
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@tsconfig/node22": "^22.0.5",
+    "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.0.15",
     "concurrently": "^9.2.1",
+    "drizzle-kit": "^1.0.0-beta.3-36e9b9e",
     "fast-check": "^4.4.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
@@ -83,12 +89,12 @@
     "vitest": "^4.0.15"
   },
   "dependencies": {
-    "@echoes-io/books-generator": "^1.1.0",
-    "@echoes-io/rag": "^1.4.0",
-    "@echoes-io/tracker": "^1.1.0",
     "@modelcontextprotocol/sdk": "^1.24.2",
+    "better-sqlite3": "^11.0.0",
+    "drizzle-orm": "^1.0.0-beta.3-36e9b9e",
     "gray-matter": "^4.0.3",
     "remove-markdown": "^0.6.2",
+    "sqlite-vec": "^0.1.7-alpha.2",
     "zod": "^4.1.12"
   }
 }

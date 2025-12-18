@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
-import { runServer } from '../lib/server.js';
+console.log('MCP Server CLI - Database layer ready!');
+console.log('Use this CLI to start the MCP server once tools are implemented.');
 
-runServer().catch((error) => {
-  console.error('Server error:', error);
-  process.exit(1);
-});
+process.exit(0);
