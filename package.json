@@ -70,6 +70,7 @@
     "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.0.15",
     "concurrently": "^9.2.1",
+    "fast-check": "^4.4.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "lockfile-lint": "^4.14.1",

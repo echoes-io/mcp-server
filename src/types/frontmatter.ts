@@ -1,6 +1,10 @@
+/**
+ * Frontmatter metadata from YAML headers
+ */
 export interface ChapterMetadata {
   pov: string;
   title: string;
+  date: string;
   timeline: string;
   arc: string;
   episode: number;
@@ -8,16 +12,13 @@ export interface ChapterMetadata {
   chapter: number;
   summary: string;
   location: string;
-  date: string;
   outfit?: string;
   kink?: string;
 }
 
-export interface ParsedMarkdown {
-  metadata: ChapterMetadata;
-  content: string;
-}
-
+/**
+ * Text statistics calculated from content
+ */
 export interface TextStats {
   words: number;
   characters: number;
@@ -25,4 +26,12 @@ export interface TextStats {
   paragraphs: number;
   sentences: number;
   readingTimeMinutes: number;
+}
+
+/**
+ * Result of parsing a markdown file
+ */
+export interface ParsedMarkdown {
+  metadata: ChapterMetadata;
+  content: string;
 }
