@@ -1,3 +1,15 @@
+# [3.0.0](https://github.com/echoes-io/mcp-server/compare/v2.2.0...v3.0.0) (2025-12-18)
+
+
+### Code Refactoring
+
+* consolidate types, schemas and utils into src/ ([851400f](https://github.com/echoes-io/mcp-server/commit/851400fd400310e153a780e60e97d2dfef1c5d86))
+
+
+### BREAKING CHANGES
+
+* Remove dependencies on @echoes-io/models and @echoes-io/utils packages
+
 # [2.2.0](https://github.com/echoes-io/mcp-server/compare/v2.1.0...v2.2.0) (2025-12-16)
 
 
