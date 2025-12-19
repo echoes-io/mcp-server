@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -10,8 +10,11 @@ import { createHybridRAG } from '../../src/rag/index.js';
 import type { ChapterMetadata } from '../../src/types/frontmatter.js';
 import { parseMarkdown } from '../../src/utils/markdown.js';
 
-describe('Timeline Integration Test', () => {
-  const timelineErosPath = '/home/zweer/projects/echoes-io/timeline-eros/content';
+const timelineErosPath = join('..', 'timeline-eros', 'content');
+const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+const hasTimelineEros = existsSync(timelineErosPath);
+
+describe.skipIf(isCI || !hasTimelineEros)('Timeline Integration Test', () => {
   const testDbPath = ':memory:'; // Use in-memory DB for testing
 
   let db: DatabaseType;
@@ -51,17 +54,14 @@ describe('Timeline Integration Test', () => {
     });
 
     // Load real chapters from timeline-eros
-    console.log('Loading chapters from timeline-eros...');
     const startTime = Date.now();
 
     chapters = await loadChaptersFromTimeline(timelineErosPath);
 
-    const loadTime = Date.now() - startTime;
-    console.log(`Loaded ${chapters.length} chapters in ${loadTime}ms`);
+    const _loadTime = Date.now() - startTime;
 
     // Take a subset for testing (first 50 chapters to keep test reasonable)
     chapters = chapters.slice(0, 50);
-    console.log(`Using ${chapters.length} chapters for testing`);
   }, 30000); // 30 second timeout for setup
 
   afterAll(async () => {
@@ -94,7 +94,6 @@ describe('Timeline Integration Test', () => {
       expect(chaptersWithCharacters.length).toBeGreaterThan(0);
 
       // Log some examples
-      console.log('Sample characters found:');
       chaptersWithCharacters.slice(0, 3).forEach((ch) => {
         console.log(`  Chapter ${ch.metadata.chapter}: ${ch.characters.join(', ')}`);
       });
@@ -106,9 +105,6 @@ describe('Timeline Integration Test', () => {
 
       expect(povs.size).toBeGreaterThan(1);
       expect(arcs.size).toBeGreaterThan(0);
-
-      console.log(`Found ${povs.size} different POVs: ${Array.from(povs).join(', ')}`);
-      console.log(`Found ${arcs.size} different arcs: ${Array.from(arcs).join(', ')}`);
     });
   });
 
@@ -119,7 +115,6 @@ describe('Timeline Integration Test', () => {
       const result = await hybridRAG.indexChapters(chapters);
 
       const indexTime = Date.now() - startTime;
-      console.log(`Indexed ${chapters.length} chapters in ${indexTime}ms`);
       console.log(
         `GraphRAG nodes: ${result.graphNodes}, Vector embeddings: ${result.vectorEmbeddings}`,
       );
@@ -148,7 +143,6 @@ describe('Timeline Integration Test', () => {
       // Calculate edge density
       const maxPossibleEdges = (chapters.length * (chapters.length - 1)) / 2;
       const edgeDensity = status.graphRAG.edges / maxPossibleEdges;
-      console.log(`Edge density: ${(edgeDensity * 100).toFixed(2)}%`);
 
       expect(edgeDensity).toBeGreaterThan(0.001); // At least 0.1% connectivity
       // Note: High density due to noisy character extraction - will improve with real NER
@@ -170,7 +164,6 @@ describe('Timeline Integration Test', () => {
         const results = await hybridRAG.search(query, { topK: 5 });
 
         const searchTime = Date.now() - startTime;
-        console.log(`Query "${query}" returned ${results.length} results in ${searchTime}ms`);
 
         expect(results.length).toBeGreaterThan(0);
         expect(searchTime).toBeLessThan(1000); // Should be fast
@@ -250,7 +243,6 @@ describe('Timeline Integration Test', () => {
           pov: testPOV,
         });
 
-        console.log(`POV "${testPOV}" filtering: found ${results.length} results`);
         results.forEach((result: SearchResult) => {
           expect(result.metadata.pov).toBe(testPOV);
         });
@@ -268,8 +260,6 @@ describe('Timeline Integration Test', () => {
       results.forEach((result: SearchResult) => {
         expect(result.source).toBe('vector');
       });
-
-      console.log(`Fallback search returned ${results.length} results from vector store`);
     });
   });
 

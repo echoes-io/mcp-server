@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -11,8 +11,11 @@ import { createHybridRAG } from '../../src/rag/index.js';
 import type { ChapterMetadata } from '../../src/types/frontmatter.js';
 import { parseMarkdown } from '../../src/utils/markdown.js';
 
-describe('Full Timeline-Eros Test (466 chapters)', () => {
-  const timelineErosPath = '/home/zweer/projects/echoes-io/timeline-eros/content';
+const timelineErosPath = join('..', 'timeline-eros', 'content');
+const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+const hasTimelineEros = existsSync(timelineErosPath);
+
+describe.skipIf(isCI || !hasTimelineEros)('Full Timeline-Eros Test (466 chapters)', () => {
   const testDbPath = ':memory:';
 
   let db: DatabaseType;
@@ -31,8 +34,6 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
   }> = [];
 
   beforeAll(async () => {
-    console.log('🚀 Starting full-scale test with ALL timeline-eros chapters...');
-
     // Initialize database
     db = await initDatabase(testDbPath);
 
@@ -54,13 +55,7 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
     });
 
     // Load ALL chapters from timeline-eros
-    console.log('📚 Loading all chapters from timeline-eros...');
-    const startTime = Date.now();
-
     chapters = await loadAllChaptersFromTimeline(timelineErosPath);
-
-    const loadTime = Date.now() - startTime;
-    console.log(`✅ Loaded ${chapters.length} chapters in ${loadTime}ms`);
   }, 60000); // 60 second timeout for setup
 
   afterAll(async () => {
@@ -78,7 +73,6 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
         (ch) => ch.content.length > 100 && ch.metadata.arc && ch.metadata.pov,
       );
 
-      console.log(`📊 Valid chapters: ${validChapters.length}/${chapters.length}`);
       expect(validChapters.length).toBeGreaterThan(300); // At least 300 valid chapters (some may be short)
     });
 
@@ -86,11 +80,6 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
       const povs = new Set(chapters.map((ch) => ch.metadata.pov));
       const arcs = new Set(chapters.map((ch) => ch.metadata.arc));
       const episodes = new Set(chapters.map((ch) => ch.metadata.episode));
-
-      console.log(`📈 Dataset diversity:`);
-      console.log(`  POVs: ${povs.size} (${Array.from(povs).join(', ')})`);
-      console.log(`  Arcs: ${arcs.size} (${Array.from(arcs).join(', ')})`);
-      console.log(`  Episodes: ${episodes.size}`);
 
       expect(povs.size).toBeGreaterThan(1);
       expect(arcs.size).toBeGreaterThan(0);
@@ -117,7 +106,6 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10);
 
-      console.log(`👥 Top 10 characters:`);
       frequentCharacters.forEach(([char, count]) => {
         console.log(`  ${char}: ${count} appearances`);
       });
@@ -129,7 +117,6 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
 
   describe('Full-Scale GraphRAG Indexing', () => {
     it('should index all 466 chapters into GraphRAG system', async () => {
-      console.log('🔄 Starting full indexing process...');
       const startTime = Date.now();
 
       const result = await hybridRAG.indexChapters(chapters);
@@ -155,7 +142,6 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
     it('should create reasonable graph structure', async () => {
       const status = hybridRAG.getStatus();
 
-      console.log(`🕸️ Graph structure:`);
       console.log(`  Nodes: ${status.graphRAG.nodes}`);
       console.log(`  Edges: ${status.graphRAG.edges}`);
 
@@ -166,7 +152,6 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
       // Calculate edge density
       const maxPossibleEdges = (chapters.length * (chapters.length - 1)) / 2;
       const edgeDensity = status.graphRAG.edges / maxPossibleEdges;
-      console.log(`📈 Edge density: ${(edgeDensity * 100).toFixed(3)}%`);
 
       // With 466 chapters, expect much lower density but account for noisy character extraction
       expect(edgeDensity).toBeGreaterThan(0.0001); // At least some connections
@@ -183,8 +168,6 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
         'intimate moment in bedroom',
         'conflict and argument between characters',
       ];
-
-      console.log('🔍 Testing search performance on full dataset...');
 
       for (const query of queries) {
         const startTime = Date.now();
@@ -218,8 +201,6 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5);
 
-      console.log('👥 Testing character filtering...');
-
       for (const [character, count] of topCharacters) {
         const startTime = Date.now();
 
@@ -244,8 +225,6 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
     });
 
     it('should test fallback system reliability', async () => {
-      console.log('🔄 Testing fallback system...');
-
       // Test with GraphRAG disabled
       const fallbackResults = await hybridRAG.search('test query', {
         topK: 10,
@@ -265,7 +244,6 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
     it('should report memory usage and performance metrics', async () => {
       const memUsage = process.memoryUsage();
 
-      console.log('💾 Memory usage:');
       console.log(`  RSS: ${(memUsage.rss / 1024 / 1024).toFixed(1)} MB`);
       console.log(`  Heap Used: ${(memUsage.heapUsed / 1024 / 1024).toFixed(1)} MB`);
       console.log(`  Heap Total: ${(memUsage.heapTotal / 1024 / 1024).toFixed(1)} MB`);
@@ -274,7 +252,6 @@ describe('Full Timeline-Eros Test (466 chapters)', () => {
       expect(memUsage.heapUsed).toBeLessThan(1024 * 1024 * 1024); // Less than 1GB
 
       const status = hybridRAG.getStatus();
-      console.log('⚙️ System status:');
       console.log(`  GraphRAG ready: ${status.graphRAG.ready}`);
       console.log(`  Embedder: ${status.embedder.name} (${status.embedder.dimension}D)`);
     });

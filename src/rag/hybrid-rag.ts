@@ -112,9 +112,6 @@ export class HybridRAG {
       }));
 
       const syncStats = await this.dbSync.syncChapters(chapterRecords);
-      console.log(
-        `Database sync: ${syncStats.timelines} timelines, ${syncStats.arcs} arcs, ${syncStats.episodes} episodes, ${syncStats.chapters} chapters`,
-      );
 
       // 2. Generate embeddings for all chapters
       const texts = chapters.map((ch) => ch.content);

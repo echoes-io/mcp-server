@@ -22,7 +22,6 @@ export async function initDatabase(dbPath: string): Promise<DatabaseType> {
   // Auto-migrate on startup
   try {
     await migrate(db, { migrationsFolder: './db' });
-    console.log('✅ Database migrations applied successfully');
   } catch (error) {
     console.error('❌ Database migration failed:', error);
     throw error;
