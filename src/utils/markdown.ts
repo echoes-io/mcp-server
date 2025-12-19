@@ -1,3 +1,4 @@
+import matter from 'gray-matter';
 import removeMd from 'remove-markdown';
 
 import type { ChapterMetadata, ParsedMarkdown, TextStats } from '../types/frontmatter.js';
@@ -7,7 +8,6 @@ import type { ChapterMetadata, ParsedMarkdown, TextStats } from '../types/frontm
  */
 
 export function parseMarkdown(markdown: string): ParsedMarkdown {
-  const matter = require('gray-matter');
   const { data, content } = matter(markdown);
 
   // Convert Date objects to strings
