@@ -2,6 +2,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
+import { indexRag, indexRagSchema } from './tools/index-rag.js';
 import { indexTracker, indexTrackerSchema } from './tools/index-tracker.js';
 import { wordsCount, wordsCountSchema } from './tools/words-count.js';
 
@@ -30,6 +31,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         name: 'index-tracker',
         description: 'Synchronize filesystem content with database',
         inputSchema: indexTrackerSchema,
+      },
+      {
+        name: 'index-rag',
+        description: 'Index chapters into GraphRAG for semantic search',
+        inputSchema: indexRagSchema,
       },
     ],
   };
@@ -66,6 +72,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     case 'index-tracker':
       try {
         const result = await indexTracker(args as any);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+    case 'index-rag':
+      try {
+        const result = await indexRag(args as any);
         return {
           content: [
             {
