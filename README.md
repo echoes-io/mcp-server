@@ -229,8 +229,8 @@ npm run lint:format
 ### Tech Stack
 
 - **Language**: TypeScript (strict mode)
-- **Testing**: Vitest (97%+ coverage)
-- **Linting**: Biome
+- **Testing**: Vitest (90.71% coverage, 82 tests)
+- **Linting**: Biome (0 warnings)
 - **Build**: TypeScript compiler
 
 ### Architecture

@@ -21,7 +21,7 @@
     "test:coverage": "vitest run --coverage",
     "check": "npm run test:coverage && npm run lint",
     "prepare": "[ \"$CI\" = \"true\" ] || [ \"$GITHUB_ACTIONS\" = \"true\" ] && echo 'Skipping husky' && exit 0 || husky",
-    "clean": "rimraf --glob ./{cli,src,test}/**/*.{d.ts,js} ./vitest*.{d.ts,js}",
+    "clean": "rimraf --glob ./{cli,src,test}/**/*.{d.ts,js} ./{drizzle,vitest}*.{d.ts,js}",
     "prebuild": "npm run clean",
     "build": "tsc",
     "release": "semantic-release"
