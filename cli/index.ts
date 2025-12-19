@@ -3,6 +3,7 @@
 import { runServer } from '../src/server.js';
 import { indexRag } from '../src/tools/index-rag.js';
 import { indexTracker } from '../src/tools/index-tracker.js';
+import { ragSearch } from '../src/tools/rag-search.js';
 import { wordsCount } from '../src/tools/words-count.js';
 
 const [, , command, ...args] = process.argv;
@@ -80,6 +81,47 @@ async function main() {
       break;
     }
 
+    case 'rag-search': {
+      const timeline = args[0];
+      const query = args[1];
+
+      if (!timeline || !query) {
+        console.error('Usage: echoes-mcp-server rag-search <timeline> "<query>" [options]');
+        process.exit(1);
+      }
+
+      // Parse optional flags
+      const topKFlag = args.indexOf('--top-k');
+      const charactersFlag = args.indexOf('--characters');
+      const arcFlag = args.indexOf('--arc');
+      const povFlag = args.indexOf('--pov');
+      const allCharacters = args.includes('--all-characters');
+      const vectorOnly = args.includes('--vector-only');
+
+      const topK = topKFlag !== -1 ? parseInt(args[topKFlag + 1], 10) : 10;
+      const characters = charactersFlag !== -1 ? args[charactersFlag + 1].split(',') : undefined;
+      const arc = arcFlag !== -1 ? args[arcFlag + 1] : undefined;
+      const pov = povFlag !== -1 ? args[povFlag + 1] : undefined;
+
+      try {
+        const result = await ragSearch({
+          timeline,
+          query,
+          topK,
+          characters,
+          allCharacters,
+          arc,
+          pov,
+          useGraphRAG: !vectorOnly,
+        });
+        console.log(JSON.stringify(result, null, 2));
+      } catch (error) {
+        console.error('Error:', error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+      break;
+    }
+
     case 'help':
       console.log(`
 Echoes MCP Server v3.0.0
@@ -89,12 +131,18 @@ Usage:
   echoes-mcp-server words-count <file>           # Count words in file
   echoes-mcp-server index-tracker <timeline> <path> # Sync filesystem to database
   echoes-mcp-server index-rag <timeline> <path>  # Index chapters into GraphRAG
+  echoes-mcp-server rag-search <timeline> "<query>" # Search chapters semantically
   echoes-mcp-server help                         # Show this help
 
 Options:
   --detailed                                     # Include detailed statistics (words-count)
-  --arc <name>                                   # Filter by arc (index-rag)
+  --arc <name>                                   # Filter by arc (index-rag, rag-search)
   --episode <num>                                # Filter by episode (index-rag)
+  --top-k <num>                                  # Max results (rag-search, default: 10)
+  --characters <name1,name2>                     # Filter by characters (rag-search)
+  --all-characters                               # Require all characters (rag-search)
+  --pov <name>                                   # Filter by POV (rag-search)
+  --vector-only                                  # Use vector search only (rag-search)
 `);
       break;
 
