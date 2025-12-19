@@ -2,6 +2,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
+import { indexTracker, indexTrackerSchema } from './tools/index-tracker.js';
 import { wordsCount, wordsCountSchema } from './tools/words-count.js';
 
 const server = new Server(
@@ -25,6 +26,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         description: 'Count words and text statistics in markdown files',
         inputSchema: wordsCountSchema,
       },
+      {
+        name: 'index-tracker',
+        description: 'Synchronize filesystem content with database',
+        inputSchema: indexTrackerSchema,
+      },
     ],
   };
 });
@@ -37,6 +43,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     case 'words-count':
       try {
         const result = await wordsCount(args as any);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+    case 'index-tracker':
+      try {
+        const result = await indexTracker(args as any);
         return {
           content: [
             {

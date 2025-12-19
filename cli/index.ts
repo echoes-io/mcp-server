@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { runServer } from '../src/server.js';
+import { indexTracker } from '../src/tools/index-tracker.js';
 import { wordsCount } from '../src/tools/words-count.js';
 
 const [, , command, ...args] = process.argv;
@@ -33,17 +34,37 @@ async function main() {
       break;
     }
 
+    case 'index-tracker': {
+      const timeline = args[0];
+      const contentPath = args[1];
+
+      if (!timeline || !contentPath) {
+        console.error('Usage: echoes-mcp-server index-tracker <timeline> <content-path>');
+        process.exit(1);
+      }
+
+      try {
+        const result = await indexTracker({ timeline, contentPath });
+        console.log(JSON.stringify(result, null, 2));
+      } catch (error) {
+        console.error('Error:', error instanceof Error ? error.message : error);
+        process.exit(1);
+      }
+      break;
+    }
+
     case 'help':
       console.log(`
 Echoes MCP Server v3.0.0
 
 Usage:
-  echoes-mcp-server                    # Run MCP server
-  echoes-mcp-server words-count <file> # Count words in file
-  echoes-mcp-server help               # Show this help
+  echoes-mcp-server                              # Run MCP server
+  echoes-mcp-server words-count <file>           # Count words in file
+  echoes-mcp-server index-tracker <timeline> <path> # Sync filesystem to database
+  echoes-mcp-server help                         # Show this help
 
 Options:
-  --detailed                           # Include detailed statistics
+  --detailed                                     # Include detailed statistics
 `);
       break;
 
