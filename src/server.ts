@@ -4,6 +4,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 
 import { indexRag, indexRagSchema } from './tools/index-rag.js';
 import { indexTracker, indexTrackerSchema } from './tools/index-tracker.js';
+import { ragContext, ragContextSchema } from './tools/rag-context.js';
 import { ragSearch, ragSearchSchema } from './tools/rag-search.js';
 import { wordsCount, wordsCountSchema } from './tools/words-count.js';
 
@@ -42,6 +43,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         name: 'rag-search',
         description: 'Search chapters using semantic similarity and character filtering',
         inputSchema: ragSearchSchema,
+      },
+      {
+        name: 'rag-context',
+        description: 'Retrieve full chapter content for AI context using semantic search',
+        inputSchema: ragContextSchema,
       },
     ],
   };
@@ -124,6 +130,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     case 'rag-search':
       try {
         const result = await ragSearch(args as any);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+    case 'rag-context':
+      try {
+        const result = await ragContext(args as any);
         return {
           content: [
             {
