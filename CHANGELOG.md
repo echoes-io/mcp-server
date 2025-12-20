@@ -1,3 +1,10 @@
+## [4.1.1](https://github.com/echoes-io/mcp-server/compare/v4.1.0...v4.1.1) (2025-12-20)
+
+
+### Bug Fixes
+
+* :construction_worker: Fixing the release process ([50d13f4](https://github.com/echoes-io/mcp-server/commit/50d13f47d3578057f3ca2abc34a772dee8506d3e))
+
 # [4.1.0](https://github.com/echoes-io/mcp-server/compare/v4.0.0...v4.1.0) (2025-12-20)
 
 
