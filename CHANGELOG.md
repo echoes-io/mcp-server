@@ -1,3 +1,10 @@
+# [4.1.0](https://github.com/echoes-io/mcp-server/compare/v4.0.0...v4.1.0) (2025-12-20)
+
+
+### Features
+
+* add automatic timeline detection for CLI commands ([be58d0a](https://github.com/echoes-io/mcp-server/commit/be58d0ac37547f5ce6cebf0e114dce03e5cab274))
+
 # [4.0.0](https://github.com/echoes-io/mcp-server/compare/v3.0.0...v4.0.0) (2025-12-19)
 
 
