@@ -24,6 +24,7 @@
     "clean": "rimraf --glob ./{cli,src,test}/**/*.{d.ts,js} ./{drizzle,vitest}*.{d.ts,js}",
     "prebuild": "npm run clean",
     "build": "tsc",
+    "prerelease": "npm run build",
     "release": "semantic-release"
   },
   "bin": {
