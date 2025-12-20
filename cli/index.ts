@@ -6,6 +6,7 @@ import { indexTracker } from '../src/tools/index-tracker.js';
 import { ragContext } from '../src/tools/rag-context.js';
 import { ragSearch } from '../src/tools/rag-search.js';
 import { wordsCount } from '../src/tools/words-count.js';
+import { getTimelineContext } from '../src/utils/timeline-detection.js';
 
 const [, , command, ...args] = process.argv;
 
@@ -38,15 +39,11 @@ async function main() {
     }
 
     case 'index-tracker': {
-      const timeline = args[0];
-      const contentPath = args[1];
-
-      if (!timeline || !contentPath) {
-        console.error('Usage: echoes-mcp-server index-tracker <timeline> <content-path>');
-        process.exit(1);
-      }
+      const timelineArg = args[0];
+      const contentPathArg = args[1];
 
       try {
+        const { timeline, contentPath } = getTimelineContext(timelineArg, contentPathArg);
         const result = await indexTracker({ timeline, contentPath });
         console.log(JSON.stringify(result, null, 2));
       } catch (error) {
@@ -57,22 +54,16 @@ async function main() {
     }
 
     case 'index-rag': {
-      const timeline = args[0];
-      const contentPath = args[1];
+      const timelineArg = args[0];
+      const contentPathArg = args[1];
       const arcFlag = args.indexOf('--arc');
       const episodeFlag = args.indexOf('--episode');
 
-      if (!timeline || !contentPath) {
-        console.error(
-          'Usage: echoes-mcp-server index-rag <timeline> <content-path> [--arc <name>] [--episode <num>]',
-        );
-        process.exit(1);
-      }
-
-      const arc = arcFlag !== -1 ? args[arcFlag + 1] : undefined;
-      const episode = episodeFlag !== -1 ? parseInt(args[episodeFlag + 1], 10) : undefined;
-
       try {
+        const { timeline, contentPath } = getTimelineContext(timelineArg, contentPathArg);
+        const arc = arcFlag !== -1 ? args[arcFlag + 1] : undefined;
+        const episode = episodeFlag !== -1 ? parseInt(args[episodeFlag + 1], 10) : undefined;
+
         const result = await indexRag({ timeline, contentPath, arc, episode });
         console.log(JSON.stringify(result, null, 2));
       } catch (error) {
@@ -83,31 +74,35 @@ async function main() {
     }
 
     case 'rag-search': {
-      const timeline = args[0];
-      const query = args[1];
-
-      if (!timeline || !query) {
-        console.error('Usage: echoes-mcp-server rag-search <timeline> "<query>" [options]');
-        process.exit(1);
-      }
-
-      // Parse optional flags
-      const topKFlag = args.indexOf('--top-k');
-      const charactersFlag = args.indexOf('--characters');
-      const arcFlag = args.indexOf('--arc');
-      const povFlag = args.indexOf('--pov');
-      const allCharacters = args.includes('--all-characters');
-      const vectorOnly = args.includes('--vector-only');
-
-      const topK = topKFlag !== -1 ? parseInt(args[topKFlag + 1], 10) : 10;
-      const characters = charactersFlag !== -1 ? args[charactersFlag + 1].split(',') : undefined;
-      const arc = arcFlag !== -1 ? args[arcFlag + 1] : undefined;
-      const pov = povFlag !== -1 ? args[povFlag + 1] : undefined;
+      const timelineArg = args[0];
+      const query = args[1] || args[0]; // If no timeline provided, first arg is query
 
       try {
+        const { timeline } = getTimelineContext(timelineArg && args[1] ? timelineArg : undefined);
+        const actualQuery = args[1] ? query : timelineArg; // Adjust query based on args
+
+        if (!actualQuery) {
+          console.error('Usage: echoes-mcp-server rag-search "<query>" [options]');
+          console.error('   or: echoes-mcp-server rag-search <timeline> "<query>" [options]');
+          process.exit(1);
+        }
+
+        // Parse optional flags
+        const topKFlag = args.indexOf('--top-k');
+        const charactersFlag = args.indexOf('--characters');
+        const arcFlag = args.indexOf('--arc');
+        const povFlag = args.indexOf('--pov');
+        const allCharacters = args.includes('--all-characters');
+        const vectorOnly = args.includes('--vector-only');
+
+        const topK = topKFlag !== -1 ? parseInt(args[topKFlag + 1], 10) : 10;
+        const characters = charactersFlag !== -1 ? args[charactersFlag + 1].split(',') : undefined;
+        const arc = arcFlag !== -1 ? args[arcFlag + 1] : undefined;
+        const pov = povFlag !== -1 ? args[povFlag + 1] : undefined;
+
         const result = await ragSearch({
           timeline,
-          query,
+          query: actualQuery,
           topK,
           characters,
           allCharacters,
@@ -124,30 +119,34 @@ async function main() {
     }
 
     case 'rag-context': {
-      const timeline = args[0];
-      const query = args[1];
-
-      if (!timeline || !query) {
-        console.error('Usage: echoes-mcp-server rag-context <timeline> "<query>" [options]');
-        process.exit(1);
-      }
-
-      // Parse optional flags
-      const maxChaptersFlag = args.indexOf('--max-chapters');
-      const charactersFlag = args.indexOf('--characters');
-      const arcFlag = args.indexOf('--arc');
-      const povFlag = args.indexOf('--pov');
-      const allCharacters = args.includes('--all-characters');
-
-      const maxChapters = maxChaptersFlag !== -1 ? parseInt(args[maxChaptersFlag + 1], 10) : 5;
-      const characters = charactersFlag !== -1 ? args[charactersFlag + 1].split(',') : undefined;
-      const arc = arcFlag !== -1 ? args[arcFlag + 1] : undefined;
-      const pov = povFlag !== -1 ? args[povFlag + 1] : undefined;
+      const timelineArg = args[0];
+      const query = args[1] || args[0]; // If no timeline provided, first arg is query
 
       try {
+        const { timeline } = getTimelineContext(timelineArg && args[1] ? timelineArg : undefined);
+        const actualQuery = args[1] ? query : timelineArg; // Adjust query based on args
+
+        if (!actualQuery) {
+          console.error('Usage: echoes-mcp-server rag-context "<query>" [options]');
+          console.error('   or: echoes-mcp-server rag-context <timeline> "<query>" [options]');
+          process.exit(1);
+        }
+
+        // Parse optional flags
+        const maxChaptersFlag = args.indexOf('--max-chapters');
+        const charactersFlag = args.indexOf('--characters');
+        const arcFlag = args.indexOf('--arc');
+        const povFlag = args.indexOf('--pov');
+        const allCharacters = args.includes('--all-characters');
+
+        const maxChapters = maxChaptersFlag !== -1 ? parseInt(args[maxChaptersFlag + 1], 10) : 5;
+        const characters = charactersFlag !== -1 ? args[charactersFlag + 1].split(',') : undefined;
+        const arc = arcFlag !== -1 ? args[arcFlag + 1] : undefined;
+        const pov = povFlag !== -1 ? args[povFlag + 1] : undefined;
+
         const result = await ragContext({
           timeline,
-          query,
+          query: actualQuery,
           maxChapters,
           characters,
           allCharacters,
@@ -169,11 +168,21 @@ Echoes MCP Server v3.0.0
 Usage:
   echoes-mcp-server                              # Run MCP server
   echoes-mcp-server words-count <file>           # Count words in file
-  echoes-mcp-server index-tracker <timeline> <path> # Sync filesystem to database
-  echoes-mcp-server index-rag <timeline> <path>  # Index chapters into GraphRAG
-  echoes-mcp-server rag-search <timeline> "<query>" # Search chapters semantically
-  echoes-mcp-server rag-context <timeline> "<query>" # Get full chapter context for AI
+  echoes-mcp-server index-tracker [timeline] [path] # Sync filesystem to database (auto-detects from cwd)
+  echoes-mcp-server index-rag [timeline] [path]  # Index chapters into GraphRAG (auto-detects from cwd)
+  echoes-mcp-server rag-search "<query>"         # Search chapters semantically (auto-detects timeline)
+  echoes-mcp-server rag-context "<query>"        # Get full chapter context for AI (auto-detects timeline)
   echoes-mcp-server help                         # Show this help
+
+Auto-Detection:
+  Run from timeline-* directory: auto-detects timeline and content path
+  Run from .github directory: multi-timeline mode (requires explicit timeline)
+  Run from mcp-server directory: test mode
+
+Examples:
+  cd timeline-pulse && echoes-mcp-server index-tracker    # Auto-detects "pulse" timeline
+  cd timeline-pulse && echoes-mcp-server rag-search "romantic scene"
+  echoes-mcp-server rag-search pulse "romantic scene"    # Explicit timeline
 
 Options:
   --detailed                                     # Include detailed statistics (words-count)
