@@ -1,245 +1,235 @@
-# mcp-server
+# Echoes MCP Server
 
-Model Context Protocol server for AI integration with Echoes storytelling platform
+[![CI](https://github.com/echoes-io/mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/echoes-io/mcp-server/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/echoes-mcp-server)](https://pypi.org/project/echoes-mcp-server/)
+[![Python](https://img.shields.io/pypi/pyversions/echoes-mcp-server)](https://pypi.org/project/echoes-mcp-server/)
+
+Model Context Protocol server for AI integration with Echoes storytelling platform.
+
+## Features
+
+- **Narrative Knowledge Graph**: Automatically extracts characters, locations, events, and their relationships
+- **Semantic Search**: Find relevant chapters using natural language queries
+- **Entity Search**: Search for characters, locations, and events
+- **Relation Search**: Explore relationships between entities
+- **Statistics**: Aggregate word counts, POV distribution, and more
+
+## Requirements
+
+- Python 3.11-3.13 (3.14 not yet supported by spaCy)
+- ~2GB disk space for models (spaCy Italian + embeddings)
 
 ## Installation
 
-The server is distributed as an npm package and can be used without cloning the repository.
-
-### Using with MCP Clients
-
-The server can run in three modes depending on the working directory:
-
-1. **Single Timeline Mode**: Run from a `timeline-*` directory to work with that specific timeline
-2. **Multi-Timeline Mode**: Run from `.github` directory to access all timelines
-3. **Test Mode**: Run from `mcp-server` directory for development
-
-#### Single Timeline Configuration (Recommended for Kiro CLI)
-
-```json
-{
-  "mcpServers": {
-    "echoes": {
-      "command": "npx",
-      "args": ["-y", "@echoes-io/mcp-server"],
-      "cwd": "/path/to/timeline-pulse"
-    }
-  }
-}
+```bash
+pip install echoes-mcp-server
 ```
 
-#### Multi-Timeline Configuration (Legacy/CAO)
-
-```json
-{
-  "mcpServers": {
-    "echoes": {
-      "command": "npx",
-      "args": ["-y", "@echoes-io/mcp-server"],
-      "cwd": "/path/to/echoes-io/.github"
-    }
-  }
-}
-```
-
-Or install globally:
+Or with [uv](https://docs.astral.sh/uv/) (recommended):
 
 ```bash
-npm install -g @echoes-io/mcp-server
+uv add echoes-mcp-server
 ```
 
-Then configure:
+The Italian spaCy model (`it_core_news_lg`) is downloaded automatically on first use.
+
+## Usage
+
+### CLI
+
+```bash
+# Count words in a markdown file
+echoes words-count ./content/arc1/ep01/ch001.md
+
+# Index timeline content
+echoes index ./content
+
+# Get statistics
+echoes stats
+echoes stats --arc arc1 --pov Alice
+
+# Search
+echoes search "Alice meets Bob"
+echoes search "Alice" --type entities
+```
+
+### MCP Server
+
+Configure in your MCP client (e.g., Claude Desktop, Kiro CLI):
 
 ```json
 {
   "mcpServers": {
     "echoes": {
       "command": "echoes-mcp-server",
-      "cwd": "/path/to/timeline-pulse",
-      "env": {
-        "ECHOES_RAG_PROVIDER": "qwen3"
-      }
+      "cwd": "/path/to/timeline"
     }
   }
 }
 ```
 
-**Optional RAG Configuration:**
-- `ECHOES_RAG_PROVIDER`: Embedding provider (`qwen3`, `nomic-embed`, `bge-base`, `e5-large`, `e5-small`, or `gemini`). Default: `qwen3`
-- `ECHOES_GEMINI_API_KEY`: Required if using `gemini` provider
+Or with uvx (no installation required):
 
-## Execution Modes
-
-### Single Timeline Mode (Recommended)
-Run from a timeline directory to work with that specific timeline:
-```bash
-cd timeline-pulse
-npx @echoes-io/mcp-server
-# [DEBUG] Mode: single-timeline "pulse"
+```json
+{
+  "mcpServers": {
+    "echoes": {
+      "command": "uvx",
+      "args": ["echoes-mcp-server"],
+      "cwd": "/path/to/timeline"
+    }
+  }
+}
 ```
-
-**Benefits:**
-- Simpler configuration for single-timeline workflows
-- Direct access to timeline databases
-- Perfect for Kiro CLI integration
-
-### Multi-Timeline Mode (Legacy)
-Run from `.github` directory to access all timelines:
-```bash
-cd .github
-npx @echoes-io/mcp-server
-# [DEBUG] Mode: multi-timeline (scanning /path/to/echoes-io)
-```
-
-**Benefits:**
-- Manage multiple timelines simultaneously
-- Backward compatible with CAO agents
-- Timeline repositories can be private
-
-### Test Mode
-Run from `mcp-server` directory for development:
-```bash
-cd mcp-server
-npm run dev
-# [DEBUG] Mode: test from mcp-server (in-memory)
-```
-
-## Timeline Architecture
-
-Each timeline has isolated databases in its own repository:
-
-```
-echoes-io/
-  .github/              # Multi-timeline mode runs from here
-  timeline-eros/        # Private timeline repo
-    tracker.db          # Timeline-specific database
-    lancedb/            # Timeline-specific RAG vector database
-    content/...
-  timeline-other/       # Another private timeline
-    tracker.db
-    lancedb/
-    content/...
-```
-
-**Benefits:**
-- Each timeline has isolated databases in its own repository
-- Timeline repositories can be private while `.github` is public
-- No need to specify `contentPath` - auto-discovered from directory structure
-- Easy to manage access: just share/don't share specific timeline repos
-
 
 ## Available Tools
 
-All tools require a `timeline` parameter to specify which timeline to operate on.
-
-### Content Operations
-- **`words-count`** - Count words and text statistics in markdown files
-  - Input: `file` (path to markdown file)
-  
-- **`chapter-info`** - Extract chapter metadata from database
-  - Input: `arc`, `episode`, `chapter`
-  
-- **`chapter-refresh`** - Refresh chapter metadata and word counts from file
-  - Input: `file` (path to chapter file)
-  
-- **`chapter-insert`** - Insert new chapter with automatic renumbering
-  - Input: `arc`, `episode`, `after`, `pov`, `title`, optional: `summary`, `location`, `outfit`, `kink`, `file`
-  
-- **`chapter-delete`** - Delete chapter from database and optionally from filesystem
-  - Input: `arc`, `episode`, `chapter`, optional: `file` (to delete from filesystem)
-
-### Episode Operations
-- **`episode-info`** - Get episode information and list of chapters
-  - Input: `arc`, `episode`
-  
-- **`episode-update`** - Update episode metadata (description, title, slug)
-  - Input: `arc`, `episode`, optional: `description`, `title`, `slug`
-
-### Timeline Operations
-- **`timeline-sync`** - Synchronize filesystem content with database
-  - Input: `timeline` (timeline name)
-  - Note: Content path is auto-discovered from timeline directory structure
-
-### Statistics
-- **`stats`** - Get aggregate statistics with optional filters
-  - Input: `timeline`, optional: `arc`, `episode`, `pov`
-  - Output: Total words/chapters, POV distribution, arc/episode breakdown, longest/shortest chapters
-  - Examples:
-    - No filters: Overall timeline statistics
-    - `arc: "arc1"`: Statistics for specific arc
-    - `arc: "arc1", episode: 1`: Statistics for specific episode
-    - `pov: "Alice"`: Statistics for specific POV across timeline
-
-### RAG (Semantic Search)
-- **`rag-index`** - Index chapters into vector database for semantic search
-  - Input: `timeline`, optional: `arc`, `episode` (to index specific content)
-  - Output: Number of chapters indexed
-  - Note: Content path is auto-discovered from timeline directory structure
-  - Note: Automatically extracts character names using NER (Named Entity Recognition)
-  
-- **`rag-search`** - Semantic search across timeline content
-  - Input: `timeline`, `query`, optional: `arc`, `pov`, `maxResults`, `characters`, `allCharacters`
-  - Output: Relevant chapters with similarity scores, previews, and character names
-  - Character filtering:
-    - `characters`: Array of character names to filter by
-    - `allCharacters`: If true, all characters must be present (AND). If false, at least one (OR). Default: false
-  - Examples:
-    - `characters: ["Alice", "Bob"], allCharacters: true` - Find chapters where both Alice AND Bob appear
-    - `characters: ["Alice", "Bob"]` - Find chapters where Alice OR Bob appear
-  
-- **`rag-context`** - Retrieve relevant context for AI interactions
-  - Input: `timeline`, `query`, optional: `arc`, `pov`, `maxChapters`, `characters`
-  - Output: Full chapter content for AI context with character names
-  - Supports character filtering like `rag-search`
-  
-- **`rag-characters`** - Get all characters that appear in chapters with a specific character
-  - Input: `timeline`, `character` (character name)
-  - Output: List of co-occurring characters sorted alphabetically
-  - Use case: "Who does character X interact with?"
-
-### Book Generation
-- **`book-generate`** - Generate PDF book from timeline content using LaTeX
-  - Input: `timeline`, `outputPath`, optional: `episodes`, `format`
-  - Output: PDF book with Victoria Regia template
-  - Formats: `a4` (default), `a5`
-  - Requirements: pandoc, LaTeX distribution (pdflatex/xelatex/lualatex)
-  - Note: Content path is auto-discovered from timeline directory structure
+| Tool | Description |
+|------|-------------|
+| `words-count` | Count words and statistics in a markdown file |
+| `index` | Index timeline content into LanceDB |
+| `search-semantic` | Semantic search on chapters |
+| `search-entities` | Search characters, locations, events |
+| `search-relations` | Search relationships between entities |
+| `stats` | Get aggregate statistics |
 
 ## Development
 
-### Scripts
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/echoes-io/mcp-server.git
+cd mcp-server
+
+# Install uv if you haven't
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create venv with Python 3.13 (required for spaCy compatibility)
+uv venv --python 3.13
+
+# Install dependencies
+uv sync --all-extras
+
+# The spaCy model downloads automatically on first use, or install manually:
+uv pip install https://github.com/explosion/spacy-models/releases/download/it_core_news_lg-3.8.0/it_core_news_lg-3.8.0-py3-none-any.whl
+```
+
+### Commands
 
 ```bash
 # Run tests
-npm test
+uv run pytest
 
 # Run tests with coverage
-npm run test:coverage
-
-# Build
-npm run build
+uv run pytest --cov
 
 # Lint
-npm run lint
+uv run ruff check .
 
-# Fix linting issues
-npm run lint:format
+# Format
+uv run ruff format .
+
+# Type check
+uv run mypy src/
+```
+
+### Demo
+
+Test with real timeline content:
+
+```bash
+# Create symlinks to timeline repos (adjust paths as needed)
+cd demo
+ln -s ../../timeline-anima/content anima
+ln -s ../../timeline-eros/content eros
+
+# Run demo
+uv run python demo/run_demo.py
+```
+
+Example output:
+```
+============================================================
+📚 Timeline: ANIMA
+============================================================
+📖 Chapters found: 55
+📝 Total words: 199,519
+📁 Arcs: ['anima', 'matilde']
+👤 POVs: ['nic']
+
+============================================================
+📚 Timeline: EROS
+============================================================
+📖 Chapters found: 465
+📝 Total words: 733,034
+📁 Arcs: ['ale', 'ele', 'gio', 'ro', 'work']
+👤 POVs: ['Ele', 'Nic', 'ale', 'angi', 'gio', 'nic', 'ro', 'vi']
+
+============================================================
+🔍 NER Demo (Named Entity Recognition)
+============================================================
+📄 Sample: anima/ep01/ch001
+🏷️  Entities found: 33
+   LOC: Malpensa, Terminal 2
+   ORG: LinkedIn, Ryanair
+   PER: GioGio, Cristo
+```
+
+### Project Structure
+
+```
+src/echoes_mcp/
+├── __init__.py          # Package version
+├── cli.py               # CLI interface (click)
+├── server.py            # MCP server
+├── database/
+│   ├── lancedb.py       # LanceDB operations
+│   └── schemas.py       # Pydantic schemas
+├── indexer/
+│   ├── scanner.py       # Filesystem scanner
+│   ├── extractor.py     # Entity extraction (LlamaIndex)
+│   ├── embeddings.py    # Embedding models
+│   └── spacy_utils.py   # spaCy with auto-download
+└── tools/
+    ├── words_count.py   # Word counting
+    ├── stats.py         # Statistics
+    ├── search.py        # Search operations
+    └── index.py         # Indexing tool
+
+demo/
+├── run_demo.py          # Demo script
+├── anima -> ...         # Symlink to timeline-anima/content
+└── eros -> ...          # Symlink to timeline-eros/content
 ```
 
 ### Tech Stack
 
-- **Language**: TypeScript (strict mode)
-- **Testing**: Vitest (90.71% coverage, 82 tests)
-- **Linting**: Biome (0 warnings)
-- **Build**: TypeScript compiler
+| Purpose | Tool |
+|---------|------|
+| Package manager | [uv](https://docs.astral.sh/uv/) |
+| Linter/Formatter | [Ruff](https://docs.astral.sh/ruff/) |
+| Type checker | [mypy](https://mypy-lang.org/) |
+| Testing | [pytest](https://pytest.org/) |
+| Vector DB | [LanceDB](https://lancedb.com/) |
+| Embeddings | [sentence-transformers](https://sbert.net/) |
+| NER | [spaCy](https://spacy.io/) (Italian model) |
+| Knowledge Graph | [LlamaIndex](https://www.llamaindex.ai/) |
 
-### Architecture
+### Node.js Comparison
 
-- **MCP Protocol**: Standard Model Context Protocol implementation
-- **Database**: SQLite via @echoes-io/tracker (singleton pattern)
-- **Validation**: Zod schemas for type-safe inputs
-- **Testing**: Comprehensive unit and integration tests
-- **Timeline Parameter**: All tools accept timeline as a required parameter
+If you're coming from Node.js:
+
+| Node/npm | Python/uv |
+|----------|-----------|
+| `npm install` | `uv sync` |
+| `npm add pkg` | `uv add pkg` |
+| `npm run test` | `uv run pytest` |
+| `npx cmd` | `uv run cmd` |
+| `package.json` | `pyproject.toml` |
+| `node_modules/` | `.venv/` |
+| Biome | Ruff |
+| Vitest | pytest |
 
 ## License
 
