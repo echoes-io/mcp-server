@@ -22,9 +22,9 @@ def main():
             print(f"⚠️  {timeline} not found (symlink broken?)")
             continue
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"📚 Timeline: {timeline.upper()}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         # Scan chapters
         chapters = scan_content(content_path)
@@ -57,9 +57,9 @@ def main():
 
     # Test NER on a sample chapter
     if all_chapters:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("🔍 NER Demo (Named Entity Recognition)")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         nlp = get_nlp()
         content_path, ch = all_chapters[0]
