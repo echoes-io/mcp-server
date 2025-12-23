@@ -19,7 +19,11 @@ from rich.progress import (
 
 from ..database import Database
 from ..indexer.embeddings import embed_texts
-from ..indexer.extractor import extract_entities_and_relations
+from ..indexer.extractor import (
+    ENTITY_TYPE_MAP,
+    RELATION_TYPE_MAP,
+    extract_entities_and_relations,
+)
 from ..indexer.scanner import ChapterFile, scan_content
 from .words_count import count_paragraphs, count_words, strip_markdown
 
@@ -173,21 +177,88 @@ async def index_timeline(
     # Extract entities if enabled
     total_entities = 0
     total_relations = 0
+    entity_records: list[dict] = []
+    relation_records: list[dict] = []
+    entity_chapters: dict[str, list[str]] = {}  # entity_id -> chapter_ids
+
     if extract_entities and records:
         console.print("[blue]Extracting entities...[/blue]")
+        now = int(time.time())
+
         for record in records:
             try:
                 result = extract_entities_and_relations(record["content"])
-                record["entities"] = [e["name"] for e in result["entities"]]
+                arc = record["arc"]
+                chapter_id = record["id"]
+
+                # Process entities - build lookup for relation types
+                chapter_entity_ids = []
+                entity_type_lookup: dict[str, str] = {}  # name -> type
+                for e in result["entities"]:
+                    entity_type = ENTITY_TYPE_MAP.get(e["type"], e["type"])
+                    entity_id = f"{arc}:{entity_type}:{e['name']}"
+                    chapter_entity_ids.append(entity_id)
+                    entity_type_lookup[e["name"]] = entity_type
+
+                    # Track which chapters mention this entity
+                    if entity_id not in entity_chapters:
+                        entity_chapters[entity_id] = []
+                        # First time seeing this entity, create record
+                        entity_records.append(
+                            {
+                                "id": entity_id,
+                                "arc": arc,
+                                "name": e["name"],
+                                "type": entity_type,
+                                "description": e.get("description", ""),
+                                "aliases": [],
+                                "vector": [0.0] * 768,  # Placeholder, will embed later
+                                "chapters": [],  # Will populate after
+                                "chapter_count": 0,
+                                "first_appearance": chapter_id,
+                                "indexed_at": now,
+                            }
+                        )
+                    entity_chapters[entity_id].append(chapter_id)
+
+                record["entities"] = chapter_entity_ids
                 total_entities += len(result["entities"])
+
+                # Process relations
+                for r in result["relations"]:
+                    rel_type = RELATION_TYPE_MAP.get(r["type"], r["type"])
+                    source_type = entity_type_lookup.get(r["source"], "CHARACTER")
+                    target_type = entity_type_lookup.get(r["target"], "CHARACTER")
+                    source_id = f"{arc}:{source_type}:{r['source']}"
+                    target_id = f"{arc}:{target_type}:{r['target']}"
+                    rel_id = f"{arc}:{r['source']}:{rel_type}:{r['target']}"
+
+                    relation_records.append(
+                        {
+                            "id": rel_id,
+                            "arc": arc,
+                            "source_entity": source_id,
+                            "target_entity": target_id,
+                            "type": rel_type,
+                            "description": "",
+                            "weight": 1.0,
+                            "chapters": [chapter_id],
+                            "indexed_at": now,
+                        }
+                    )
                 total_relations += len(result["relations"])
-                # TODO: store relations in separate table
+
                 logger.debug(
-                    f"Chapter {record['id']}: {len(result['entities'])} entities, {len(result['relations'])} relations"
+                    f"Chapter {chapter_id}: {len(result['entities'])} entities, {len(result['relations'])} relations"
                 )
             except Exception as e:
                 logger.warning(f"Entity extraction failed for {record['id']}: {e}")
                 record["entities"] = []
+
+        # Update entity chapter lists
+        for er in entity_records:
+            er["chapters"] = entity_chapters.get(er["id"], [])
+            er["chapter_count"] = len(er["chapters"])
 
     # Count new vs updated
     indexed = sum(1 for r in records if r["file_path"] not in existing_hashes)
@@ -197,6 +268,14 @@ async def index_timeline(
     if records:
         console.print("[dim]Saving to database...[/dim]")
         db.upsert_chapters(records)
+
+    if entity_records:
+        console.print(f"[dim]Saving {len(entity_records)} entities...[/dim]")
+        db.upsert_entities(entity_records)
+
+    if relation_records:
+        console.print(f"[dim]Saving {len(relation_records)} relations...[/dim]")
+        db.upsert_relations(relation_records)
 
     # Delete removed chapters
     deleted = 0

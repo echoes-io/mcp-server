@@ -7,10 +7,10 @@ from typing import TypedDict
 
 logger = logging.getLogger(__name__)
 
-# Entity types for narrative content
+# Entity types for narrative content (Italian for LLM prompt)
 ENTITY_TYPES = ["PERSONAGGIO", "LUOGO", "EVENTO", "OGGETTO"]
 
-# Relation types for narrative content
+# Relation types for narrative content (Italian for LLM prompt)
 RELATION_TYPES = [
     "AMA",
     "ODIA",
@@ -26,6 +26,30 @@ RELATION_TYPES = [
     "POSSIEDE",
     "USA",
 ]
+
+# Mapping Italian -> English for database schema
+ENTITY_TYPE_MAP = {
+    "PERSONAGGIO": "CHARACTER",
+    "LUOGO": "LOCATION",
+    "EVENTO": "EVENT",
+    "OGGETTO": "OBJECT",
+}
+
+RELATION_TYPE_MAP = {
+    "AMA": "LOVES",
+    "ODIA": "HATES",
+    "CONOSCE": "KNOWS",
+    "PARENTE_DI": "RELATED_TO",
+    "AMICO_DI": "FRIENDS_WITH",
+    "SI_TROVA_IN": "LOCATED_IN",
+    "VIVE_A": "LIVES_IN",
+    "VA_A": "TRAVELS_TO",
+    "CAUSA": "CAUSES",
+    "PRECEDE": "HAPPENS_BEFORE",
+    "SEGUE": "HAPPENS_AFTER",
+    "POSSIEDE": "OWNS",
+    "USA": "USES",
+}
 
 
 class ExtractedEntity(TypedDict):
@@ -79,9 +103,9 @@ def _extract_with_gemini(text: str) -> ExtractionResult | None:
         return None
 
     try:
-        from llama_index.llms.google_genai import GoogleGenAI
+        from google import genai
 
-        llm = GoogleGenAI(model="gemini-3-flash-preview", api_key=api_key)
+        client = genai.Client(api_key=api_key)
 
         prompt = EXTRACTION_PROMPT.format(
             entity_types=", ".join(ENTITY_TYPES),
@@ -89,7 +113,10 @@ def _extract_with_gemini(text: str) -> ExtractionResult | None:
             text=text[:4000],  # Limit text length
         )
 
-        response = llm.complete(prompt)
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=prompt,
+        )
         response_text = response.text.strip()
 
         # Clean markdown code blocks if present
