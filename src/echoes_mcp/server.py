@@ -136,9 +136,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     try:
         match name:
             case "debug-cwd":
-                import os
-
-                cwd = os.getcwd()
+                cwd = Path.cwd()
                 return [TextContent(type="text", text=f"Server cwd: {cwd}")]
 
             case "words-count":
