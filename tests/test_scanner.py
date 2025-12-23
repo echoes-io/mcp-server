@@ -65,7 +65,7 @@ class TestExtractChapterInfo:
         assert result["arc"] == "arc1"
         assert result["episode"] == 1
         assert result["chapter"] == 1
-        assert result["pov"] == "Alice"
+        assert result["pov"] == "alice"
         assert result["title"] == "Chapter 1"
 
     def test_returns_none_for_invalid_path(self, temp_dir: Path):

@@ -75,13 +75,14 @@ def extract_chapter_info(file_path: Path, base_path: Path) -> ChapterFile | None
     ch_match = re.match(r"ep\d+-ch(\d+)", file_path.stem)
     chapter = int(ch_match.group(1)) if ch_match else metadata.get("chapter", 1)
 
-    # Get POV from metadata or filename
+    # Get POV from metadata or filename (normalized to lowercase)
     pov = metadata.get("pov", "")
     if not pov and ch_match:
         # Try to extract from filename: ep01-ch001-alice-title.md
         name_parts = file_path.stem.split("-")
         if len(name_parts) >= 3:
-            pov = name_parts[2].title()
+            pov = name_parts[2]
+    pov = pov.lower() if pov else "unknown"
 
     return ChapterFile(
         file_path=str(rel_path),
@@ -89,7 +90,7 @@ def extract_chapter_info(file_path: Path, base_path: Path) -> ChapterFile | None
         arc=arc,
         episode=episode,
         chapter=chapter,
-        pov=pov or "Unknown",
+        pov=pov,
         title=metadata.get("title", file_path.stem),
         location=metadata.get("location"),
         date=metadata.get("date"),
