@@ -41,11 +41,11 @@ async def list_tools() -> list[Tool]:
     return [
         Tool(
             name="words-count",
-            description="Count words and statistics in a markdown file",
+            description="Count words and statistics in a markdown file. IMPORTANT: Use absolute paths only.",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "file": {"type": "string", "description": "Path to markdown file"},
+                    "file": {"type": "string", "description": "Absolute path to markdown file"},
                 },
                 "required": ["file"],
             },
@@ -64,11 +64,14 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="index",
-            description="Index timeline content into LanceDB",
+            description="Index timeline content into LanceDB. IMPORTANT: Use absolute paths only.",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "content_path": {"type": "string", "description": "Path to content directory"},
+                    "content_path": {
+                        "type": "string",
+                        "description": "Absolute path to content directory",
+                    },
                     "force": {"type": "boolean", "description": "Force full re-index"},
                     "arc": {"type": "string", "description": "Index only this arc"},
                 },
@@ -124,6 +127,14 @@ async def list_tools() -> list[Tool]:
     ]
 
 
+def _require_absolute_path(path: str, param_name: str) -> Path:
+    """Validate that path is absolute and return as Path object."""
+    p = Path(path)
+    if not p.is_absolute():
+        raise ValueError(f"{param_name} must be an absolute path, got: {path}")
+    return p
+
+
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Handle tool calls."""
@@ -131,7 +142,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     try:
         match name:
             case "words-count":
-                result = words_count(arguments["file"])
+                file_path = _require_absolute_path(arguments["file"], "file")
+                result = words_count(str(file_path))
                 logger.debug(f"words-count result: {result}")
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
@@ -147,9 +159,10 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
             case "index":
-                logger.info(f"Starting index: content_path={arguments['content_path']}")
+                content_path = _require_absolute_path(arguments["content_path"], "content_path")
+                logger.info(f"Starting index: content_path={content_path}")
                 result = await index_timeline(
-                    arguments["content_path"],
+                    content_path,
                     DB_PATH,
                     force=arguments.get("force", False),
                     arc_filter=arguments.get("arc"),
