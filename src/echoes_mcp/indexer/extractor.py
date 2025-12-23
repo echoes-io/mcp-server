@@ -45,7 +45,7 @@ def setup_llm_settings() -> None:
     # For now, we'll skip LLM-based extraction and use simpler methods
 
 
-def extract_entities_simple(pov: str) -> list[dict]:
+def extract_entities_simple(arc: str, pov: str) -> list[dict]:
     """Simple entity extraction without LLM (fallback)."""
     entities = []
 
@@ -53,6 +53,8 @@ def extract_entities_simple(pov: str) -> list[dict]:
     if pov and pov != "Unknown":
         entities.append(
             {
+                "id": f"{arc}:CHARACTER:{pov}",
+                "arc": arc,
                 "name": pov,
                 "type": "CHARACTER",
                 "description": "POV character",

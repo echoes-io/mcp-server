@@ -2,7 +2,8 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from lancedb.pydantic import LanceModel, Vector
+from pydantic import Field
 
 EntityType = Literal["CHARACTER", "LOCATION", "EVENT", "OBJECT", "EMOTION"]
 
@@ -28,8 +29,11 @@ RelationType = Literal[
     "SEEKS",
 ]
 
+# Default embedding dimension (sentence-transformers paraphrase-multilingual)
+EMBEDDING_DIM = 768
 
-class ChapterRecord(BaseModel):
+
+class ChapterRecord(LanceModel):
     """Schema for chapters.lance table."""
 
     # Identification
@@ -58,24 +62,25 @@ class ChapterRecord(BaseModel):
     paragraph_count: int
 
     # RAG
-    vector: list[float] = Field(description="768-dim embedding")
+    vector: Vector(EMBEDDING_DIM)  # type: ignore[valid-type]
     entities: list[str] = Field(default_factory=list, description="Entity IDs")
 
     # Metadata
     indexed_at: int = Field(description="Unix timestamp")
 
 
-class EntityRecord(BaseModel):
+class EntityRecord(LanceModel):
     """Schema for entities.lance table."""
 
-    id: str = Field(description="Unique ID: type:name")
+    id: str = Field(description="Unique ID: arc:type:name")
+    arc: str = Field(description="Arc this entity belongs to")
     name: str
-    type: EntityType
+    type: str  # EntityType as string for LanceDB compatibility
     description: str
     aliases: list[str] = Field(default_factory=list)
 
     # RAG
-    vector: list[float] = Field(description="Embedding of name+description")
+    vector: Vector(EMBEDDING_DIM)  # type: ignore[valid-type]
 
     # References
     chapters: list[str] = Field(default_factory=list, description="Chapter IDs")
@@ -86,10 +91,11 @@ class EntityRecord(BaseModel):
     indexed_at: int
 
 
-class RelationRecord(BaseModel):
+class RelationRecord(LanceModel):
     """Schema for relations.lance table."""
 
-    id: str = Field(description="Unique ID: source:type:target")
+    id: str = Field(description="Unique ID: arc:source:type:target")
+    arc: str = Field(description="Arc this relation belongs to")
     source_entity: str = Field(description="Source entity ID")
     target_entity: str = Field(description="Target entity ID")
     type: str = Field(description="Relation type")

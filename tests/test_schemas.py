@@ -55,7 +55,8 @@ class TestEntityRecord:
 
     def test_valid_character(self):
         entity = EntityRecord(
-            id="character:alice",
+            id="bloom:CHARACTER:alice",
+            arc="bloom",
             name="Alice",
             type="CHARACTER",
             description="The protagonist",
@@ -63,21 +64,26 @@ class TestEntityRecord:
             indexed_at=1234567890,
         )
         assert entity.type == "CHARACTER"
+        assert entity.arc == "bloom"
 
     def test_invalid_type(self):
-        with pytest.raises(ValidationError):
-            EntityRecord(
-                id="invalid:test",
-                name="Test",
-                type="INVALID_TYPE",  # type: ignore
-                description="Test",
-                vector=[0.1] * 768,
-                indexed_at=1234567890,
-            )
+        # Note: type is now a plain str for LanceDB compatibility, so this test
+        # just verifies the record can be created with any type string
+        entity = EntityRecord(
+            id="bloom:CUSTOM:test",
+            arc="bloom",
+            name="Test",
+            type="CUSTOM_TYPE",
+            description="Test",
+            vector=[0.1] * 768,
+            indexed_at=1234567890,
+        )
+        assert entity.type == "CUSTOM_TYPE"
 
     def test_aliases_default_empty(self):
         entity = EntityRecord(
-            id="character:bob",
+            id="bloom:CHARACTER:bob",
+            arc="bloom",
             name="Bob",
             type="CHARACTER",
             description="A friend",
@@ -92,20 +98,23 @@ class TestRelationRecord:
 
     def test_valid_relation(self):
         relation = RelationRecord(
-            id="rel:alice:loves:bob",
-            source_entity="character:alice",
-            target_entity="character:bob",
+            id="bloom:alice:LOVES:bob",
+            arc="bloom",
+            source_entity="bloom:CHARACTER:alice",
+            target_entity="bloom:CHARACTER:bob",
             type="LOVES",
             description="Alice loves Bob",
             weight=0.9,
             indexed_at=1234567890,
         )
         assert relation.weight == 0.9
+        assert relation.arc == "bloom"
 
     def test_weight_bounds(self):
         with pytest.raises(ValidationError):
             RelationRecord(
-                id="rel:test",
+                id="bloom:a:KNOWS:b",
+                arc="bloom",
                 source_entity="a",
                 target_entity="b",
                 type="KNOWS",

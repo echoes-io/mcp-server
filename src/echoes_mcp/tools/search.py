@@ -97,6 +97,7 @@ async def search_semantic(
 async def search_entities(
     db: Database,
     query_vector: list[float] | None = None,
+    arc: str | None = None,
     name: str | None = None,
     entity_type: str | None = None,
     limit: int = 10,
@@ -107,11 +108,14 @@ async def search_entities(
     Args:
         db: Database connection
         query_vector: Query embedding for semantic search
+        arc: Filter by arc (recommended to avoid cross-arc contamination)
         name: Exact name match
         entity_type: Filter by type (CHARACTER, LOCATION, etc.)
         limit: Max results
     """
     filters: list[str] = []
+    if arc:
+        filters.append(f"arc = '{arc}'")
     if name:
         filters.append(f"name = '{name}'")
     if entity_type:
@@ -145,6 +149,7 @@ async def search_entities(
 
 async def search_relations(
     db: Database,
+    arc: str | None = None,
     entity: str | None = None,
     source: str | None = None,
     target: str | None = None,
@@ -156,6 +161,7 @@ async def search_relations(
 
     Args:
         db: Database connection
+        arc: Filter by arc (recommended to avoid cross-arc contamination)
         entity: Find all relations involving this entity
         source: Filter by source entity
         target: Filter by target entity
@@ -163,6 +169,8 @@ async def search_relations(
         limit: Max results
     """
     filters: list[str] = []
+    if arc:
+        filters.append(f"arc = '{arc}'")
     if entity:
         filters.append(f"(source_entity = '{entity}' OR target_entity = '{entity}')")
     if source:

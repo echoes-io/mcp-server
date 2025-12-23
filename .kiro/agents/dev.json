@@ -7,7 +7,7 @@
   "allowedTools": ["read", "shell", "web_search", "web_fetch", "introspect", "thinking", "code", "grep", "glob"],
   "toolsSettings": {
     "write": {
-      "allowedPaths": ["lib/**", "test/**", "*.md", "*.json", "*.ts"]
+      "allowedPaths": [".github/**", ".kiro/**", "src/**", "tests/**", "*.md", "*.toml", "*.py"]
     },
     "shell": {
       "autoAllowReadonly": true

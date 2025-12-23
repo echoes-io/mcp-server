@@ -12,7 +12,29 @@ Model Context Protocol server for AI integration with Echoes storytelling platfo
 - **Semantic Search**: Find relevant chapters using natural language queries
 - **Entity Search**: Search for characters, locations, and events
 - **Relation Search**: Explore relationships between entities
+- **Arc Isolation**: Each arc is a separate narrative universe - no cross-arc contamination
 - **Statistics**: Aggregate word counts, POV distribution, and more
+
+## Architecture
+
+### Arc Isolation
+
+Each arc in a timeline is treated as a separate narrative universe:
+
+- Entities are scoped to arcs: `bloom:CHARACTER:Alice` ≠ `work:CHARACTER:Alice`
+- Relations are internal to arcs: `bloom:Alice:LOVES:Bob`
+- Searches can be filtered by arc to avoid cross-arc contamination
+
+This is important for multi-arc timelines where the same character may have different knowledge/experiences in different arcs.
+
+### Data Model
+
+```
+Timeline (content directory)
+└── Arc (story universe)
+    └── Episode (story event)
+        └── Chapter (individual .md file)
+```
 
 ## Requirements
 
@@ -44,13 +66,26 @@ echoes words-count ./content/arc1/ep01/ch001.md
 # Index timeline content
 echoes index ./content
 
+# Index only a specific arc
+echoes index ./content --arc bloom
+
 # Get statistics
 echoes stats
 echoes stats --arc arc1 --pov Alice
 
-# Search
-echoes search "Alice meets Bob"
-echoes search "Alice" --type entities
+# Search (filters by arc to avoid cross-arc contamination)
+echoes search "primo incontro" --arc bloom
+echoes search "Alice" --type entities --arc bloom
+```
+
+### Environment Variables
+
+```bash
+# Custom embedding model (default: paraphrase-multilingual-MiniLM-L12-v2)
+export ECHOES_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+
+# HuggingFace token for gated models
+export HF_TOKEN=hf_xxx
 ```
 
 ### MCP Server
