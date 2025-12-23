@@ -74,6 +74,11 @@ async def list_tools() -> list[Tool]:
                     },
                     "force": {"type": "boolean", "description": "Force full re-index"},
                     "arc": {"type": "string", "description": "Index only this arc"},
+                    "extract_entities": {
+                        "type": "boolean",
+                        "description": "Extract entities/relations (slower but richer data)",
+                        "default": True,
+                    },
                 },
                 "required": ["content_path"],
             },
@@ -167,6 +172,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                     force=arguments.get("force", False),
                     arc_filter=arguments.get("arc"),
                     quiet=True,  # Suppress console output for MCP
+                    extract_entities=arguments.get("extract_entities", True),
                 )
                 logger.info(f"Index complete: {result}")
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]

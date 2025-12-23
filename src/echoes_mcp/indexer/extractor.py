@@ -1,100 +1,169 @@
-"""Entity and relation extraction using LlamaIndex PropertyGraphIndex."""
+"""Entity and relation extraction with Gemini (primary) or spaCy (fallback)."""
 
-from llama_index.core import Document, PropertyGraphIndex, Settings
-from llama_index.core.indices.property_graph import SchemaLLMPathExtractor
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+import json
+import logging
+import os
+from typing import TypedDict
 
-from .embeddings import DEFAULT_MODEL
+logger = logging.getLogger(__name__)
 
 # Entity types for narrative content
-ENTITY_TYPES = [
-    "PERSONAGGIO",  # Characters
-    "LUOGO",  # Locations
-    "EVENTO",  # Events
-    "OGGETTO",  # Objects
-]
+ENTITY_TYPES = ["PERSONAGGIO", "LUOGO", "EVENTO", "OGGETTO"]
 
 # Relation types for narrative content
 RELATION_TYPES = [
-    # Character relations
     "AMA",
     "ODIA",
     "CONOSCE",
     "PARENTE_DI",
     "AMICO_DI",
-    # Spatial relations
     "SI_TROVA_IN",
     "VIVE_A",
     "VA_A",
-    # Temporal/causal relations
     "CAUSA",
     "PRECEDE",
     "SEGUE",
-    # Object relations
     "POSSIEDE",
     "USA",
 ]
 
 
-def setup_llm_settings() -> None:
-    """Configure LlamaIndex settings for local/API LLM."""
-    # Use HuggingFace embeddings (local, no API needed)
-    Settings.embed_model = HuggingFaceEmbedding(model_name=DEFAULT_MODEL)
+class ExtractedEntity(TypedDict):
+    """Extracted entity."""
 
-    # LLM will be configured per-call or use default
-    # For now, we'll skip LLM-based extraction and use simpler methods
+    name: str
+    type: str
+    description: str
 
 
-def extract_entities_simple(arc: str, pov: str) -> list[dict]:
-    """Simple entity extraction without LLM (fallback)."""
-    entities = []
+class ExtractedRelation(TypedDict):
+    """Extracted relation."""
 
-    # Always add POV as character
-    if pov and pov != "Unknown":
+    source: str
+    target: str
+    type: str
+
+
+class ExtractionResult(TypedDict):
+    """Result of entity/relation extraction."""
+
+    entities: list[ExtractedEntity]
+    relations: list[ExtractedRelation]
+
+
+EXTRACTION_PROMPT = """Analizza questo testo narrativo italiano ed estrai entità e relazioni.
+
+TIPI DI ENTITÀ: {entity_types}
+TIPI DI RELAZIONI: {relation_types}
+
+TESTO:
+{text}
+
+Rispondi SOLO con JSON valido in questo formato:
+{{
+  "entities": [
+    {{"name": "Nome", "type": "PERSONAGGIO", "description": "breve descrizione"}}
+  ],
+  "relations": [
+    {{"source": "Nome1", "target": "Nome2", "type": "AMA"}}
+  ]
+}}
+
+Estrai solo entità e relazioni esplicitamente menzionate nel testo. JSON:"""
+
+
+def _extract_with_gemini(text: str) -> ExtractionResult | None:
+    """Extract entities using Gemini API."""
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        return None
+
+    try:
+        from llama_index.llms.google_genai import GoogleGenAI
+
+        llm = GoogleGenAI(model="gemini-3-flash-preview", api_key=api_key)
+
+        prompt = EXTRACTION_PROMPT.format(
+            entity_types=", ".join(ENTITY_TYPES),
+            relation_types=", ".join(RELATION_TYPES),
+            text=text[:4000],  # Limit text length
+        )
+
+        response = llm.complete(prompt)
+        response_text = response.text.strip()
+
+        # Clean markdown code blocks if present
+        if response_text.startswith("```"):
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+        response_text = response_text.strip()
+
+        result = json.loads(response_text)
+        return ExtractionResult(
+            entities=result.get("entities", []),
+            relations=result.get("relations", []),
+        )
+
+    except Exception as e:
+        logger.warning(f"Gemini extraction failed: {e}")
+        return None
+
+
+def _extract_with_spacy(text: str) -> ExtractionResult:
+    """Extract entities using spaCy NER (fallback)."""
+    from .spacy_utils import get_nlp
+
+    nlp = get_nlp()
+    doc = nlp(text[:100000])  # spaCy limit
+
+    entities: list[ExtractedEntity] = []
+    seen_names: set[str] = set()
+
+    for ent in doc.ents:
+        name = ent.text.strip()
+        if name in seen_names or len(name) < 2:
+            continue
+        seen_names.add(name)
+
+        # Map spaCy labels to our types
+        if ent.label_ == "PER":
+            entity_type = "PERSONAGGIO"
+        elif ent.label_ in ("LOC", "GPE"):
+            entity_type = "LUOGO"
+        elif ent.label_ == "ORG":
+            entity_type = "OGGETTO"  # Organizations as objects
+        else:
+            continue
+
         entities.append(
-            {
-                "id": f"{arc}:CHARACTER:{pov}",
-                "arc": arc,
-                "name": pov,
-                "type": "CHARACTER",
-                "description": "POV character",
-            }
+            ExtractedEntity(
+                name=name,
+                type=entity_type,
+                description=f"Estratto da spaCy ({ent.label_})",
+            )
         )
 
-    return entities
+    # spaCy doesn't extract relations
+    return ExtractionResult(entities=entities, relations=[])
 
 
-def create_property_graph_index(
-    documents: list[Document],
-    use_llm: bool = False,
-) -> PropertyGraphIndex:
+def extract_entities_and_relations(text: str) -> ExtractionResult:
     """
-    Create PropertyGraphIndex from documents.
+    Extract entities and relations from text.
 
-    Args:
-        documents: List of LlamaIndex documents
-        use_llm: Whether to use LLM for entity extraction (requires API key)
+    Uses Gemini if GEMINI_API_KEY is set, otherwise falls back to spaCy.
     """
-    setup_llm_settings()
+    # Try Gemini first
+    result = _extract_with_gemini(text)
+    if result is not None:
+        logger.info(
+            f"Gemini extracted {len(result['entities'])} entities, {len(result['relations'])} relations"
+        )
+        return result
 
-    if use_llm:
-        # Full extraction with LLM
-        kg_extractor = SchemaLLMPathExtractor(
-            possible_entities=ENTITY_TYPES,
-            possible_relations=RELATION_TYPES,
-            strict=False,
-        )
-        index = PropertyGraphIndex.from_documents(
-            documents,
-            kg_extractors=[kg_extractor],
-            show_progress=True,
-        )
-    else:
-        # Simple index without LLM extraction
-        index = PropertyGraphIndex.from_documents(
-            documents,
-            kg_extractors=[],  # No extractors = just embed documents
-            show_progress=True,
-        )
-
-    return index
+    # Fallback to spaCy
+    logger.info("Using spaCy fallback for entity extraction")
+    result = _extract_with_spacy(text)
+    logger.info(f"spaCy extracted {len(result['entities'])} entities")
+    return result

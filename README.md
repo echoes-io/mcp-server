@@ -86,6 +86,10 @@ export ECHOES_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 
 # HuggingFace token for gated models
 export HF_TOKEN=hf_xxx
+
+# Gemini API key for entity/relation extraction (optional)
+# Get your key at https://aistudio.google.com/apikey
+export GEMINI_API_KEY=your_api_key
 ```
 
 ### MCP Server
@@ -249,6 +253,7 @@ demo/
 | Vector DB | [LanceDB](https://lancedb.com/) |
 | Embeddings | [sentence-transformers](https://sbert.net/) |
 | NER | [spaCy](https://spacy.io/) (Italian model) |
+| Entity Extraction | [Gemini 3 Flash](https://ai.google.dev/) (primary) / spaCy (fallback) |
 | Knowledge Graph | [LlamaIndex](https://www.llamaindex.ai/) |
 
 ### Node.js Comparison

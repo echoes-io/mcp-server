@@ -1,5 +1,6 @@
 """Index tool - index timeline content into LanceDB."""
 
+import logging
 import time
 from pathlib import Path
 from typing import TypedDict
@@ -18,8 +19,11 @@ from rich.progress import (
 
 from ..database import Database
 from ..indexer.embeddings import embed_texts
+from ..indexer.extractor import extract_entities_and_relations
 from ..indexer.scanner import ChapterFile, scan_content
 from .words_count import count_paragraphs, count_words, strip_markdown
+
+logger = logging.getLogger(__name__)
 
 
 class IndexResult(TypedDict):
@@ -69,6 +73,7 @@ async def index_timeline(
     force: bool = False,
     arc_filter: str | None = None,
     quiet: bool = False,
+    extract_entities: bool = True,
 ) -> IndexResult:
     """
     Index timeline content into LanceDB.
@@ -79,6 +84,7 @@ async def index_timeline(
         force: Force full re-index (ignore hashes)
         arc_filter: Only index this arc
         quiet: Suppress console output (for MCP server)
+        extract_entities: Whether to extract entities/relations (slower but richer)
     """
     start_time = time.time()
     content_path = Path(content_path)
@@ -164,6 +170,25 @@ async def index_timeline(
         for chapter, vector in zip(to_index, vectors, strict=True):
             records.append(prepare_chapter_record(chapter, vector))
 
+    # Extract entities if enabled
+    total_entities = 0
+    total_relations = 0
+    if extract_entities and records:
+        console.print("[blue]Extracting entities...[/blue]")
+        for record in records:
+            try:
+                result = extract_entities_and_relations(record["content"])
+                record["entities"] = [e["name"] for e in result["entities"]]
+                total_entities += len(result["entities"])
+                total_relations += len(result["relations"])
+                # TODO: store relations in separate table
+                logger.debug(
+                    f"Chapter {record['id']}: {len(result['entities'])} entities, {len(result['relations'])} relations"
+                )
+            except Exception as e:
+                logger.warning(f"Entity extraction failed for {record['id']}: {e}")
+                record["entities"] = []
+
     # Count new vs updated
     indexed = sum(1 for r in records if r["file_path"] not in existing_hashes)
     updated = len(records) - indexed
@@ -182,7 +207,7 @@ async def index_timeline(
         indexed=indexed,
         updated=updated,
         deleted=deleted,
-        entities=0,  # TODO: implement entity extraction
-        relations=0,  # TODO: implement relation extraction
+        entities=total_entities,
+        relations=total_relations,
         duration_seconds=round(time.time() - start_time, 2),
     )
