@@ -40,11 +40,6 @@ async def list_tools() -> list[Tool]:
     """List available tools."""
     return [
         Tool(
-            name="debug-cwd",
-            description="Show server working directory (for debugging)",
-            inputSchema={"type": "object", "properties": {}},
-        ),
-        Tool(
             name="words-count",
             description="Count words and statistics in a markdown file",
             inputSchema={
@@ -135,10 +130,6 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     logger.info(f"Tool call: {name} with args: {arguments}")
     try:
         match name:
-            case "debug-cwd":
-                cwd = Path.cwd()
-                return [TextContent(type="text", text=f"Server cwd: {cwd}")]
-
             case "words-count":
                 result = words_count(arguments["file"])
                 logger.debug(f"words-count result: {result}")
