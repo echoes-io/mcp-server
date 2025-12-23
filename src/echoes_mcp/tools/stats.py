@@ -15,6 +15,8 @@ class StatsResult(TypedDict):
     max_words: int
     unique_povs: int
     pov_distribution: dict[str, int]
+    arcs: list[str]
+    episodes: int
     entities: dict[str, int]
     relations: int
 
@@ -50,7 +52,9 @@ async def stats(
     if filter_expr:
         query = query.where(filter_expr)
 
-    chapters: list[dict[str, Any]] = query.select(["word_count", "pov"]).limit(10000).to_list()
+    chapters: list[dict[str, Any]] = (
+        query.select(["word_count", "pov", "arc", "episode"]).limit(10000).to_list()
+    )
 
     if not chapters:
         return StatsResult(
@@ -61,6 +65,8 @@ async def stats(
             max_words=0,
             unique_povs=0,
             pov_distribution={},
+            arcs=[],
+            episodes=0,
             entities={"total": 0, "characters": 0, "locations": 0, "events": 0},
             relations=0,
         )
@@ -74,6 +80,10 @@ async def stats(
     for c in chapters:
         pov_name = c["pov"]
         pov_dist[pov_name] = pov_dist.get(pov_name, 0) + 1
+
+    # Arcs and episodes
+    arcs = sorted({c["arc"] for c in chapters})
+    episode_keys = {(c["arc"], c["episode"]) for c in chapters}
 
     # Entity stats
     entities = db.entities.search().select(["type"]).limit(10000).to_list()
@@ -94,6 +104,8 @@ async def stats(
         max_words=max(word_counts) if word_counts else 0,
         unique_povs=len(pov_dist),
         pov_distribution=pov_dist,
+        arcs=arcs,
+        episodes=len(episode_keys),
         entities=entity_counts,
         relations=len(relations),
     )

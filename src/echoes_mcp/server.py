@@ -16,7 +16,7 @@ from .tools import index_timeline, search_semantic, stats, words_count
 server = Server("echoes-mcp-server")
 
 # Database path from cwd
-DB_PATH = Path.cwd() / "lancedb"
+DB_PATH = Path.cwd() / ".lancedb"
 
 
 def get_db() -> Database:

@@ -35,7 +35,7 @@ def words_count_cmd(file_path: str) -> None:
 
 
 @cli.command("stats")
-@click.option("--db", "db_path", default="./lancedb", help="Path to LanceDB database")
+@click.option("--db", "db_path", default=".lancedb", help="Path to LanceDB database")
 @click.option("--arc", help="Filter by arc")
 @click.option("--episode", type=int, help="Filter by episode")
 @click.option("--pov", help="Filter by POV character")
@@ -75,23 +75,54 @@ def stats_cmd(db_path: str, arc: str | None, episode: int | None, pov: str | Non
 
 @cli.command("index")
 @click.argument("content_path", type=click.Path(exists=True))
-@click.option("--db", "db_path", default="./lancedb", help="Path to LanceDB database")
+@click.option("--db", "db_path", default=".lancedb", help="Path to LanceDB database")
 @click.option("--force", is_flag=True, help="Force full re-index")
 @click.option("--arc", help="Index only this arc")
 def index_cmd(content_path: str, db_path: str, force: bool, arc: str | None) -> None:
     """Index timeline content into LanceDB."""
     result = asyncio.run(index_timeline(content_path, db_path, force=force, arc_filter=arc))
 
-    console.print("\n[bold green]Indexing complete![/bold green]")
+    console.print("\n[bold green]✓ Indexing complete![/bold green]")
     console.print(f"  New: {result['indexed']}")
     console.print(f"  Updated: {result['updated']}")
     console.print(f"  Deleted: {result['deleted']}")
-    console.print(f"  Duration: {result['duration_seconds']}s")
+    console.print(f"  Duration: {result['duration_seconds']:.1f}s")
+
+    # Show summary stats if we indexed something
+    if result["indexed"] > 0 or result["updated"] > 0:
+        db = Database(db_path)
+        try:
+            summary = asyncio.run(stats(db, arc=arc))
+            console.print("\n[bold]Summary:[/bold]")
+            console.print(f"  📖 {summary['chapters']} chapters")
+            console.print(f"  📝 {summary['words']:,} words")
+
+            # Reading time (avg 200 words/min)
+            reading_mins = summary["words"] // 200
+            if reading_mins >= 60:
+                hours = reading_mins // 60
+                mins = reading_mins % 60
+                console.print(f"  ⏱️  ~{hours}h {mins}m reading time")
+            else:
+                console.print(f"  ⏱️  ~{reading_mins}m reading time")
+
+            # Arcs and episodes
+            if summary.get("arcs"):
+                console.print(f"  📁 {len(summary['arcs'])} arcs: {', '.join(summary['arcs'])}")
+            if summary.get("episodes"):
+                console.print(f"  🎬 {summary['episodes']} episodes")
+
+            # POVs
+            if summary["pov_distribution"]:
+                povs = list(summary["pov_distribution"].keys())
+                console.print(f"  👤 {len(povs)} POVs: {', '.join(povs)}")
+        except Exception:
+            pass  # Stats failed, just skip
 
 
 @cli.command("search")
 @click.argument("query")
-@click.option("--db", "db_path", default="./lancedb", help="Path to LanceDB database")
+@click.option("--db", "db_path", default=".lancedb", help="Path to LanceDB database")
 @click.option(
     "--type",
     "search_type",
@@ -134,7 +165,7 @@ def search_cmd(query: str, db_path: str, search_type: str, arc: str | None, limi
 
 
 @cli.command("serve")
-@click.option("--db", "db_path", default="./lancedb", help="Path to LanceDB database")
+@click.option("--db", "db_path", default=".lancedb", help="Path to LanceDB database")
 def serve_cmd(db_path: str) -> None:  # noqa: ARG001
     """Start the MCP server."""
     from .server import main

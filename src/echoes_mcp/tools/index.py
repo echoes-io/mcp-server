@@ -4,12 +4,24 @@ import time
 from pathlib import Path
 from typing import TypedDict
 
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 from ..database import Database
 from ..indexer.embeddings import embed_texts
 from ..indexer.scanner import ChapterFile, scan_content
 from .words_count import count_paragraphs, count_words, strip_markdown
+
+console = Console()
 
 
 class IndexResult(TypedDict):
@@ -55,7 +67,7 @@ def prepare_chapter_record(
 
 async def index_timeline(
     content_path: str | Path,
-    db_path: str | Path = "./lancedb",
+    db_path: str | Path = ".lancedb",
     force: bool = False,
     arc_filter: str | None = None,
 ) -> IndexResult:
@@ -73,15 +85,13 @@ async def index_timeline(
     db = Database(db_path)
 
     # Scan filesystem
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-    ) as progress:
-        progress.add_task("Scanning files...", total=None)
-        chapters = scan_content(content_path)
+    console.print("[dim]Scanning files...[/dim]")
+    chapters = scan_content(content_path)
 
     if arc_filter:
         chapters = [c for c in chapters if c["arc"] == arc_filter]
+
+    console.print(f"[green]Found {len(chapters)} chapters[/green]")
 
     if not chapters:
         return IndexResult(
@@ -108,6 +118,7 @@ async def index_timeline(
     deleted_paths = [p for p in existing_hashes if p not in current_paths]
 
     if not to_index and not deleted_paths:
+        console.print("[yellow]No changes detected[/yellow]")
         return IndexResult(
             indexed=0,
             updated=0,
@@ -117,21 +128,34 @@ async def index_timeline(
             duration_seconds=time.time() - start_time,
         )
 
+    console.print(f"[blue]Indexing {len(to_index)} chapters...[/blue]")
+
     # Generate embeddings for chapters to index
     records = []
     if to_index:
+        texts = [c["content"][:2000] for c in to_index]
+
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            TextColumn("ETA:"),
+            TimeRemainingColumn(),
+            console=console,
         ) as progress:
-            progress.add_task(f"Embedding {len(to_index)} chapters...", total=None)
+            task = progress.add_task("Embedding", total=len(texts))
 
-            # Prepare texts for embedding
-            texts = [c["content"][:2000] for c in to_index]  # Truncate for embedding
-            vectors = embed_texts(texts)
+            def update_progress(completed: int, _total: int) -> None:
+                progress.update(task, completed=completed)
 
-            for chapter, vector in zip(to_index, vectors, strict=True):
-                records.append(prepare_chapter_record(chapter, vector))
+            vectors = embed_texts(texts, progress_callback=update_progress)
+
+        # Prepare records
+        for chapter, vector in zip(to_index, vectors, strict=True):
+            records.append(prepare_chapter_record(chapter, vector))
 
     # Count new vs updated
     indexed = sum(1 for r in records if r["file_path"] not in existing_hashes)
@@ -139,6 +163,7 @@ async def index_timeline(
 
     # Save to database
     if records:
+        console.print("[dim]Saving to database...[/dim]")
         db.upsert_chapters(records)
 
     # Delete removed chapters
