@@ -2,6 +2,8 @@
 
 import asyncio
 import json
+import logging
+import sys
 from pathlib import Path
 
 from mcp.server import Server
@@ -12,11 +14,20 @@ from .database import Database
 from .indexer import embed_query
 from .tools import index_timeline, search_semantic, stats, words_count
 
+# Setup logging to stderr (stdout is used for MCP JSON-RPC)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    stream=sys.stderr,
+)
+logger = logging.getLogger("echoes-mcp")
+
 # Initialize server
 server = Server("echoes-mcp-server")
 
 # Database path from cwd
 DB_PATH = Path.cwd() / ".lancedb"
+logger.info(f"Server starting, cwd={Path.cwd()}, db_path={DB_PATH}")
 
 
 def get_db() -> Database:
@@ -28,6 +39,11 @@ def get_db() -> Database:
 async def list_tools() -> list[Tool]:
     """List available tools."""
     return [
+        Tool(
+            name="debug-cwd",
+            description="Show server working directory (for debugging)",
+            inputSchema={"type": "object", "properties": {}},
+        ),
         Tool(
             name="words-count",
             description="Count words and statistics in a markdown file",
@@ -116,10 +132,18 @@ async def list_tools() -> list[Tool]:
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Handle tool calls."""
+    logger.info(f"Tool call: {name} with args: {arguments}")
     try:
         match name:
+            case "debug-cwd":
+                import os
+
+                cwd = os.getcwd()
+                return [TextContent(type="text", text=f"Server cwd: {cwd}")]
+
             case "words-count":
                 result = words_count(arguments["file"])
+                logger.debug(f"words-count result: {result}")
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
             case "stats":
@@ -130,9 +154,11 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                     episode=arguments.get("episode"),
                     pov=arguments.get("pov"),
                 )
+                logger.debug(f"stats result: chapters={result['chapters']}")
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
             case "index":
+                logger.info(f"Starting index: content_path={arguments['content_path']}")
                 result = await index_timeline(
                     arguments["content_path"],
                     DB_PATH,
@@ -140,10 +166,12 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                     arc_filter=arguments.get("arc"),
                     quiet=True,  # Suppress console output for MCP
                 )
+                logger.info(f"Index complete: {result}")
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
             case "search-semantic":
                 db = get_db()
+                logger.debug(f"Embedding query: {arguments['query']}")
                 query_vector = embed_query(arguments["query"])
                 results = await search_semantic(
                     db,
@@ -153,6 +181,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                     pov=arguments.get("pov"),
                     limit=arguments.get("limit", 10),
                 )
+                logger.debug(f"search-semantic found {len(results)} results")
                 return [TextContent(type="text", text=json.dumps(results, indent=2))]
 
             case "search-entities":
@@ -164,9 +193,11 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 return [TextContent(type="text", text="Not implemented yet")]
 
             case _:
+                logger.warning(f"Unknown tool: {name}")
                 return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
     except Exception as e:
+        logger.exception(f"Error in tool {name}: {e}")
         return [TextContent(type="text", text=f"Error: {e}")]
 
 
