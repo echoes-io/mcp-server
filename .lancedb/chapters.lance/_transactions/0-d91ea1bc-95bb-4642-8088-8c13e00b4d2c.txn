@@ -1,7 +1,0 @@
-$d91ea1bc-95bb-4642-8088-8c13e00b4d2c²Ýid ÿÿÿÿÿÿÿÿÿ*string8"	file_path ÿÿÿÿÿÿÿÿÿ*string8"	file_hash ÿÿÿÿÿÿÿÿÿ*string8arc ÿÿÿÿÿÿÿÿÿ*string8episode ÿÿÿÿÿÿÿÿÿ*int648chapter ÿÿÿÿÿÿÿÿÿ*int648pov ÿÿÿÿÿÿÿÿÿ*string8title ÿÿÿÿÿÿÿÿÿ*string8#location ÿÿÿÿÿÿÿÿÿ*string08date	 ÿÿÿÿÿÿÿÿÿ*string08 content
- ÿÿÿÿÿÿÿÿÿ*string8"excerpt ÿÿÿÿÿÿÿÿÿ*string08"
-word_count ÿÿÿÿÿÿÿÿÿ*int648"
-char_count ÿÿÿÿÿÿÿÿÿ*int648'paragraph_count ÿÿÿÿÿÿÿÿÿ*int6484vector ÿÿÿÿÿÿÿÿÿ*fixed_size_list:float:76808entities ÿÿÿÿÿÿÿÿÿ*list8item *string08"
-indexed_at ÿÿÿÿÿÿÿÿÿ*int648"'
-lance.auto_cleanup.older_than14days"!
-lance.auto_cleanup.interval20
