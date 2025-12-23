@@ -21,8 +21,6 @@ from ..indexer.embeddings import embed_texts
 from ..indexer.scanner import ChapterFile, scan_content
 from .words_count import count_paragraphs, count_words, strip_markdown
 
-console = Console()
-
 
 class IndexResult(TypedDict):
     """Result of index operation."""
@@ -70,6 +68,7 @@ async def index_timeline(
     db_path: str | Path = ".lancedb",
     force: bool = False,
     arc_filter: str | None = None,
+    quiet: bool = False,
 ) -> IndexResult:
     """
     Index timeline content into LanceDB.
@@ -79,10 +78,14 @@ async def index_timeline(
         db_path: Path to LanceDB database
         force: Force full re-index (ignore hashes)
         arc_filter: Only index this arc
+        quiet: Suppress console output (for MCP server)
     """
     start_time = time.time()
     content_path = Path(content_path)
     db = Database(db_path)
+
+    # Console output only if not quiet
+    console = Console(quiet=quiet)
 
     # Scan filesystem
     console.print("[dim]Scanning files...[/dim]")
@@ -135,23 +138,27 @@ async def index_timeline(
     if to_index:
         texts = [c["content"][:2000] for c in to_index]
 
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TaskProgressColumn(),
-            MofNCompleteColumn(),
-            TimeElapsedColumn(),
-            TextColumn("ETA:"),
-            TimeRemainingColumn(),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Embedding", total=len(texts))
+        if quiet:
+            # No progress bar for MCP server
+            vectors = embed_texts(texts)
+        else:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TaskProgressColumn(),
+                MofNCompleteColumn(),
+                TimeElapsedColumn(),
+                TextColumn("ETA:"),
+                TimeRemainingColumn(),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Embedding", total=len(texts))
 
-            def update_progress(completed: int, _total: int) -> None:
-                progress.update(task, completed=completed)
+                def update_progress(completed: int, _total: int) -> None:
+                    progress.update(task, completed=completed)
 
-            vectors = embed_texts(texts, progress_callback=update_progress)
+                vectors = embed_texts(texts, progress_callback=update_progress)
 
         # Prepare records
         for chapter, vector in zip(to_index, vectors, strict=True):

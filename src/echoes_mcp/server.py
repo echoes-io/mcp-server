@@ -138,6 +138,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                     DB_PATH,
                     force=arguments.get("force", False),
                     arc_filter=arguments.get("arc"),
+                    quiet=True,  # Suppress console output for MCP
                 )
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
