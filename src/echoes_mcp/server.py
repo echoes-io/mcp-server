@@ -13,7 +13,14 @@ from mcp.types import GetPromptResult, Prompt, PromptArgument, PromptMessage, Te
 from .database import Database
 from .indexer import embed_query
 from .prompts import get_prompt, list_prompts
-from .tools import index_timeline, search_semantic, stats, words_count
+from .tools import (
+    index_timeline,
+    search_entities,
+    search_relations,
+    search_semantic,
+    stats,
+    words_count,
+)
 
 # Setup logging to stderr (stdout is used for MCP JSON-RPC)
 logging.basicConfig(
@@ -196,12 +203,34 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 return [TextContent(type="text", text=json.dumps(results, indent=2))]
 
             case "search-entities":
-                # TODO: Implement with embeddings
-                return [TextContent(type="text", text="Not implemented yet")]
+                db = get_db()
+                query_vector = None
+                if arguments.get("query"):
+                    query_vector = embed_query(arguments["query"])
+                results = await search_entities(
+                    db,
+                    query_vector=query_vector,
+                    arc=arguments.get("arc"),
+                    name=arguments.get("name"),
+                    entity_type=arguments.get("type"),
+                    limit=arguments.get("limit", 10),
+                )
+                logger.debug(f"search-entities found {len(results)} results")
+                return [TextContent(type="text", text=json.dumps(results, indent=2))]
 
             case "search-relations":
-                # TODO: Implement
-                return [TextContent(type="text", text="Not implemented yet")]
+                db = get_db()
+                results = await search_relations(
+                    db,
+                    arc=arguments.get("arc"),
+                    entity=arguments.get("entity"),
+                    source=arguments.get("source"),
+                    target=arguments.get("target"),
+                    relation_type=arguments.get("type"),
+                    limit=arguments.get("limit", 10),
+                )
+                logger.debug(f"search-relations found {len(results)} results")
+                return [TextContent(type="text", text=json.dumps(results, indent=2))]
 
             case _:
                 logger.warning(f"Unknown tool: {name}")
