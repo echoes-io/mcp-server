@@ -30,7 +30,8 @@ class Database:
 
     def _get_or_create_table(self, name: str, schema: type) -> Table:
         """Get existing table or create new one with schema."""
-        if name in self.db.table_names():
+        existing = self.db.list_tables().tables
+        if name in existing:
             return self.db.open_table(name)
         return self.db.create_table(name, schema=schema)
 
