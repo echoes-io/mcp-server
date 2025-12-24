@@ -90,64 +90,8 @@ class TestGetPrompt:
     """Tests for get_prompt."""
 
     @pytest.fixture
-    def content_with_arc(self):
-        """Create content dir with an arc."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            content = Path(tmpdir) / "content"
-            (content / "work").mkdir(parents=True)
-            yield content
-
-    def test_missing_github_repo(self, content_with_arc):
-        """Test error when .github repo not found."""
-        with (
-            patch.object(Path, "exists", return_value=False),
-            patch(
-                "echoes_mcp.prompts.handlers.validate_github_repo",
-                return_value={"exists": False, "path": "/fake/.github/.kiro/prompts"},
-            ),
-        ):
-            result = get_prompt(
-                "new-chapter", {"arc": "work", "chapter": "1"}, "test", content_with_arc
-            )
-            text = result["messages"][0]["content"]["text"]
-            assert "Error" in text
-            assert ".github" in text
-
-    def test_invalid_arc(self, content_with_arc):
-        """Test error for non-existent arc."""
-        result = get_prompt(
-            "new-chapter", {"arc": "nonexistent", "chapter": "1"}, "test", content_with_arc
-        )
-        text = result["messages"][0]["content"]["text"]
-        assert "Error" in text
-        assert "nonexistent" in text
-        assert "not found" in text
-
-    def test_invalid_chapter_number(self, content_with_arc):
-        """Test error for non-numeric chapter."""
-        result = get_prompt(
-            "new-chapter", {"arc": "work", "chapter": "abc"}, "test", content_with_arc
-        )
-        text = result["messages"][0]["content"]["text"]
-        assert "Error" in text
-        assert "must be a number" in text
-
-    def test_new_arc_already_exists(self, content_with_arc):
-        """Test error when creating arc that exists."""
-        result = get_prompt("new-arc", {"name": "work"}, "test", content_with_arc)
-        text = result["messages"][0]["content"]["text"]
-        assert "Error" in text
-        assert "already exists" in text
-
-    def test_missing_required_arg(self, content_with_arc):
-        """Test error for missing required argument."""
-        result = get_prompt("new-chapter", {"arc": "work"}, "test", content_with_arc)
-        text = result["messages"][0]["content"]["text"]
-        assert "Error" in text
-        assert "Missing" in text
-
-    def test_successful_prompt_loading(self):
-        """Test successful prompt loading with mocked .github."""
+    def mock_github_and_content(self):
+        """Create content dir with arc and mock .github prompts."""
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create content with arc
             content = Path(tmpdir) / "content"
@@ -157,20 +101,99 @@ class TestGetPrompt:
             github_prompts = Path(tmpdir) / ".github" / ".kiro" / "prompts"
             github_prompts.mkdir(parents=True)
             (github_prompts / "new-chapter.md").write_text(
-                "# Test Prompt\n\nArc: {ARC}, Chapter: {CHAPTER}, Timeline: {TIMELINE}"
+                "# New Chapter\n\nArc: {ARC}, Chapter: {CHAPTER}, Timeline: {TIMELINE}"
             )
+            (github_prompts / "new-arc.md").write_text(
+                "# New Arc\n\nName: {NAME}, Timeline: {TIMELINE}"
+            )
+
+            yield content, str(github_prompts)
+
+    def test_missing_github_repo(self):
+        """Test error when .github repo not found."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            content = Path(tmpdir) / "content"
+            (content / "work").mkdir(parents=True)
 
             with patch(
                 "echoes_mcp.prompts.handlers.validate_github_repo",
-                return_value={"exists": True, "path": str(github_prompts)},
+                return_value={"exists": False, "path": "/fake/.github/.kiro/prompts"},
             ):
-                result = get_prompt(
-                    "new-chapter", {"arc": "work", "chapter": "1"}, "test-timeline", content
-                )
+                result = get_prompt("new-chapter", {"arc": "work", "chapter": "1"}, "test", content)
                 text = result["messages"][0]["content"]["text"]
+                assert "Error" in text
+                assert ".github" in text
 
-                # Check placeholders were substituted
-                assert "Arc: work" in text
-                assert "Chapter: 1" in text
-                assert "Timeline: test-timeline" in text
-                assert "{ARC}" not in text  # Placeholder should be replaced
+    def test_invalid_arc(self, mock_github_and_content):
+        """Test error for non-existent arc."""
+        content, github_path = mock_github_and_content
+
+        with patch(
+            "echoes_mcp.prompts.handlers.validate_github_repo",
+            return_value={"exists": True, "path": github_path},
+        ):
+            result = get_prompt(
+                "new-chapter", {"arc": "nonexistent", "chapter": "1"}, "test", content
+            )
+            text = result["messages"][0]["content"]["text"]
+            assert "Error" in text
+            assert "nonexistent" in text
+            assert "not found" in text
+
+    def test_invalid_chapter_number(self, mock_github_and_content):
+        """Test error for non-numeric chapter."""
+        content, github_path = mock_github_and_content
+
+        with patch(
+            "echoes_mcp.prompts.handlers.validate_github_repo",
+            return_value={"exists": True, "path": github_path},
+        ):
+            result = get_prompt("new-chapter", {"arc": "work", "chapter": "abc"}, "test", content)
+            text = result["messages"][0]["content"]["text"]
+            assert "Error" in text
+            assert "must be a number" in text
+
+    def test_new_arc_already_exists(self, mock_github_and_content):
+        """Test error when creating arc that exists."""
+        content, github_path = mock_github_and_content
+
+        with patch(
+            "echoes_mcp.prompts.handlers.validate_github_repo",
+            return_value={"exists": True, "path": github_path},
+        ):
+            result = get_prompt("new-arc", {"name": "work"}, "test", content)
+            text = result["messages"][0]["content"]["text"]
+            assert "Error" in text
+            assert "already exists" in text
+
+    def test_missing_required_arg(self, mock_github_and_content):
+        """Test error for missing required argument."""
+        content, github_path = mock_github_and_content
+
+        with patch(
+            "echoes_mcp.prompts.handlers.validate_github_repo",
+            return_value={"exists": True, "path": github_path},
+        ):
+            result = get_prompt("new-chapter", {"arc": "work"}, "test", content)
+            text = result["messages"][0]["content"]["text"]
+            assert "Error" in text
+            assert "Missing" in text
+
+    def test_successful_prompt_loading(self, mock_github_and_content):
+        """Test successful prompt loading."""
+        content, github_path = mock_github_and_content
+
+        with patch(
+            "echoes_mcp.prompts.handlers.validate_github_repo",
+            return_value={"exists": True, "path": github_path},
+        ):
+            result = get_prompt(
+                "new-chapter", {"arc": "work", "chapter": "1"}, "test-timeline", content
+            )
+            text = result["messages"][0]["content"]["text"]
+
+            # Check placeholders were substituted
+            assert "Arc: work" in text
+            assert "Chapter: 1" in text
+            assert "Timeline: test-timeline" in text
+            assert "{ARC}" not in text
