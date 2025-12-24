@@ -53,7 +53,7 @@ def substitute_placeholders(
         if not validate_arc_exists(arc, content_path):
             available = get_available_arcs(content_path)
             raise ValueError(
-                f'Arc "{arc}" not found.\n' f"Available arcs: {', '.join(available) or 'none'}"
+                f'Arc "{arc}" not found.\nAvailable arcs: {", ".join(available) or "none"}'
             )
 
         # Validate chapter is a number
@@ -88,7 +88,7 @@ def substitute_placeholders(
         if not validate_arc_exists(arc, content_path):
             available = get_available_arcs(content_path)
             raise ValueError(
-                f'Arc "{arc}" not found.\n' f"Available arcs: {', '.join(available) or 'none'}"
+                f'Arc "{arc}" not found.\nAvailable arcs: {", ".join(available) or "none"}'
             )
 
         if not validate_is_number(episode):
