@@ -90,12 +90,22 @@ async def index_timeline(
         quiet: Suppress console output (for MCP server)
         extract_entities: Whether to extract entities/relations (slower but richer)
     """
+    from .. import __version__
+
     start_time = time.time()
     content_path = Path(content_path)
     db = Database(db_path)
 
     # Console output only if not quiet
     console = Console(quiet=quiet)
+
+    # Check if version changed - auto-force reindex
+    indexed_version = db.get_indexed_version()
+    if indexed_version and indexed_version != __version__ and not force:
+        console.print(
+            f"[yellow]Version changed ({indexed_version} → {__version__}), forcing re-index[/yellow]"
+        )
+        force = True
 
     # Scan filesystem
     console.print("[dim]Scanning files...[/dim]")
@@ -281,6 +291,10 @@ async def index_timeline(
     deleted = 0
     if deleted_paths:
         deleted = db.delete_chapters_by_paths(deleted_paths)
+
+    # Save version after successful indexing
+    if records or deleted_paths:
+        db.set_indexed_version(__version__)
 
     return IndexResult(
         indexed=indexed,

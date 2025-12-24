@@ -1,6 +1,7 @@
 """LanceDB database connection and operations."""
 
 import contextlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,7 @@ from .schemas import ChapterRecord, EntityRecord, RelationRecord
 CHAPTERS_TABLE = "chapters"
 ENTITIES_TABLE = "entities"
 RELATIONS_TABLE = "relations"
+METADATA_FILE = "metadata.json"
 
 
 class Database:
@@ -106,3 +108,20 @@ class Database:
     def close(self) -> None:
         """Close database connection."""
         self._db = None
+
+    def get_indexed_version(self) -> str | None:
+        """Get the version used for last indexing."""
+        metadata_path = self.db_path / METADATA_FILE
+        if not metadata_path.exists():
+            return None
+        try:
+            data = json.loads(metadata_path.read_text())
+            return data.get("indexed_version")
+        except Exception:
+            return None
+
+    def set_indexed_version(self, version: str) -> None:
+        """Set the version used for indexing."""
+        metadata_path = self.db_path / METADATA_FILE
+        self.db_path.mkdir(parents=True, exist_ok=True)
+        metadata_path.write_text(json.dumps({"indexed_version": version}))
