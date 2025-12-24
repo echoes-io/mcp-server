@@ -59,6 +59,13 @@ PROMPTS = [
             {"name": "name", "description": "Arc name (lowercase, no spaces)", "required": True},
         ],
     },
+    {
+        "name": "revise-arc",
+        "description": "Review and fix an entire arc (documentation, word counts, narrative quality)",
+        "arguments": [
+            {"name": "arc", "description": "Arc name to revise", "required": True},
+        ],
+    },
 ]
 
 

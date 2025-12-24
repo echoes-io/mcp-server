@@ -145,6 +145,7 @@ The server provides dynamic prompts that load templates from `../.github/.kiro/p
 | `new-character` | name | Create a new character sheet |
 | `new-episode` | arc, episode | Create a new episode outline |
 | `new-arc` | name | Create a new story arc |
+| `revise-arc` | arc | Review and fix an entire arc |
 
 Prompts support placeholder substitution (`{ARC}`, `{CHAPTER}`, `{TIMELINE}`, etc.) and validate arguments (e.g., arc must exist, chapter must be a number).
 

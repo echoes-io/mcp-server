@@ -21,7 +21,7 @@ class TestListPrompts:
     def test_returns_all_prompts(self):
         result = list_prompts()
         assert "prompts" in result
-        assert len(result["prompts"]) == 6
+        assert len(result["prompts"]) == 7
 
     def test_prompt_names(self):
         result = list_prompts()
@@ -32,6 +32,7 @@ class TestListPrompts:
         assert "new-character" in names
         assert "new-episode" in names
         assert "new-arc" in names
+        assert "revise-arc" in names
 
     def test_prompts_have_arguments(self):
         result = list_prompts()

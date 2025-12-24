@@ -99,6 +99,17 @@ def substitute_placeholders(
         if not name:
             raise ValueError("Missing required argument: name")
 
+    if prompt_name == "revise-arc":
+        arc = args.get("arc")
+        if not arc:
+            raise ValueError("Missing required argument: arc")
+
+        if not validate_arc_exists(arc, content_path):
+            available = get_available_arcs(content_path)
+            raise ValueError(
+                f'Arc "{arc}" not found.\nAvailable arcs: {", ".join(available) or "none"}'
+            )
+
     # Replace all placeholders
     result = template
     for key, value in replacements.items():
