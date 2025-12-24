@@ -8,10 +8,11 @@ from pathlib import Path
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from mcp.types import GetPromptResult, Prompt, PromptArgument, PromptMessage, TextContent, Tool
 
 from .database import Database
 from .indexer import embed_query
+from .prompts import get_prompt, list_prompts
 from .tools import index_timeline, search_semantic, stats, words_count
 
 # Setup logging to stderr (stdout is used for MCP JSON-RPC)
@@ -27,7 +28,9 @@ server = Server("echoes-mcp-server")
 
 # Database path from cwd
 DB_PATH = Path.cwd() / ".lancedb"
-logger.info(f"Server starting, cwd={Path.cwd()}, db_path={DB_PATH}")
+CONTENT_PATH = Path.cwd() / "content"
+TIMELINE = Path.cwd().name  # Use directory name as timeline name
+logger.info(f"Server starting, cwd={Path.cwd()}, db_path={DB_PATH}, timeline={TIMELINE}")
 
 
 def get_db() -> Database:
@@ -213,6 +216,48 @@ async def run_server() -> None:
     """Run the MCP server with stdio transport."""
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())
+
+
+@server.list_prompts()
+async def handle_list_prompts() -> list[Prompt]:
+    """List available prompts."""
+    prompts_data = list_prompts()
+    return [
+        Prompt(
+            name=p["name"],
+            description=p["description"],
+            arguments=[
+                PromptArgument(
+                    name=arg["name"],
+                    description=arg["description"],
+                    required=arg["required"],
+                )
+                for arg in p["arguments"]
+            ],
+        )
+        for p in prompts_data["prompts"]
+    ]
+
+
+@server.get_prompt()
+async def handle_get_prompt(name: str, arguments: dict[str, str] | None) -> GetPromptResult:
+    """Get a prompt by name with substituted placeholders."""
+    logger.info(f"Get prompt: {name} with args: {arguments}")
+    result = get_prompt(
+        name=name,
+        args=arguments or {},
+        timeline=TIMELINE,
+        content_path=CONTENT_PATH,
+    )
+    return GetPromptResult(
+        messages=[
+            PromptMessage(
+                role=msg["role"],
+                content=TextContent(type="text", text=msg["content"]["text"]),
+            )
+            for msg in result["messages"]
+        ]
+    )
 
 
 def main() -> None:

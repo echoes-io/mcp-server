@@ -14,6 +14,7 @@ Model Context Protocol server for AI integration with Echoes storytelling platfo
 - **Relation Search**: Explore relationships between entities
 - **Arc Isolation**: Each arc is a separate narrative universe - no cross-arc contamination
 - **Statistics**: Aggregate word counts, POV distribution, and more
+- **Dynamic Prompts**: Reusable prompt templates with placeholder substitution
 
 ## Architecture
 
@@ -132,6 +133,21 @@ Or with uvx (no installation required):
 | `search-relations` | Search relationships between entities |
 | `stats` | Get aggregate statistics |
 
+## Available Prompts
+
+The server provides dynamic prompts that load templates from `../.github/.kiro/prompts/` and optionally append timeline-specific overrides from `./.kiro/prompts/`.
+
+| Prompt | Arguments | Description |
+|--------|-----------|-------------|
+| `new-chapter` | arc, chapter | Create a new chapter for a timeline arc |
+| `revise-chapter` | arc, chapter | Revise an existing chapter |
+| `expand-chapter` | arc, chapter, target | Expand a chapter to target word count |
+| `new-character` | name | Create a new character sheet |
+| `new-episode` | arc, episode | Create a new episode outline |
+| `new-arc` | name | Create a new story arc |
+
+Prompts support placeholder substitution (`{ARC}`, `{CHAPTER}`, `{TIMELINE}`, etc.) and validate arguments (e.g., arc must exist, chapter must be a number).
+
 ## Development
 
 ### Setup
@@ -227,9 +243,13 @@ src/echoes_mcp/
 │   └── schemas.py       # Pydantic schemas
 ├── indexer/
 │   ├── scanner.py       # Filesystem scanner
-│   ├── extractor.py     # Entity extraction (LlamaIndex)
+│   ├── extractor.py     # Entity extraction (Gemini/spaCy)
 │   ├── embeddings.py    # Embedding models
 │   └── spacy_utils.py   # spaCy with auto-download
+├── prompts/
+│   ├── handlers.py      # Prompt loading and MCP integration
+│   ├── substitution.py  # Placeholder replacement
+│   └── validation.py    # Arc/argument validation
 └── tools/
     ├── words_count.py   # Word counting
     ├── stats.py         # Statistics
