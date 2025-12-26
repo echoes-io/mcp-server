@@ -10,6 +10,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import GetPromptResult, Prompt, PromptArgument, PromptMessage, TextContent, Tool
 
+from . import __version__
 from .database import Database
 from .indexer import embed_query
 from .prompts import get_prompt, list_prompts
@@ -49,6 +50,15 @@ def get_db() -> Database:
 async def list_tools() -> list[Tool]:
     """List available tools."""
     return [
+        Tool(
+            name="version",
+            description="Get the current version of echoes-mcp-server",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        ),
         Tool(
             name="words-count",
             description="Count words and statistics in a markdown file. IMPORTANT: Use absolute paths only.",
@@ -156,6 +166,10 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     logger.info(f"Tool call: {name} with args: {arguments}")
     try:
         match name:
+            case "version":
+                result = {"version": __version__, "package": "echoes-mcp-server"}
+                return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
             case "words-count":
                 file_path = _require_absolute_path(arguments["file"], "file")
                 result = words_count(str(file_path))
