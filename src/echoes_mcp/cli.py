@@ -6,7 +6,8 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from .. import __version__
+from echoes_mcp import __version__
+
 from .database import Database
 from .tools import index_timeline, stats, words_count
 
