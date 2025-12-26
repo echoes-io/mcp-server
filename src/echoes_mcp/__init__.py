@@ -1,4 +1,4 @@
 """Echoes MCP Server - Narrative Knowledge Graph for storytelling."""
 
-__version__ = "5.7.1"
+__version__ = "5.8.0"
 __all__ = ["__version__"]
