@@ -1,6 +1,6 @@
 [project]
 name = "echoes-mcp-server"
-version = "5.8.0"
+version = "5.8.1"
 description = "MCP server for Echoes storytelling platform with Narrative Knowledge Graph"
 readme = "README.md"
 license = {text = "MIT"}
