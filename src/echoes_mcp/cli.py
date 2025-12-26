@@ -6,6 +6,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from .. import __version__
 from .database import Database
 from .tools import index_timeline, stats, words_count
 
@@ -13,7 +14,7 @@ console = Console()
 
 
 @click.group()
-@click.version_option()
+@click.version_option(version=__version__, prog_name="echoes")
 def cli() -> None:
     """Echoes MCP Server - Narrative Knowledge Graph for storytelling."""
     pass

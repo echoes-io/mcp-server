@@ -121,7 +121,7 @@ Content.
             # Second index without changes - should be 0 since no migration needed
             # Create a fake metadata file to avoid migration
             metadata_path = db_path / "metadata.json"
-            metadata_path.write_text('{"version": "5.7.0"}')
+            metadata_path.write_text('{"version": "5.7.1"}')
 
             result2 = await index_timeline(content, db_path, quiet=True, extract_entities=False)
             assert result2["indexed"] == 0
