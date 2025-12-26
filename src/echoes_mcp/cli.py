@@ -80,7 +80,7 @@ def stats_cmd(db_path: str, arc: str | None, episode: int | None, pov: str | Non
 @click.option("--arc", help="Index only this arc")
 def index_cmd(content_path: str, db_path: str, force: bool, arc: str | None) -> None:
     """Index timeline content into LanceDB."""
-    from ..indexer.spacy_utils import SPACY_MODEL, SPACY_MODEL_URL, check_spacy_model
+    from echoes_mcp.indexer.spacy_utils import SPACY_MODEL, SPACY_MODEL_URL, check_spacy_model
 
     # Check spaCy model availability early
     if not check_spacy_model():
