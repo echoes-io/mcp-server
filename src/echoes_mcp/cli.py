@@ -80,6 +80,15 @@ def stats_cmd(db_path: str, arc: str | None, episode: int | None, pov: str | Non
 @click.option("--arc", help="Index only this arc")
 def index_cmd(content_path: str, db_path: str, force: bool, arc: str | None) -> None:
     """Index timeline content into LanceDB."""
+    from ..indexer.spacy_utils import SPACY_MODEL, SPACY_MODEL_URL, check_spacy_model
+
+    # Check spaCy model availability early
+    if not check_spacy_model():
+        console.print(f"[red]❌ spaCy model '{SPACY_MODEL}' not found![/red]")
+        console.print("[yellow]Please install it manually:[/yellow]")
+        console.print(f"   pip install {SPACY_MODEL_URL}")
+        raise click.Abort()
+
     result = asyncio.run(index_timeline(content_path, db_path, force=force, arc_filter=arc))
 
     console.print("\n[bold green]✓ Indexing complete![/bold green]")

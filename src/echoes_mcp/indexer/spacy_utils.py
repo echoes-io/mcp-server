@@ -39,3 +39,12 @@ def get_nlp() -> Language:
             raise RuntimeError(f"spaCy model '{SPACY_MODEL}' not available") from None
 
     return _nlp
+
+
+def check_spacy_model() -> bool:
+    """Check if spaCy model is available without trying to download."""
+    try:
+        spacy.load(SPACY_MODEL)
+        return True
+    except OSError:
+        return False
