@@ -65,7 +65,7 @@ class TestIndexTimeline:
         with tempfile.TemporaryDirectory() as tmpdir:
             content = Path(tmpdir) / "content"
             content.mkdir()
-            db_path = Path(tmpdir) / ".lancedb"
+            db_path = Path(tmpdir) / "db"
 
             result = await index_timeline(content, db_path, quiet=True, extract_entities=False)
 
@@ -89,7 +89,7 @@ title: Test Chapter
 This is test content.
 """)
 
-            db_path = Path(tmpdir) / ".lancedb"
+            db_path = Path(tmpdir) / "db"
 
             result = await index_timeline(content, db_path, quiet=True, extract_entities=False)
 
@@ -112,13 +112,17 @@ title: Test
 Content.
 """)
 
-            db_path = Path(tmpdir) / ".lancedb"
+            db_path = Path(tmpdir) / "db"
 
             # First index
             result1 = await index_timeline(content, db_path, quiet=True, extract_entities=False)
             assert result1["indexed"] == 1
 
-            # Second index without changes
+            # Second index without changes - should be 0 since no migration needed
+            # Create a fake metadata file to avoid migration
+            metadata_path = db_path / "metadata.json"
+            metadata_path.write_text('{"version": "5.5.1"}')
+
             result2 = await index_timeline(content, db_path, quiet=True, extract_entities=False)
             assert result2["indexed"] == 0
             assert result2["updated"] == 0
@@ -152,7 +156,7 @@ title: Test
 Content.
 """)
 
-            db_path = Path(tmpdir) / ".lancedb"
+            db_path = Path(tmpdir) / "db"
 
             # First index
             await index_timeline(content, db_path, quiet=True, extract_entities=False)
@@ -181,7 +185,7 @@ title: {arc} Chapter
 Content for {arc}.
 """)
 
-            db_path = Path(tmpdir) / ".lancedb"
+            db_path = Path(tmpdir) / "db"
 
             # Index only arc1
             result = await index_timeline(

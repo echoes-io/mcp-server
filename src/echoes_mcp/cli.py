@@ -35,7 +35,7 @@ def words_count_cmd(file_path: str) -> None:
 
 
 @cli.command("stats")
-@click.option("--db", "db_path", default=".lancedb", help="Path to LanceDB database")
+@click.option("--db", "db_path", default="db", help="Path to LanceDB database")
 @click.option("--arc", help="Filter by arc")
 @click.option("--episode", type=int, help="Filter by episode")
 @click.option("--pov", help="Filter by POV character")
@@ -75,7 +75,7 @@ def stats_cmd(db_path: str, arc: str | None, episode: int | None, pov: str | Non
 
 @cli.command("index")
 @click.argument("content_path", type=click.Path(exists=True))
-@click.option("--db", "db_path", default=".lancedb", help="Path to LanceDB database")
+@click.option("--db", "db_path", default="db", help="Path to LanceDB database")
 @click.option("--force", is_flag=True, help="Force full re-index")
 @click.option("--arc", help="Index only this arc")
 def index_cmd(content_path: str, db_path: str, force: bool, arc: str | None) -> None:
@@ -122,7 +122,7 @@ def index_cmd(content_path: str, db_path: str, force: bool, arc: str | None) -> 
 
 @cli.command("search")
 @click.argument("query")
-@click.option("--db", "db_path", default=".lancedb", help="Path to LanceDB database")
+@click.option("--db", "db_path", default="db", help="Path to LanceDB database")
 @click.option(
     "--type",
     "search_type",
@@ -165,7 +165,7 @@ def search_cmd(query: str, db_path: str, search_type: str, arc: str | None, limi
 
 
 @cli.command("serve")
-@click.option("--db", "db_path", default=".lancedb", help="Path to LanceDB database")
+@click.option("--db", "db_path", default="db", help="Path to LanceDB database")
 def serve_cmd(db_path: str) -> None:  # noqa: ARG001
     """Start the MCP server."""
     from .server import main

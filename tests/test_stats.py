@@ -13,7 +13,7 @@ from echoes_mcp.tools.stats import stats
 def db_with_chapters():
     """Create a database with test chapters."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        db = Database(Path(tmpdir) / ".lancedb")
+        db = Database(Path(tmpdir) / "db")
 
         db.upsert_chapters(
             [

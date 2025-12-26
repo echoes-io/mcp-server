@@ -13,7 +13,7 @@ from echoes_mcp.tools.search import search_entities, search_relations, search_se
 def db_with_data():
     """Create a database with test data."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        db = Database(Path(tmpdir) / ".lancedb")
+        db = Database(Path(tmpdir) / "db")
 
         # Insert test chapters
         db.upsert_chapters(

@@ -26,11 +26,16 @@ def get_nlp() -> Language:
         _nlp = spacy.load(SPACY_MODEL)
     except OSError:
         print(f"📥 Downloading spaCy model '{SPACY_MODEL}'...")
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", SPACY_MODEL_URL],
-            stdout=subprocess.DEVNULL,
-        )
-        _nlp = spacy.load(SPACY_MODEL)
-        print(f"✓ Model '{SPACY_MODEL}' installed")
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", SPACY_MODEL_URL],
+                stdout=subprocess.DEVNULL,
+            )
+            _nlp = spacy.load(SPACY_MODEL)
+            print(f"✓ Model '{SPACY_MODEL}' installed")
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("❌ Failed to install spaCy model. Please install manually:")
+            print(f"   pip install {SPACY_MODEL_URL}")
+            raise RuntimeError(f"spaCy model '{SPACY_MODEL}' not available") from None
 
     return _nlp

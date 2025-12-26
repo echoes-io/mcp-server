@@ -8,6 +8,7 @@ from typing import Any
 import lancedb
 from lancedb.table import Table
 
+from .. import __version__
 from .schemas import ChapterRecord, EntityRecord, RelationRecord
 
 CHAPTERS_TABLE = "chapters"
@@ -22,6 +23,47 @@ class Database:
     def __init__(self, db_path: str | Path) -> None:
         self.db_path = Path(db_path)
         self._db: lancedb.DBConnection | None = None
+        self._check_migration()
+
+    def _check_migration(self) -> None:
+        """Check if database needs migration and handle it."""
+        metadata_path = self.db_path / METADATA_FILE
+
+        if not metadata_path.exists():
+            # New database, create metadata
+            self._save_metadata()
+            return
+
+        try:
+            with metadata_path.open() as f:
+                metadata = json.load(f)
+
+            db_version = metadata.get("version", "0.0.0")
+            if db_version != __version__:
+                print(f"🔄 Database version mismatch: {db_version} → {__version__}")
+                print("🗑️  Removing old database for schema migration...")
+
+                # Remove all tables but keep directory
+                for table_name in [CHAPTERS_TABLE, ENTITIES_TABLE, RELATIONS_TABLE]:
+                    table_path = self.db_path / f"{table_name}.lance"
+                    if table_path.exists():
+                        import shutil
+
+                        shutil.rmtree(table_path)
+
+                self._save_metadata()
+                print("✅ Database ready for re-indexing")
+
+        except (json.JSONDecodeError, KeyError):
+            # Corrupted metadata, force recreation
+            self._save_metadata()
+
+    def _save_metadata(self) -> None:
+        """Save current version to metadata file."""
+        self.db_path.mkdir(exist_ok=True)
+        metadata = {"version": __version__}
+        with (self.db_path / METADATA_FILE).open("w") as f:
+            json.dump(metadata, f)
 
     @property
     def db(self) -> lancedb.DBConnection:

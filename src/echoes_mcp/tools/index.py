@@ -73,7 +73,7 @@ def prepare_chapter_record(
 
 async def index_timeline(
     content_path: str | Path,
-    db_path: str | Path = ".lancedb",
+    db_path: str | Path = "db",
     force: bool = False,
     arc_filter: str | None = None,
     quiet: bool = False,

@@ -34,7 +34,7 @@ logger = logging.getLogger("echoes-mcp")
 server = Server("echoes-mcp-server")
 
 # Database path from cwd
-DB_PATH = Path.cwd() / ".lancedb"
+DB_PATH = Path.cwd() / "db"
 CONTENT_PATH = Path.cwd() / "content"
 TIMELINE = Path.cwd().name  # Use directory name as timeline name
 logger.info(f"Server starting, cwd={Path.cwd()}, db_path={DB_PATH}, timeline={TIMELINE}")
