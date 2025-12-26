@@ -15,7 +15,7 @@ class SearchResult(TypedDict):
     episode: int
     chapter: int
     score: float
-    excerpt: str
+    summary: str
 
 
 class EntitySearchResult(TypedDict):
@@ -88,7 +88,7 @@ async def search_semantic(
             episode=r["episode"],
             chapter=r["chapter"],
             score=float(r.get("_distance", 0)),
-            excerpt=r.get("content", "")[:200] + "..." if r.get("content") else "",
+            summary=r.get("content", "")[:200] + "..." if r.get("content") else "",
         )
         for r in results
     ]

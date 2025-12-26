@@ -47,7 +47,7 @@ class TestChapterRecord:
             indexed_at=1234567890,
         )
         assert chapter.location is None
-        assert chapter.excerpt is None
+        assert chapter.summary is None
 
 
 class TestEntityRecord:

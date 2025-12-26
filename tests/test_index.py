@@ -23,7 +23,7 @@ class TestPrepareChapterRecord:
             "location": "Milano",
             "date": "2024-01-01",
             "content": "This is test content with some words.",
-            "excerpt": "Test excerpt",
+            "summary": "Test summary",
         }
         vector = [0.1] * 768
 
@@ -36,7 +36,7 @@ class TestPrepareChapterRecord:
         assert record["vector"] == vector
         assert "indexed_at" in record
 
-    def test_generates_excerpt_if_missing(self):
+    def test_generates_summary_if_missing(self):
         chapter = {
             "file_path": "/test/ch001.md",
             "file_hash": "abc123",
@@ -48,13 +48,13 @@ class TestPrepareChapterRecord:
             "location": None,
             "date": None,
             "content": "A" * 300,
-            "excerpt": None,
+            "summary": None,
         }
         vector = [0.0] * 768
 
         record = prepare_chapter_record(chapter, vector)
 
-        assert len(record["excerpt"]) == 200
+        assert len(record["summary"]) == 200
 
 
 class TestIndexTimeline:

@@ -30,7 +30,7 @@ def db_with_data():
                     "location": "Milano",
                     "date": "2024-01-01",
                     "content": "Alice walked through Milano.",
-                    "excerpt": "Alice walked...",
+                    "summary": "Alice walked...",
                     "word_count": 100,
                     "char_count": 500,
                     "paragraph_count": 3,

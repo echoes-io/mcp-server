@@ -150,14 +150,14 @@ def search_cmd(query: str, db_path: str, search_type: str, arc: str | None, limi
         table.add_column("Score", justify="right", width=6)
         table.add_column("Chapter", width=20)
         table.add_column("POV", width=12)
-        table.add_column("Excerpt", width=50)
+        table.add_column("Summary", width=50)
 
         for r in results:
             table.add_row(
                 f"{r['score']:.2f}",
                 f"{r['arc']} E{r['episode']}C{r['chapter']}",
                 r["pov"],
-                r["excerpt"][:50] + "...",
+                r["summary"][:50] + "...",
             )
         console.print(table)
     else:

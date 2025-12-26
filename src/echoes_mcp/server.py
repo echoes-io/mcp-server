@@ -176,16 +176,21 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             case "index":
                 content_path = _require_absolute_path(arguments["content_path"], "content_path")
                 logger.info(f"Starting index: content_path={content_path}")
-                result = await index_timeline(
-                    content_path,
-                    DB_PATH,
-                    force=arguments.get("force", False),
-                    arc_filter=arguments.get("arc"),
-                    quiet=True,  # Suppress console output for MCP
-                    extract_entities=arguments.get("extract_entities", True),
-                )
-                logger.info(f"Index complete: {result}")
-                return [TextContent(type="text", text=json.dumps(result, indent=2))]
+                try:
+                    result = await index_timeline(
+                        content_path,
+                        DB_PATH,
+                        force=arguments.get("force", False),
+                        arc_filter=arguments.get("arc"),
+                        quiet=True,  # Suppress console output for MCP
+                        extract_entities=arguments.get("extract_entities", True),
+                    )
+                    logger.info(f"Index complete: {result}")
+                    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+                except Exception as e:
+                    error_msg = f"Indexing failed: {str(e)}"
+                    logger.error(error_msg, exc_info=True)
+                    return [TextContent(type="text", text=f"ERROR: {error_msg}")]
 
             case "search-semantic":
                 db = get_db()

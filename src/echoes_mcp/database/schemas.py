@@ -54,7 +54,7 @@ class ChapterRecord(LanceModel):
 
     # Content
     content: str = Field(description="Clean text without frontmatter/markdown")
-    excerpt: str | None = Field(default=None, description="Short summary")
+    summary: str | None = Field(default=None, description="Short summary")
 
     # Statistics
     word_count: int

@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from echoes_mcp.indexer.scanner import (
     compute_hash,
     extract_chapter_info,
@@ -40,16 +42,15 @@ Body content."""
 
     def test_no_frontmatter(self):
         content = "Just body content."
-        metadata, body = parse_frontmatter(content)
-        assert metadata == {}
-        assert body == content
+        with pytest.raises(ValueError, match="No frontmatter found"):
+            parse_frontmatter(content)
 
     def test_incomplete_frontmatter(self):
         content = """---
 title: Test
 No closing"""
-        metadata, body = parse_frontmatter(content)
-        assert metadata == {}
+        with pytest.raises(ValueError, match="Frontmatter not properly closed"):
+            parse_frontmatter(content)
 
 
 class TestExtractChapterInfo:
@@ -72,8 +73,8 @@ class TestExtractChapterInfo:
         # File directly in temp_dir (not enough path depth)
         file_path = temp_dir / "test.md"
         file_path.write_text("---\ntitle: Test\n---\nContent")
-        result = extract_chapter_info(file_path, temp_dir)
-        assert result is None
+        with pytest.raises(ValueError, match="Invalid path structure"):
+            extract_chapter_info(file_path, temp_dir)
 
 
 class TestScanContent:

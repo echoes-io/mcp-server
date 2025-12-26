@@ -61,7 +61,7 @@ def prepare_chapter_record(
         "location": chapter["location"],
         "date": chapter["date"],
         "content": chapter["content"],
-        "excerpt": chapter["excerpt"] or chapter["content"][:200],
+        "summary": chapter["summary"] or chapter["content"][:200],
         "word_count": count_words(clean_content),
         "char_count": len(clean_content),
         "paragraph_count": count_paragraphs(clean_content),
