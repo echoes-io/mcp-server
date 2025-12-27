@@ -1,3 +1,11 @@
+## [5.8.2](https://github.com/echoes-io/mcp-server/compare/v5.8.1...v5.8.2) (2025-12-27)
+
+
+### Bug Fixes
+
+* :white_check_mark: Fixed test model ([8d65cf7](https://github.com/echoes-io/mcp-server/commit/8d65cf71bac70b1532db193fdaba2d77b5378de7))
+* **ci:** add model pre-download to prevent protobuf parsing failures ([9856b49](https://github.com/echoes-io/mcp-server/commit/9856b498b835cac04cc0484df2cff43e81307a26))
+
 ## [4.1.1](https://github.com/echoes-io/mcp-server/compare/v4.1.0...v4.1.1) (2025-12-20)
 
 
