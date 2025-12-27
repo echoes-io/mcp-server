@@ -5,7 +5,7 @@ import {
   type Tensor,
 } from '@huggingface/transformers';
 
-export const DEFAULT_EMBEDDING_MODEL = 'Xenova/multilingual-e5-small';
+import { DEFAULT_EMBEDDING_MODEL } from '../constants.js';
 
 let extractor: FeatureExtractionPipeline | null = null;
 let currentModel: string | null = null;

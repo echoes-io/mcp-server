@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { TEST_EMBEDDING_MODEL } from '../../lib/constants.js';
 import { Database } from '../../lib/database/index.js';
 import type {
   ChapterRecord,
@@ -15,7 +16,7 @@ import type {
 import { generateEmbedding, resetExtractor } from '../../lib/indexer/embeddings.js';
 import { search } from '../../lib/tools/search.js';
 
-const TEST_MODEL = 'Xenova/all-MiniLM-L6-v2';
+const TEST_MODEL = TEST_EMBEDDING_MODEL;
 
 describe('search', () => {
   let tempDir: string;

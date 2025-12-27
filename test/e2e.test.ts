@@ -3,7 +3,7 @@
  *
  * This test uses:
  * - Real markdown files from test/fixtures/content
- * - Real embedding model (Xenova/all-MiniLM-L6-v2)
+ * - Real embedding model (Xenova/e5-small-v2)
  * - Real LanceDB database
  * - Mocked Gemini API (extractEntities)
  *
@@ -122,7 +122,10 @@ import { stats } from '../lib/tools/stats.js';
 import { wordsCount } from '../lib/tools/words-count.js';
 
 const FIXTURES_PATH = join(__dirname, 'fixtures', 'content');
-const TEST_MODEL = 'Xenova/all-MiniLM-L6-v2';
+
+import { TEST_EMBEDDING_MODEL } from '../lib/constants.js';
+
+const TEST_MODEL = TEST_EMBEDDING_MODEL;
 
 describe('e2e', () => {
   let dbPath: string;

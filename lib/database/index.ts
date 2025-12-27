@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { type Connection, connect, type Table } from '@lancedb/lancedb';
 import type { Schema } from 'apache-arrow';
 
+import { DEFAULT_DB_PATH } from '../constants.js';
 import { getEmbeddingDimension, getEmbeddingModel } from '../indexer/embeddings.js';
 import { getPackageConfig } from '../utils.js';
 import {
@@ -14,8 +15,6 @@ import {
   type RelationRecord,
   RelationSchema,
 } from './schemas.js';
-
-export const DEFAULT_DB_PATH = 'db';
 
 interface TableConfig<T> {
   name: string;

@@ -1,6 +1,7 @@
 import z from 'zod';
 
-import { Database, DEFAULT_DB_PATH } from '../database/index.js';
+import { DEFAULT_DB_PATH } from '../constants.js';
+import { Database } from '../database/index.js';
 import type { ToolConfig } from '../types.js';
 
 export const statsConfig: ToolConfig = {

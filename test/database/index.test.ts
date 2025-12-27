@@ -4,13 +4,14 @@ import { join } from 'node:path';
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Use a small, fast model for tests
+import { TEST_EMBEDDING_MODEL } from '../../lib/constants.js';
 import { Database } from '../../lib/database/index.js';
 import type { ChapterRecord, EntityRecord, RelationRecord } from '../../lib/database/schemas.js';
 import { generateEmbedding, resetExtractor } from '../../lib/indexer/embeddings.js';
 import { getPackageConfig } from '../../lib/utils.js';
 
-// Use a small, fast model for tests
-const TEST_MODEL = 'Xenova/all-MiniLM-L6-v2';
+const TEST_MODEL = TEST_EMBEDDING_MODEL;
 const EMBEDDING_DIM = 384;
 
 describe('Database', () => {

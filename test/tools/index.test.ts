@@ -18,13 +18,14 @@ vi.mock('../../lib/indexer/extractor.js', () => ({
   ),
 }));
 
+// Use a small, fast model for tests
+import { TEST_EMBEDDING_MODEL } from '../../lib/constants.js';
 import { Database } from '../../lib/database/index.js';
 import { generateEmbedding, resetExtractor } from '../../lib/indexer/embeddings.js';
 import { extractEntities } from '../../lib/indexer/extractor.js';
 import { index } from '../../lib/tools/index.js';
 
-// Use a small, fast model for tests
-const TEST_MODEL = 'Xenova/all-MiniLM-L6-v2';
+const TEST_MODEL = TEST_EMBEDDING_MODEL;
 
 describe('index tool', () => {
   let tempDir: string;

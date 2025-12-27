@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { DEFAULT_EMBEDDING_MODEL, TEST_EMBEDDING_MODEL } from '../../lib/constants.js';
 import {
-  DEFAULT_EMBEDDING_MODEL,
   generateEmbedding,
   generateEmbeddings,
   getEmbeddingDimension,
@@ -10,14 +10,14 @@ import {
 } from '../../lib/indexer/embeddings.js';
 
 // Use a small, fast model for tests
-const TEST_MODEL = 'Xenova/all-MiniLM-L6-v2';
+const TEST_MODEL = TEST_EMBEDDING_MODEL;
 
 describe('embeddings', () => {
   beforeAll(async () => {
     // Pre-load model to cache it (first load is slow)
     process.env.ECHOES_EMBEDDING_MODEL = TEST_MODEL;
     await generateEmbedding('warmup');
-  });
+  }, 30000); // 30 second timeout for model download
 
   beforeEach(() => {
     resetExtractor();
@@ -49,7 +49,7 @@ describe('embeddings', () => {
     it('uses default model when not specified', async () => {
       delete process.env.ECHOES_EMBEDDING_MODEL;
       const dim = await getEmbeddingDimension();
-      expect(dim).toBe(384); // multilingual-e5-small is also 384
+      expect(dim).toBe(384); // e5-small-v2 is also 384
     });
   });
 

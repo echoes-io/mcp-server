@@ -3,6 +3,8 @@
 [![CI](https://github.com/echoes-io/mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/echoes-io/mcp-server/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@echoes-io/mcp-server)](https://www.npmjs.com/package/@echoes-io/mcp-server)
 [![Node](https://img.shields.io/node/v/@echoes-io/mcp-server)](https://www.npmjs.com/package/@echoes-io/mcp-server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Coverage Badge](https://img.shields.io/badge/coverage-100%25-brightgreen?style=flat)
 
 Model Context Protocol server for AI integration with Echoes storytelling platform.
 

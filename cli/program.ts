@@ -1,6 +1,6 @@
 import { Command } from '@commander-js/extra-typings';
 
-import { DEFAULT_DB_PATH } from '../lib/database/index.js';
+import { DEFAULT_DB_PATH } from '../lib/constants.js';
 import { startServer } from '../lib/server.js';
 import { index, indexConfig } from '../lib/tools/index.js';
 import { search, searchConfig } from '../lib/tools/search.js';
