@@ -205,9 +205,9 @@ describe('CLI program', () => {
         const dbPath = join(tempDir, 'db');
         await program.parseAsync(['node', 'test', 'index', contentDir, '--db', dbPath]);
 
-        expect(consoleLogSpy).toHaveBeenCalledWith('🔍 Indexing timeline...\n');
-        expect(consoleLogSpy).toHaveBeenCalledWith('✅ Indexing complete\n');
-        expect(consoleLogSpy).toHaveBeenCalledWith('   📖 Indexed:  1');
+        // listr2 handles progress output, we just check the summary
+        expect(consoleLogSpy).toHaveBeenCalledWith('\n📊 Summary');
+        expect(consoleLogSpy).toHaveBeenCalledWith('   📖 Indexed:   1 chapters');
       });
 
       it('exits with error on invalid path', async () => {

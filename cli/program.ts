@@ -1,8 +1,9 @@
 import { Command } from '@commander-js/extra-typings';
 
 import { DEFAULT_DB_PATH } from '../lib/constants.js';
+import { runIndexTasks } from '../lib/indexer/tasks.js';
 import { startServer } from '../lib/server.js';
-import { index, indexConfig } from '../lib/tools/index.js';
+import { indexConfig } from '../lib/tools/index.js';
 import { search, searchConfig } from '../lib/tools/search.js';
 import { stats, statsConfig } from '../lib/tools/stats.js';
 import { wordsCount, wordsCountConfig } from '../lib/tools/words-count.js';
@@ -80,17 +81,17 @@ program
   .option('--force', indexConfig.arguments.force)
   .action(async (contentPath, { db, arc, force }) => {
     try {
-      console.log('🔍 Indexing timeline...\n');
-      const result = await index({ contentPath, arc, force, dbPath: db });
+      // Use default renderer for CLI (shows progress bar)
+      const result = await runIndexTasks({ contentPath, arc, force, dbPath: db });
 
-      console.log('✅ Indexing complete\n');
-      console.log(`   📖 Indexed:  ${result.indexed}`);
-      console.log(`   ⏭️  Skipped:  ${result.skipped}`);
-      console.log(`   🗑️  Deleted:  ${result.deleted}`);
-      console.log(`   👤 Entities: ${result.entities}`);
+      console.log('\n📊 Summary');
+      console.log(`   📖 Indexed:   ${result.indexed} chapters`);
+      console.log(`   ⏭️  Skipped:   ${result.skipped} chapters`);
+      console.log(`   🗑️  Deleted:   ${result.deleted} chapters`);
+      console.log(`   👤 Entities:  ${result.entities}`);
       console.log(`   🔗 Relations: ${result.relations}`);
     } catch (error) {
-      console.error(`❌ Error: ${(error as Error).message}`);
+      console.error(`\n❌ Error: ${(error as Error).message}`);
       process.exit(1);
     }
   });
