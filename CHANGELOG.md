@@ -1,3 +1,11 @@
+# [6.1.0](https://github.com/echoes-io/mcp-server/compare/v6.0.0...v6.1.0) (2025-12-27)
+
+
+### Features
+
+* :arrow_up: Fixed package-lock ([9add583](https://github.com/echoes-io/mcp-server/commit/9add583c37b25f173063056192e509e81e797e14))
+* **cli:** add progress bar for index command with listr2 ([ff14668](https://github.com/echoes-io/mcp-server/commit/ff1466851c0e05e73c2ee86feaba09cd7a3cc2f4))
+
 # [6.0.0](https://github.com/echoes-io/mcp-server/compare/v5.8.2...v6.0.0) (2025-12-27)
 
 
