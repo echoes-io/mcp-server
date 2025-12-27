@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Pre-download embedding model
+        run: npx tsx scripts/preload-model.ts
+
       - name: Test
         run: npm test
 
