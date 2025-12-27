@@ -1,3 +1,22 @@
+# [6.0.0](https://github.com/echoes-io/mcp-server/compare/v5.8.2...v6.0.0) (2025-12-27)
+
+
+* feat!: finalize v6.0.0 release with TypeScript migration ([e8bb838](https://github.com/echoes-io/mcp-server/commit/e8bb83895a6476bdfa5fb9fd4fd1cca31e81324c))
+
+
+### BREAKING CHANGES
+
+* Complete migration from Python to TypeScript/Node.js
+
+- Migrated from Python to TypeScript/Node.js 20+
+- Removed spaCy dependency - Gemini-only entity extraction
+- Changed installation from uvx to npx echoes-mcp-server
+- Requires GEMINI_API_KEY environment variable (no fallback)
+- Reduced installation size from ~2GB to ~100MB
+- Maintained 100% LanceDB schema compatibility with v5
+- Centralized constants in lib/constants.ts
+- Added model pre-download for CI stability
+
 ## [5.8.2](https://github.com/echoes-io/mcp-server/compare/v5.8.1...v5.8.2) (2025-12-27)
 
 
