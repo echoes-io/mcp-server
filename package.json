@@ -1,0 +1,99 @@
+{
+  "name": "@echoes-io/mcp-server",
+  "version": "6.0.0",
+  "description": "📚 Model Context Protocol server for AI-powered storytelling with Narrative Knowledge Graph - extract characters, locations, relationships and search your stories semantically.",
+  "type": "module",
+  "bin": {
+    "echoes": "cli/index.js"
+  },
+  "files": [
+    "cli/**/*.js",
+    "cli/**/*.d.ts",
+    "cli/**/*.map",
+    "lib/**/*.js",
+    "lib/**/*.d.ts",
+    "lib/**/*.map",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "prebuild": "npm run clean",
+    "build": "tsc",
+    "pretest": "npm run clean",
+    "test": "vitest run",
+    "pretest:coverage": "npm run clean",
+    "test:coverage": "vitest run --coverage",
+    "prelint": "npm run build",
+    "lint": "concurrently npm:lint:* --prefixColors auto",
+    "lint:format": "biome check --write",
+    "lint:package": "npmPkgJsonLint .",
+    "lint:lockfile": "lockfile-lint --path package-lock.json",
+    "lint:engines": "ls-engines",
+    "lint:publish": "publint --strict",
+    "postlint": "npm run clean",
+    "clean": "rimraf --glob ./{cli,lib,test}/**/*.{d.ts,js,map} ./vitest*.{d.ts,js,map}",
+    "prepare": "[ \"$CI\" = \"true\" ] || [ \"$GITHUB_ACTIONS\" = \"true\" ] && echo 'Skipping husky' && exit 0 || husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/echoes-io/mcp-server.git"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "storytelling",
+    "narrative",
+    "knowledge-graph",
+    "rag",
+    "semantic-search",
+    "entity-extraction",
+    "lancedb",
+    "vector-database",
+    "gemini",
+    "embeddings",
+    "typescript",
+    "ai",
+    "llm"
+  ],
+  "author": "Zweer <n.olivieriachille@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/echoes-io/mcp-server/issues"
+  },
+  "homepage": "https://github.com/echoes-io/mcp-server#readme",
+  "engines": {
+    "node": ">=20.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.10",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@tsconfig/node22": "^22.0.5",
+    "@types/node": "^25.0.3",
+    "@vitest/coverage-v8": "^4.0.16",
+    "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "lockfile-lint": "^4.14.1",
+    "ls-engines": "^0.9.4",
+    "npm-package-json-lint": "^9.0.0",
+    "npm-package-json-lint-config-default": "^8.0.1",
+    "publint": "^0.3.16",
+    "semantic-release": "^25.0.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
+  },
+  "dependencies": {
+    "@commander-js/extra-typings": "^14.0.0",
+    "@google/genai": "^1.34.0",
+    "@huggingface/transformers": "^3.8.1",
+    "@lancedb/lancedb": "^0.23.0",
+    "@modelcontextprotocol/sdk": "^1.25.1",
+    "apache-arrow": "^18.1.0",
+    "commander": "^14.0.2",
+    "gray-matter": "^4.0.3",
+    "remove-markdown": "^0.6.2",
+    "zod": "^4.2.1"
+  }
+}

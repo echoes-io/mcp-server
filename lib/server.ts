@@ -1,0 +1,114 @@
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+
+import { getPrompt, PROMPTS } from './prompts/index.js';
+import { index, indexConfig, indexSchema } from './tools/index.js';
+import { search, searchConfig, searchSchema } from './tools/search.js';
+import { stats, statsConfig, statsSchema } from './tools/stats.js';
+import { wordsCount, wordsCountConfig, wordsCountSchema } from './tools/words-count.js';
+import { getPackageConfig } from './utils.js';
+
+type ToolResult = { content: Array<{ type: 'text'; text: string }>; isError?: boolean };
+
+function success(data: unknown): ToolResult {
+  return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+}
+
+export function formatError(err: unknown): ToolResult {
+  const message = err instanceof Error ? err.message : String(err);
+  return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true };
+}
+
+export function createServer(): McpServer {
+  const { description, name, version } = getPackageConfig();
+
+  const server = new McpServer({ name, description, version });
+
+  // Register tools
+  server.registerTool(
+    wordsCountConfig.name,
+    {
+      description: wordsCountConfig.description,
+      inputSchema: wordsCountSchema,
+    },
+    async (args) => {
+      try {
+        return success(wordsCount(args));
+      } catch (err) {
+        return formatError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    statsConfig.name,
+    {
+      description: statsConfig.description,
+      inputSchema: statsSchema,
+    },
+    async (args) => {
+      try {
+        return success(await stats(args));
+      } catch (err) {
+        return formatError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    indexConfig.name,
+    {
+      description: indexConfig.description,
+      inputSchema: indexSchema,
+    },
+    async (args) => {
+      try {
+        return success(await index(args));
+      } catch (err) {
+        return formatError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    searchConfig.name,
+    {
+      description: searchConfig.description,
+      inputSchema: searchSchema,
+      /* v8 ignore start */
+    },
+    async (args) => {
+      try {
+        return success(await search(args));
+      } catch (err) {
+        return formatError(err);
+      }
+    },
+  );
+  /* v8 ignore stop */
+
+  // Register prompts
+  for (const prompt of PROMPTS) {
+    server.prompt(prompt.name, prompt.description, prompt.args, (args) => {
+      try {
+        const text = getPrompt(prompt.name, args as Record<string, string>);
+        return { messages: [{ role: 'user', content: { type: 'text', text } }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : /* v8 ignore next */ String(err);
+        return {
+          messages: [{ role: 'user', content: { type: 'text', text: `Error: ${message}` } }],
+        };
+      }
+    });
+  }
+
+  return server;
+}
+
+/* v8 ignore start */
+export async function startServer(): Promise<void> {
+  const server = createServer();
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
+/* v8 ignore stop */
