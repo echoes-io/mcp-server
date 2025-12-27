@@ -32,7 +32,7 @@
     "lint:engines": "ls-engines",
     "lint:publish": "publint --strict",
     "postlint": "npm run clean",
-    "clean": "rimraf --glob ./{cli,lib,test}/**/*.{d.ts,js,map} ./vitest*.{d.ts,js,map}",
+    "clean": "rimraf --glob ./{cli,lib,scripts,test}/**/*.{d.ts,js,map} ./vitest*.{d.ts,js,map}",
     "prepare": "[ \"$CI\" = \"true\" ] || [ \"$GITHUB_ACTIONS\" = \"true\" ] && echo 'Skipping husky' && exit 0 || husky"
   },
   "repository": {
