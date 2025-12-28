@@ -65,11 +65,10 @@ export class Database {
     if (this.tableConfigs) return this.tableConfigs;
 
     await this.getMetadata();
-    const dim = this._embeddingDim ?? 384;
 
     this.tableConfigs = {
-      chapters: { name: 'chapters', schema: createChapterSchema(dim) },
-      entities: { name: 'entities', schema: createEntitySchema(dim) },
+      chapters: { name: 'chapters', schema: createChapterSchema(this._embeddingDim as number) },
+      entities: { name: 'entities', schema: createEntitySchema(this._embeddingDim as number) },
       relations: { name: 'relations', schema: RelationSchema },
     };
 
