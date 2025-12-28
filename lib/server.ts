@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
 import { getPrompt, PROMPTS } from './prompts/index.js';
 import { index, indexConfig, indexSchema } from './tools/index.js';
+import { list, listConfig, listSchema } from './tools/list.js';
 import { search, searchConfig, searchSchema } from './tools/search.js';
 import { stats, statsConfig, statsSchema } from './tools/stats.js';
 import { wordsCount, wordsCountConfig, wordsCountSchema } from './tools/words-count.js';
@@ -80,6 +81,21 @@ export function createServer(): McpServer {
     async (args) => {
       try {
         return success(await search(args));
+      } catch (err) {
+        return formatError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    listConfig.name,
+    {
+      description: listConfig.description,
+      inputSchema: listSchema,
+    },
+    async (args) => {
+      try {
+        return success(await list(args));
       } catch (err) {
         return formatError(err);
       }

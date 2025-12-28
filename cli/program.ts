@@ -4,6 +4,7 @@ import { DEFAULT_DB_PATH } from '../lib/constants.js';
 import { runIndexTasks } from '../lib/indexer/tasks.js';
 import { startServer } from '../lib/server.js';
 import { indexConfig } from '../lib/tools/index.js';
+import { type ListInput, list, listConfig } from '../lib/tools/list.js';
 import { search, searchConfig } from '../lib/tools/search.js';
 import { stats, statsConfig } from '../lib/tools/stats.js';
 import { wordsCount, wordsCountConfig } from '../lib/tools/words-count.js';
@@ -139,6 +140,54 @@ program
         for (const r of result.results) {
           console.log(`🔗 ${r.source_entity} → ${r.type} → ${r.target_entity}`);
           console.log(`   ${r.description}`);
+          console.log('');
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command(listConfig.name)
+  .description(listConfig.description)
+  .argument('<type>', listConfig.arguments.type)
+  .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
+  .option('--arc <name>', listConfig.arguments.arc)
+  .option('--entity-type <type>', listConfig.arguments.entityType)
+  .option('--relation-type <type>', listConfig.arguments.relationType)
+  .action(async (type, { db, arc, entityType, relationType }) => {
+    try {
+      const result = await list({
+        type: type as 'entities' | 'relations',
+        arc,
+        entityType: entityType as ListInput['entityType'],
+        relationType: relationType as ListInput['relationType'],
+        dbPath: db,
+      });
+
+      if (result.type === 'entities') {
+        console.log(`👤 Found ${result.results.length} entities\n`);
+        for (const e of result.results) {
+          console.log(`${e.name} (${e.type})`);
+          console.log(`   ${e.description}`);
+          /* c8 ignore start */
+          if (Array.isArray(e.aliases) && e.aliases.length > 0) {
+            console.log(`   Aliases: ${e.aliases.join(', ')}`);
+          }
+          /* c8 ignore stop */
+          console.log(`   Chapters: ${e.chapter_count}`);
+          console.log('');
+        }
+      } else {
+        console.log(`🔗 Found ${result.results.length} relations\n`);
+        for (const r of result.results) {
+          const source = r.source_entity.split(':').pop();
+          const target = r.target_entity.split(':').pop();
+          console.log(`${source} → ${r.type} → ${target}`);
+          console.log(`   ${r.description}`);
+          console.log(`   Chapters: ${r.chapters.length}`);
           console.log('');
         }
       }
