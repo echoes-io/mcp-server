@@ -1,3 +1,17 @@
+# [6.2.0](https://github.com/echoes-io/mcp-server/compare/v6.1.0...v6.2.0) (2025-12-28)
+
+
+### Bug Fixes
+
+* improve CLI defaults and UX ([50f1ab3](https://github.com/echoes-io/mcp-server/commit/50f1ab3d0b65928716c8aed52a8832191da6e0f7))
+
+
+### Features
+
+* **cli:** add list command for entities and relations ([43cda96](https://github.com/echoes-io/mcp-server/commit/43cda968e3f80a1ae418356317c876b303849d6b))
+* **database:** add schema versioning for controlled migrations ([2a0d8d9](https://github.com/echoes-io/mcp-server/commit/2a0d8d9f1864016f2ffec7ee500bca1aae20d8e7))
+* **embeddings:** add dtype support for quantized models ([1012933](https://github.com/echoes-io/mcp-server/commit/101293329424f8a94baab58ee3157d71b3aa758a))
+
 # [6.1.0](https://github.com/echoes-io/mcp-server/compare/v6.0.0...v6.1.0) (2025-12-27)
 
 
