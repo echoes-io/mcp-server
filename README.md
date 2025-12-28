@@ -83,7 +83,8 @@ Configure in your MCP client (e.g., Claude Desktop, Kiro):
 |----------|----------|---------|-------------|
 | `GEMINI_API_KEY` | Yes | - | API key for Gemini entity extraction |
 | `ECHOES_GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model for extraction |
-| `ECHOES_EMBEDDING_MODEL` | No | `Xenova/multilingual-e5-small` | HuggingFace embedding model |
+| `ECHOES_EMBEDDING_MODEL` | No | `Xenova/e5-small-v2` | HuggingFace embedding model |
+| `ECHOES_EMBEDDING_DTYPE` | No | `fp32` | Quantization level: `fp32`, `fp16`, `q8`, `q4` |
 | `HF_TOKEN` | No | - | HuggingFace token for gated models |
 
 ## Available Tools

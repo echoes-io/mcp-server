@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vite
 // Mock embeddings module before importing Database
 vi.mock('../lib/indexer/embeddings.js', () => ({
   getEmbeddingModel: vi.fn(() => 'test/model'),
+  getEmbeddingDtype: vi.fn(() => 'fp32'),
   getEmbeddingDimension: vi.fn(() => Promise.resolve(384)),
   generateEmbedding: vi.fn(() => Promise.resolve(Array(384).fill(0.1))),
   preloadModel: vi.fn(() => Promise.resolve()),

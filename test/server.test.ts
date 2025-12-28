@@ -11,6 +11,7 @@ type MCPContent = Array<{ type: string; text: string }>;
 // Mock embeddings and extractor for faster tests
 vi.mock('../lib/indexer/embeddings.js', () => ({
   getEmbeddingModel: vi.fn(() => 'test/model'),
+  getEmbeddingDtype: vi.fn(() => 'fp32'),
   getEmbeddingDimension: vi.fn(() => Promise.resolve(384)),
   generateEmbedding: vi.fn(() => Promise.resolve(Array(384).fill(0.1))),
   preloadModel: vi.fn(() => Promise.resolve()),
