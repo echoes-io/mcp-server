@@ -75,7 +75,7 @@ program
 program
   .command(indexConfig.name)
   .description(indexConfig.description)
-  .argument('<contentPath>', indexConfig.arguments.contentPath)
+  .argument('[contentPath]', indexConfig.arguments.contentPath, './content')
   .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
   .option('--arc <name>', indexConfig.arguments.arc)
   .option('--force', indexConfig.arguments.force)

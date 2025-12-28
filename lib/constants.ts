@@ -12,4 +12,4 @@ export const TEST_EMBEDDING_MODEL = 'Xenova/e5-small-v2';
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 
 // Default database path
-export const DEFAULT_DB_PATH = 'db';
+export const DEFAULT_DB_PATH = './db';

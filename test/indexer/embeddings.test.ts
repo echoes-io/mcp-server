@@ -6,6 +6,7 @@ import {
   generateEmbeddings,
   getEmbeddingDimension,
   getEmbeddingModel,
+  preloadModel,
   resetExtractor,
 } from '../../lib/indexer/embeddings.js';
 
@@ -133,6 +134,19 @@ describe('embeddings', () => {
       // Batch and individual should produce same results
       expect(batchResult[0]).toEqual(individual1);
       expect(batchResult[1]).toEqual(individual2);
+    });
+  });
+
+  describe('preloadModel', () => {
+    it('preloads model without generating embedding', async () => {
+      resetExtractor();
+      await preloadModel();
+      // Model should be loaded, subsequent calls should be fast
+      const start = Date.now();
+      await generateEmbedding('test');
+      const elapsed = Date.now() - start;
+      // Should be fast since model is already loaded
+      expect(elapsed).toBeLessThan(1000);
     });
   });
 

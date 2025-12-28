@@ -32,7 +32,7 @@ async function getExtractor(model: string): Promise<FeatureExtractionPipeline> {
     return extractor;
   }
 
-  extractor = await pipeline('feature-extraction', model);
+  extractor = await pipeline('feature-extraction', model, { dtype: 'fp32' });
   currentModel = model;
 
   // Cache dimension when loading model
@@ -41,6 +41,11 @@ async function getExtractor(model: string): Promise<FeatureExtractionPipeline> {
   cachedDimension = config.hidden_size as number;
 
   return extractor;
+}
+
+export async function preloadModel(model?: string): Promise<void> {
+  const m = model ?? getEmbeddingModel();
+  await getExtractor(m);
 }
 
 export async function generateEmbedding(text: string, model?: string): Promise<number[]> {

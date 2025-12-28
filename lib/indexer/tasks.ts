@@ -7,7 +7,7 @@ import type {
   RelationRecord,
   ScannedChapter,
 } from '../database/schemas.js';
-import { generateEmbedding } from './embeddings.js';
+import { generateEmbedding, preloadModel } from './embeddings.js';
 import { extractEntities } from './extractor.js';
 import { scanTimeline } from './scanner.js';
 
@@ -64,6 +64,13 @@ export function formatEta(startTime: number, current: number, total: number): st
 
 function createTasks(): ListrTask<IndexTasksContext>[] {
   return [
+    {
+      title: 'Loading embedding model',
+      task: async (ctx, task) => {
+        task.title = `Loading embedding model (${ctx.db.embeddingModel})`;
+        await preloadModel(ctx.db.embeddingModel);
+      },
+    },
     {
       title: 'Scanning filesystem',
       task: async (ctx, task) => {
