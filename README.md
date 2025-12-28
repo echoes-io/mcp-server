@@ -56,6 +56,10 @@ echoes stats --arc arc1 --pov Alice
 # Search (filters by arc to avoid cross-arc contamination)
 echoes search "primo incontro" --arc bloom
 echoes search "Alice" --type entities --arc bloom
+
+# Check narrative consistency
+echoes check-consistency bloom
+echoes check-consistency bloom --rules kink-firsts,outfit-claims
 ```
 
 ### MCP Server
@@ -95,6 +99,7 @@ Configure in your MCP client (e.g., Claude Desktop, Kiro):
 | `index` | Index timeline content into LanceDB |
 | `search` | Search chapters, entities, or relations |
 | `stats` | Get aggregate statistics |
+| `check-consistency` | Analyze arc for narrative inconsistencies |
 
 ## Available Prompts
 

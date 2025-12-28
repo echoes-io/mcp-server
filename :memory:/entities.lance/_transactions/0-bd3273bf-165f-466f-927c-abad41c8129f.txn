@@ -1,0 +1,5 @@
+$bd3273bf-165f-466f-927c-abad41c8129f²id ÿÿÿÿÿÿÿÿÿ*string8arc ÿÿÿÿÿÿÿÿÿ*string8name ÿÿÿÿÿÿÿÿÿ*string8type ÿÿÿÿÿÿÿÿÿ*string8$description ÿÿÿÿÿÿÿÿÿ*string8aliases ÿÿÿÿÿÿÿÿÿ*list8item *string82vector ÿÿÿÿÿÿÿÿÿ*fixed_size_list:float:3848chapters ÿÿÿÿÿÿÿÿÿ*list8item	 *string8%chapter_count
+ ÿÿÿÿÿÿÿÿÿ*int328)first_appearance ÿÿÿÿÿÿÿÿÿ*string8#
+indexed_at ÿÿÿÿÿÿÿÿÿ*double8"'
+lance.auto_cleanup.older_than14days"!
+lance.auto_cleanup.interval20

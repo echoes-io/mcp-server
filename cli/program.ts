@@ -3,6 +3,7 @@ import { Command } from '@commander-js/extra-typings';
 import { DEFAULT_DB_PATH } from '../lib/constants.js';
 import { runIndexTasks } from '../lib/indexer/tasks.js';
 import { startServer } from '../lib/server.js';
+import { checkConsistency, checkConsistencyConfig } from '../lib/tools/consistency/index.js';
 import { indexConfig } from '../lib/tools/index.js';
 import { type ListInput, list, listConfig } from '../lib/tools/list.js';
 import { search, searchConfig } from '../lib/tools/search.js';
@@ -205,3 +206,67 @@ program
     await startServer();
   });
 /* c8 ignore stop */
+
+program
+  .command(checkConsistencyConfig.name)
+  .description(checkConsistencyConfig.description)
+  .argument('<arc>', checkConsistencyConfig.arguments.arc)
+  .option('--content <path>', checkConsistencyConfig.arguments.contentPath, './content')
+  .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
+  .option(
+    '--rules <rules>',
+    checkConsistencyConfig.arguments.rules,
+    (val) =>
+      val.split(',') as (
+        | 'kink-firsts'
+        | 'outfit-claims'
+        | 'first-time-content'
+        | 'relation-jump'
+        | 'entity-duplicate'
+      )[],
+  )
+  .option('--severity <level>', checkConsistencyConfig.arguments.severity)
+  .option('--format <format>', 'Output format: text or json', 'text')
+  .action(async (arc, { content, db, rules, severity, format }) => {
+    try {
+      const result = await checkConsistency({
+        contentPath: content,
+        arc,
+        rules,
+        severity: severity as 'error' | 'warning' | 'info' | undefined,
+        dbPath: db,
+      });
+
+      if (format === 'json') {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+
+      console.log(`🔍 Consistency check for "${arc}"\n`);
+
+      if (result.issues.length === 0) {
+        console.log('✅ No issues found!');
+        return;
+      }
+
+      console.log(`Found ${result.issues.length} issue(s):\n`);
+
+      for (const issue of result.issues) {
+        const icon = issue.severity === 'error' ? '❌' : issue.severity === 'warning' ? '⚠️' : 'ℹ️';
+        console.log(`${icon} ${issue.message}`);
+        console.log(`   Current: ep${issue.current.episode}:ch${issue.current.chapter}`);
+        if (issue.previous) {
+          console.log(`   Previous: ep${issue.previous.episode}:ch${issue.previous.chapter}`);
+        }
+        console.log('');
+      }
+
+      console.log('Summary:');
+      console.log(`   ❌ Errors:   ${result.summary.errors}`);
+      console.log(`   ⚠️  Warnings: ${result.summary.warnings}`);
+      console.log(`   ℹ️  Info:     ${result.summary.info}`);
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
