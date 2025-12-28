@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { type Connection, connect, type Table } from '@lancedb/lancedb';
 import type { Schema } from 'apache-arrow';
 
+import { SCHEMA_VERSION } from '../constants.js';
 import { getEmbeddingDimension, getEmbeddingModel } from '../indexer/embeddings.js';
-import { getPackageConfig } from '../utils.js';
 import {
   type ChapterRecord,
   createChapterSchema,
@@ -22,9 +22,8 @@ interface TableConfig<T> {
 }
 
 interface Metadata {
-  version: string;
+  schemaVersion: number;
   embeddingModel: string;
-  embeddingDim: number;
 }
 
 export class Database {
@@ -32,6 +31,7 @@ export class Database {
   private tables = new Map<string, Table>();
   private migrationChecked = false;
   private metadata: Metadata | null = null;
+  private _embeddingDim: number | null = null;
   private tableConfigs: {
     chapters: TableConfig<ChapterRecord>;
     entities: TableConfig<EntityRecord>;
@@ -42,18 +42,20 @@ export class Database {
     return join(this.dbPath, 'metadata.json');
   }
 
-  constructor(public readonly dbPath: string) {}
+  constructor(
+    public readonly dbPath: string,
+    private readonly force = false,
+  ) {}
 
   private async getMetadata(): Promise<Metadata> {
     if (this.metadata) return this.metadata;
 
     const model = getEmbeddingModel();
-    const dim = await getEmbeddingDimension(model);
+    this._embeddingDim = await getEmbeddingDimension(model);
 
     this.metadata = {
-      version: getPackageConfig().version,
+      schemaVersion: SCHEMA_VERSION,
       embeddingModel: model,
-      embeddingDim: dim,
     };
 
     return this.metadata;
@@ -62,11 +64,12 @@ export class Database {
   private async getTableConfigs() {
     if (this.tableConfigs) return this.tableConfigs;
 
-    const metadata = await this.getMetadata();
+    await this.getMetadata();
+    const dim = this._embeddingDim ?? 384;
 
     this.tableConfigs = {
-      chapters: { name: 'chapters', schema: createChapterSchema(metadata.embeddingDim) },
-      entities: { name: 'entities', schema: createEntitySchema(metadata.embeddingDim) },
+      chapters: { name: 'chapters', schema: createChapterSchema(dim) },
+      entities: { name: 'entities', schema: createEntitySchema(dim) },
       relations: { name: 'relations', schema: RelationSchema },
     };
 
@@ -79,8 +82,8 @@ export class Database {
   }
 
   get embeddingDim(): number {
-    if (!this.metadata) throw new Error('Database not connected');
-    return this.metadata.embeddingDim;
+    if (!this._embeddingDim) throw new Error('Database not connected');
+    return this._embeddingDim;
   }
 
   private async getConnection(): Promise<Connection> {
@@ -103,19 +106,23 @@ export class Database {
       const stored: Partial<Metadata> = JSON.parse(readFileSync(this.metadataPath, 'utf-8'));
       const reasons: string[] = [];
 
-      if (stored.version !== current.version) {
-        reasons.push(`version ${stored.version} → ${current.version}`);
+      if ((stored.schemaVersion ?? 0) < current.schemaVersion) {
+        reasons.push(`schema version ${stored.schemaVersion ?? 0} → ${current.schemaVersion}`);
       }
       if (stored.embeddingModel !== current.embeddingModel) {
-        reasons.push(`model ${stored.embeddingModel} → ${current.embeddingModel}`);
-      }
-      if (stored.embeddingDim !== current.embeddingDim) {
-        reasons.push(`dimension ${stored.embeddingDim} → ${current.embeddingDim}`);
+        reasons.push(`embedding model ${stored.embeddingModel} → ${current.embeddingModel}`);
       }
 
       if (reasons.length > 0) {
-        console.log(`🔄 Database config changed: ${reasons.join(', ')}`);
-        console.log('🗑️  Removing old database for re-indexing...');
+        if (!this.force) {
+          throw new Error(
+            `Database migration required: ${reasons.join(', ')}\n` +
+              'This requires re-indexing all content. Use --force to confirm and reset the database.',
+          );
+        }
+
+        console.log(`🔄 Database migration: ${reasons.join(', ')}`);
+        console.log('🗑️  Resetting database for re-indexing...');
 
         const db = await this.getConnection();
         const existingTables = await db.tableNames();
@@ -131,7 +138,11 @@ export class Database {
         this.saveMetadata();
         console.log('✅ Database ready for re-indexing');
       }
-    } catch {
+    } catch (error) {
+      // Re-throw migration errors, only ignore JSON parse errors
+      if (error instanceof Error && error.message.includes('Database migration required')) {
+        throw error;
+      }
       this.saveMetadata();
     }
   }

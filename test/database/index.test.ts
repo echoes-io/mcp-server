@@ -9,7 +9,6 @@ import { TEST_EMBEDDING_MODEL } from '../../lib/constants.js';
 import { Database } from '../../lib/database/index.js';
 import type { ChapterRecord, EntityRecord, RelationRecord } from '../../lib/database/schemas.js';
 import { generateEmbedding, resetExtractor } from '../../lib/indexer/embeddings.js';
-import { getPackageConfig } from '../../lib/utils.js';
 
 const TEST_MODEL = TEST_EMBEDDING_MODEL;
 const EMBEDDING_DIM = 384;
@@ -46,9 +45,8 @@ describe('Database', () => {
       expect(existsSync(metadataPath)).toBe(true);
 
       const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
-      expect(metadata.version).toBe(getPackageConfig().version);
+      expect(metadata.schemaVersion).toBe(1);
       expect(metadata.embeddingModel).toBe(TEST_MODEL);
-      expect(metadata.embeddingDim).toBe(EMBEDDING_DIM);
     });
 
     it('auto-detects embedding dimension from model', async () => {
@@ -73,17 +71,51 @@ describe('Database', () => {
       expect(() => db.embeddingDim).toThrow('Database not connected');
     });
 
-    it('detects version mismatch and clears tables', async () => {
+    it('throws on model mismatch without force flag', async () => {
       mkdirSync(dbPath, { recursive: true });
       const metadataPath = join(dbPath, 'metadata.json');
       writeFileSync(
         metadataPath,
-        JSON.stringify({
-          version: '0.0.1',
-          embeddingModel: TEST_MODEL,
-          embeddingDim: EMBEDDING_DIM,
-        }),
+        JSON.stringify({ schemaVersion: 1, embeddingModel: 'old/model' }),
       );
+
+      const db = new Database(dbPath);
+
+      await expect(db.connect()).rejects.toThrow('embedding model');
+    });
+
+    it('throws on schema version mismatch without force flag', async () => {
+      mkdirSync(dbPath, { recursive: true });
+      const metadataPath = join(dbPath, 'metadata.json');
+      writeFileSync(metadataPath, JSON.stringify({ schemaVersion: 0, embeddingModel: TEST_MODEL }));
+
+      const db = new Database(dbPath);
+
+      await expect(db.connect()).rejects.toThrow('schema version');
+    });
+
+    it('clears tables on mismatch with force flag', async () => {
+      mkdirSync(dbPath, { recursive: true });
+      const metadataPath = join(dbPath, 'metadata.json');
+      writeFileSync(
+        metadataPath,
+        JSON.stringify({ schemaVersion: 0, embeddingModel: 'old/model' }),
+      );
+
+      const logs: string[] = [];
+      vi.spyOn(console, 'log').mockImplementation((msg) => logs.push(msg));
+
+      const db = new Database(dbPath, true); // force = true
+      await db.connect();
+
+      expect(logs.some((l) => l.includes('Database migration'))).toBe(true);
+      expect(logs.some((l) => l.includes('Resetting database'))).toBe(true);
+    });
+
+    it('keeps database when schema and model match', async () => {
+      mkdirSync(dbPath, { recursive: true });
+      const metadataPath = join(dbPath, 'metadata.json');
+      writeFileSync(metadataPath, JSON.stringify({ schemaVersion: 1, embeddingModel: TEST_MODEL }));
 
       const logs: string[] = [];
       vi.spyOn(console, 'log').mockImplementation((msg) => logs.push(msg));
@@ -91,76 +123,21 @@ describe('Database', () => {
       const db = new Database(dbPath);
       await db.connect();
 
-      expect(logs.some((l) => l.includes('config changed'))).toBe(true);
-      expect(logs.some((l) => l.includes('version'))).toBe(true);
+      expect(logs.some((l) => l.includes('migration'))).toBe(false);
     });
 
-    it('detects model mismatch and clears tables', async () => {
+    it('treats missing schemaVersion as 0', async () => {
       mkdirSync(dbPath, { recursive: true });
       const metadataPath = join(dbPath, 'metadata.json');
-      writeFileSync(
-        metadataPath,
-        JSON.stringify({
-          version: getPackageConfig().version,
-          embeddingModel: 'old/model',
-          embeddingDim: EMBEDDING_DIM,
-        }),
-      );
-
-      const logs: string[] = [];
-      vi.spyOn(console, 'log').mockImplementation((msg) => logs.push(msg));
+      // Old metadata without schemaVersion
+      writeFileSync(metadataPath, JSON.stringify({ embeddingModel: TEST_MODEL }));
 
       const db = new Database(dbPath);
-      await db.connect();
 
-      expect(logs.some((l) => l.includes('config changed'))).toBe(true);
-      expect(logs.some((l) => l.includes('model'))).toBe(true);
+      await expect(db.connect()).rejects.toThrow('schema version 0 → 1');
     });
 
-    it('detects dimension mismatch and clears tables', async () => {
-      mkdirSync(dbPath, { recursive: true });
-      const metadataPath = join(dbPath, 'metadata.json');
-      writeFileSync(
-        metadataPath,
-        JSON.stringify({
-          version: getPackageConfig().version,
-          embeddingModel: TEST_MODEL,
-          embeddingDim: 768,
-        }),
-      );
-
-      const logs: string[] = [];
-      vi.spyOn(console, 'log').mockImplementation((msg) => logs.push(msg));
-
-      const db = new Database(dbPath);
-      await db.connect();
-
-      expect(logs.some((l) => l.includes('config changed'))).toBe(true);
-      expect(logs.some((l) => l.includes('dimension'))).toBe(true);
-    });
-
-    it('keeps database when all config matches', async () => {
-      mkdirSync(dbPath, { recursive: true });
-      const metadataPath = join(dbPath, 'metadata.json');
-      writeFileSync(
-        metadataPath,
-        JSON.stringify({
-          version: getPackageConfig().version,
-          embeddingModel: TEST_MODEL,
-          embeddingDim: EMBEDDING_DIM,
-        }),
-      );
-
-      const logs: string[] = [];
-      vi.spyOn(console, 'log').mockImplementation((msg) => logs.push(msg));
-
-      const db = new Database(dbPath);
-      await db.connect();
-
-      expect(logs.some((l) => l.includes('config changed'))).toBe(false);
-    });
-
-    it('drops existing tables on config mismatch', async () => {
+    it('drops existing tables on mismatch with force', async () => {
       // First, create a database with some data
       const db1 = new Database(dbPath);
       await db1.upsertChapters([
@@ -187,19 +164,12 @@ describe('Database', () => {
       ]);
       db1.close();
 
-      // Now change the version in metadata
+      // Now change the model in metadata
       const metadataPath = join(dbPath, 'metadata.json');
-      writeFileSync(
-        metadataPath,
-        JSON.stringify({
-          version: '0.0.1',
-          embeddingModel: TEST_MODEL,
-          embeddingDim: EMBEDDING_DIM,
-        }),
-      );
+      writeFileSync(metadataPath, JSON.stringify({ embeddingModel: 'old/model' }));
 
-      // Connect again - should drop tables
-      const db2 = new Database(dbPath);
+      // Connect with force - should drop tables
+      const db2 = new Database(dbPath, true);
       await db2.connect();
 
       // Table should be empty after migration
@@ -217,7 +187,8 @@ describe('Database', () => {
 
       // Should have recreated metadata
       const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
-      expect(metadata.version).toBe(getPackageConfig().version);
+      expect(metadata.schemaVersion).toBe(1);
+      expect(metadata.embeddingModel).toBe(TEST_MODEL);
     });
   });
 

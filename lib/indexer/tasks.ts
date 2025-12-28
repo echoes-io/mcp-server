@@ -233,7 +233,7 @@ export async function runIndexTasks(
   silent = false,
 ): Promise<IndexTasksOutput> {
   // Initialize database before creating tasks
-  const db = new Database(input.dbPath);
+  const db = new Database(input.dbPath, input.force);
   await db.connect();
 
   const baseCtx: IndexTasksContext = {
