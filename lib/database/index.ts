@@ -192,12 +192,26 @@ export class Database {
 
   async upsertEntities(records: EntityRecord[]): Promise<number> {
     const configs = await this.getTableConfigs();
-    return this.upsert(configs.entities, records);
+    // Add HITL fields with defaults
+    const recordsWithHitl = records.map((record) => ({
+      ...record,
+      review_status: (record as any).review_status || 'approved',
+      reviewed_at: (record as any).reviewed_at || null,
+      original_extraction: (record as any).original_extraction || null,
+    }));
+    return this.upsert(configs.entities, recordsWithHitl);
   }
 
   async upsertRelations(records: RelationRecord[]): Promise<number> {
     const configs = await this.getTableConfigs();
-    return this.upsert(configs.relations, records);
+    // Add HITL fields with defaults
+    const recordsWithHitl = records.map((record) => ({
+      ...record,
+      review_status: (record as any).review_status || 'approved',
+      reviewed_at: (record as any).reviewed_at || null,
+      original_extraction: (record as any).original_extraction || null,
+    }));
+    return this.upsert(configs.relations, recordsWithHitl);
   }
 
   async getChapters(arc?: string): Promise<ChapterRecord[]> {

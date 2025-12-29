@@ -9,6 +9,8 @@ import { graphExport, graphExportConfig } from '../lib/tools/graph-export.js';
 import { history, historyConfig } from '../lib/tools/history.js';
 import { indexConfig } from '../lib/tools/index.js';
 import { type ListInput, list, listConfig } from '../lib/tools/list.js';
+import { reviewGenerate, reviewGenerateConfig } from '../lib/tools/review-generate.js';
+import { reviewStatus, reviewStatusConfig } from '../lib/tools/review-status.js';
 import { search, searchConfig } from '../lib/tools/search.js';
 import { stats, statsConfig } from '../lib/tools/stats.js';
 import { wordsCount, wordsCountConfig } from '../lib/tools/words-count.js';
@@ -379,6 +381,70 @@ program
       ) {
         console.log('No history found for the specified criteria.');
       }
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// Review generate command
+program
+  .command('review-generate')
+  .description(reviewGenerateConfig.description)
+  .argument('<arc>', reviewGenerateConfig.arguments.arc)
+  .option('--output <file>', reviewGenerateConfig.arguments.output, '.echoes-review.yaml')
+  .option('--filter <type>', reviewGenerateConfig.arguments.filter, 'pending')
+  .option('--db <path>', reviewGenerateConfig.arguments.dbPath, DEFAULT_DB_PATH)
+  .action(async (arc, options) => {
+    try {
+      const result = await reviewGenerate({
+        arc,
+        output: options.output,
+        filter: options.filter as 'pending' | 'all',
+        dbPath: options.db,
+      });
+
+      console.log(`📝 Review file generated: ${result.file}`);
+      console.log(`📊 ${result.stats.entities} entities, ${result.stats.relations} relations`);
+
+      // Write file to disk
+      const fs = await import('node:fs/promises');
+      await fs.writeFile(result.file, result.content, 'utf8');
+      console.log(`✅ File written successfully`);
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// Review status command
+program
+  .command('review-status')
+  .description(reviewStatusConfig.description)
+  .argument('<arc>', reviewStatusConfig.arguments.arc)
+  .option('--db <path>', reviewStatusConfig.arguments.dbPath, DEFAULT_DB_PATH)
+  .action(async (arc, options) => {
+    try {
+      const result = await reviewStatus({
+        arc,
+        dbPath: options.db,
+      });
+
+      console.log(`=== ${arc.toUpperCase()} - Review Status ===\n`);
+
+      console.log('📊 Entities:');
+      console.log(`  Pending: ${result.entities.pending}`);
+      console.log(`  Approved: ${result.entities.approved}`);
+      console.log(`  Modified: ${result.entities.modified}`);
+      console.log(`  Rejected: ${result.entities.rejected}`);
+      console.log(`  Total: ${result.entities.total}\n`);
+
+      console.log('🔗 Relations:');
+      console.log(`  Pending: ${result.relations.pending}`);
+      console.log(`  Approved: ${result.relations.approved}`);
+      console.log(`  Modified: ${result.relations.modified}`);
+      console.log(`  Rejected: ${result.relations.rejected}`);
+      console.log(`  Total: ${result.relations.total}`);
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);
       process.exit(1);

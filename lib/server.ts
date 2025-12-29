@@ -6,6 +6,12 @@ import { graphExport, graphExportConfig, graphExportSchema } from './tools/graph
 import { history, historyConfig, historySchema } from './tools/history.js';
 import { index, indexConfig, indexSchema } from './tools/index.js';
 import { list, listConfig, listSchema } from './tools/list.js';
+import {
+  reviewGenerate,
+  reviewGenerateConfig,
+  reviewGenerateSchema,
+} from './tools/review-generate.js';
+import { reviewStatus, reviewStatusConfig, reviewStatusSchema } from './tools/review-status.js';
 import { search, searchConfig, searchSchema } from './tools/search.js';
 import { stats, statsConfig, statsSchema } from './tools/stats.js';
 import { wordsCount, wordsCountConfig, wordsCountSchema } from './tools/words-count.js';
@@ -128,6 +134,36 @@ export function createServer(): McpServer {
     async (args) => {
       try {
         return success(await history(args));
+      } catch (err) {
+        return formatError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    reviewGenerateConfig.name,
+    {
+      description: reviewGenerateConfig.description,
+      inputSchema: reviewGenerateSchema,
+    },
+    async (args) => {
+      try {
+        return success(await reviewGenerate(args));
+      } catch (err) {
+        return formatError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    reviewStatusConfig.name,
+    {
+      description: reviewStatusConfig.description,
+      inputSchema: reviewStatusSchema,
+    },
+    async (args) => {
+      try {
+        return success(await reviewStatus(args));
       } catch (err) {
         return formatError(err);
       }

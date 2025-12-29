@@ -65,7 +65,7 @@ describe('createChapterSchema', () => {
 describe('createEntitySchema', () => {
   it('has correct number of fields', () => {
     const schema = createEntitySchema(384);
-    expect(schema.fields).toHaveLength(11);
+    expect(schema.fields).toHaveLength(14);
   });
 
   it('has required fields', () => {
@@ -87,7 +87,7 @@ describe('createEntitySchema', () => {
 
 describe('RelationSchema', () => {
   it('has correct number of fields', () => {
-    expect(RelationSchema.fields).toHaveLength(9);
+    expect(RelationSchema.fields).toHaveLength(12);
   });
 
   it('has required fields', () => {

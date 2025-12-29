@@ -60,6 +60,10 @@ export function createEntitySchema(embeddingDim: number): Schema {
     new Field('chapter_count', new Int32(), false),
     new Field('first_appearance', new Utf8(), false),
     new Field('indexed_at', new Float64(), false),
+    // HITL fields
+    new Field('review_status', new Utf8(), false),
+    new Field('reviewed_at', new Float64(), true),
+    new Field('original_extraction', new Utf8(), true),
   ]);
 }
 
@@ -73,6 +77,10 @@ export const RelationSchema = new Schema([
   new Field('weight', new Float64(), false),
   new Field('chapters', new List(new Field('item', new Utf8())), false),
   new Field('indexed_at', new Float64(), false),
+  // HITL fields
+  new Field('review_status', new Utf8(), false),
+  new Field('reviewed_at', new Float64(), true),
+  new Field('original_extraction', new Utf8(), true),
 ]);
 
 // TypeScript interfaces

@@ -102,6 +102,8 @@ Configure in your MCP client (e.g., Claude Desktop, Kiro):
 | `check-consistency` | Analyze arc for narrative inconsistencies |
 | `graph-export` | Export knowledge graph in various formats |
 | `history` | Query character/arc history (kinks, outfits, locations, relations) |
+| `review-generate` | Generate review file for pending entity/relation extractions |
+| `review-status` | Show review statistics for an arc |
 
 ## Available Prompts
 
