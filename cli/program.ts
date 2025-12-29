@@ -1,9 +1,11 @@
 import { Command } from '@commander-js/extra-typings';
 
 import { DEFAULT_DB_PATH } from '../lib/constants.js';
+import type { EntityType, RelationType } from '../lib/database/schemas.js';
 import { runIndexTasks } from '../lib/indexer/tasks.js';
 import { startServer } from '../lib/server.js';
 import { checkConsistency, checkConsistencyConfig } from '../lib/tools/consistency/index.js';
+import { graphExport, graphExportConfig } from '../lib/tools/graph-export.js';
 import { indexConfig } from '../lib/tools/index.js';
 import { type ListInput, list, listConfig } from '../lib/tools/list.js';
 import { search, searchConfig } from '../lib/tools/search.js';
@@ -265,6 +267,39 @@ program
       console.log(`   ❌ Errors:   ${result.summary.errors}`);
       console.log(`   ⚠️  Warnings: ${result.summary.warnings}`);
       console.log(`   ℹ️  Info:     ${result.summary.info}`);
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('graph')
+  .description(graphExportConfig.description)
+  .argument('<arc>', graphExportConfig.arguments.arc)
+  .option('--format <format>', 'Output format: mermaid, json, or dot', 'mermaid')
+  .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
+  .option('--entity-types <types>', 'Filter by entity types (comma-separated)')
+  .option('--relation-types <types>', 'Filter by relation types (comma-separated)')
+  .option('--characters <names>', 'Filter by character names (comma-separated)')
+  .action(async (arc, { format, db, entityTypes, relationTypes, characters }) => {
+    try {
+      const result = await graphExport({
+        arc,
+        format: format as 'mermaid' | 'json' | 'dot',
+        entityTypes: entityTypes?.split(',') as EntityType[] | undefined,
+        relationTypes: relationTypes?.split(',') as RelationType[] | undefined,
+        characters: characters?.split(','),
+        dbPath: db,
+      });
+
+      console.log(result.content);
+
+      if (process.stderr.isTTY) {
+        console.error(
+          `\n📊 Graph exported: ${result.stats.nodes} nodes, ${result.stats.edges} edges`,
+        );
+      }
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);
       process.exit(1);
