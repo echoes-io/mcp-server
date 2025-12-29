@@ -9,6 +9,7 @@ import { graphExport, graphExportConfig } from '../lib/tools/graph-export.js';
 import { history, historyConfig } from '../lib/tools/history.js';
 import { indexConfig } from '../lib/tools/index.js';
 import { type ListInput, list, listConfig } from '../lib/tools/list.js';
+import { reviewApply, reviewApplyConfig } from '../lib/tools/review-apply.js';
 import { reviewGenerate, reviewGenerateConfig } from '../lib/tools/review-generate.js';
 import { reviewStatus, reviewStatusConfig } from '../lib/tools/review-status.js';
 import { search, searchConfig } from '../lib/tools/search.js';
@@ -445,6 +446,51 @@ program
       console.log(`  Modified: ${result.relations.modified}`);
       console.log(`  Rejected: ${result.relations.rejected}`);
       console.log(`  Total: ${result.relations.total}`);
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// Review apply command
+program
+  .command('review-apply')
+  .description(reviewApplyConfig.description)
+  .argument('<file>', reviewApplyConfig.arguments.file)
+  .option('--dry-run', reviewApplyConfig.arguments.dryRun, false)
+  .option('--db <path>', reviewApplyConfig.arguments.dbPath, DEFAULT_DB_PATH)
+  .action(async (file, options) => {
+    try {
+      const result = await reviewApply({
+        file,
+        dryRun: options.dryRun,
+        dbPath: options.db,
+      });
+
+      if (result.preview) {
+        console.log('🔍 DRY RUN - Preview of changes:\n');
+      } else {
+        console.log('✅ Applied changes:\n');
+      }
+
+      console.log('📊 Summary:');
+      console.log(
+        `  Entities: ${result.changes.entities.approved} approved, ${result.changes.entities.modified} modified, ${result.changes.entities.rejected} rejected, ${result.changes.entities.added} added`,
+      );
+      console.log(
+        `  Relations: ${result.changes.relations.approved} approved, ${result.changes.relations.modified} modified, ${result.changes.relations.rejected} rejected, ${result.changes.relations.added} added\n`,
+      );
+
+      if (result.details.length > 0) {
+        console.log('📝 Details:');
+        for (const detail of result.details) {
+          console.log(`  ${detail}`);
+        }
+      }
+
+      if (result.preview) {
+        console.log('\n💡 Run without --dry-run to apply changes');
+      }
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);
       process.exit(1);

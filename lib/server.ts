@@ -6,6 +6,7 @@ import { graphExport, graphExportConfig, graphExportSchema } from './tools/graph
 import { history, historyConfig, historySchema } from './tools/history.js';
 import { index, indexConfig, indexSchema } from './tools/index.js';
 import { list, listConfig, listSchema } from './tools/list.js';
+import { reviewApply, reviewApplyConfig, reviewApplySchema } from './tools/review-apply.js';
 import {
   reviewGenerate,
   reviewGenerateConfig,
@@ -164,6 +165,21 @@ export function createServer(): McpServer {
     async (args) => {
       try {
         return success(await reviewStatus(args));
+      } catch (err) {
+        return formatError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    reviewApplyConfig.name,
+    {
+      description: reviewApplyConfig.description,
+      inputSchema: reviewApplySchema,
+    },
+    async (args) => {
+      try {
+        return success(await reviewApply(args));
       } catch (err) {
         return formatError(err);
       }

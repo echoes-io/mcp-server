@@ -104,6 +104,7 @@ Configure in your MCP client (e.g., Claude Desktop, Kiro):
 | `history` | Query character/arc history (kinks, outfits, locations, relations) |
 | `review-generate` | Generate review file for pending entity/relation extractions |
 | `review-status` | Show review statistics for an arc |
+| `review-apply` | Apply corrections from review file to database |
 
 ## Available Prompts
 

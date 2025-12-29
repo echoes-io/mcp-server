@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { Database } from '../../lib/database/index.js';
 import type { EntityType, RelationType } from '../../lib/database/schemas.js';
+import { reviewApply } from '../../lib/tools/review-apply.js';
 import { reviewGenerate } from '../../lib/tools/review-generate.js';
 import { reviewStatus } from '../../lib/tools/review-status.js';
 
@@ -183,6 +184,70 @@ describe('review tools', () => {
       });
 
       expect(result.file).toBe('custom-review.yaml');
+    });
+  });
+
+  describe('reviewApply', () => {
+    it('should handle dry run mode', async () => {
+      const yamlContent = `# Test review file
+arc: test-arc
+
+entities:
+  - id: "test:CHARACTER:Alice"
+    name: "Alice"
+    type: "CHARACTER"
+    description: "Test character"
+    aliases: []
+    status: approved
+
+relations:
+  - id: "test:Alice:LOVES:Bob"
+    source: "Alice"
+    target: "Bob"
+    type: "LOVES"
+    description: "Test relation"
+    weight: 0.9
+    chapters: []
+    status: approved
+
+additions:
+  entities: []
+  relations: []`;
+
+      // Write test file
+      const fs = await import('node:fs/promises');
+      const testFile = join(testDir, 'test-review.yaml');
+      await fs.writeFile(testFile, yamlContent, 'utf8');
+
+      const result = await reviewApply({
+        file: testFile,
+        dryRun: true,
+        dbPath,
+      });
+
+      expect(result.preview).toBe(true);
+      expect(result.changes.entities.approved).toBe(1);
+      expect(result.changes.relations.approved).toBe(1);
+      expect(result.details).toContain('✅ Entity approved: Alice');
+      expect(result.details).toContain('✅ Relation approved: Alice → LOVES → Bob');
+    });
+
+    it('should validate input parameters', async () => {
+      await expect(
+        reviewApply({
+          file: '',
+          dbPath,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it('should handle missing file', async () => {
+      await expect(
+        reviewApply({
+          file: 'nonexistent.yaml',
+          dbPath,
+        }),
+      ).rejects.toThrow();
     });
   });
 });
