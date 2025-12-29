@@ -6,6 +6,7 @@ import { runIndexTasks } from '../lib/indexer/tasks.js';
 import { startServer } from '../lib/server.js';
 import { checkConsistency, checkConsistencyConfig } from '../lib/tools/consistency/index.js';
 import { graphExport, graphExportConfig } from '../lib/tools/graph-export.js';
+import { history, historyConfig } from '../lib/tools/history.js';
 import { indexConfig } from '../lib/tools/index.js';
 import { type ListInput, list, listConfig } from '../lib/tools/list.js';
 import { search, searchConfig } from '../lib/tools/search.js';
@@ -299,6 +300,84 @@ program
         console.error(
           `\n📊 Graph exported: ${result.stats.nodes} nodes, ${result.stats.edges} edges`,
         );
+      }
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// History command
+program
+  .command('history')
+  .description(historyConfig.description)
+  .argument('<arc>', historyConfig.arguments.arc)
+  .option('--character <character>', historyConfig.arguments.character)
+  .option('--only <type>', historyConfig.arguments.only)
+  .option('--search <term>', historyConfig.arguments.search)
+  .option('--db <path>', historyConfig.arguments.dbPath, DEFAULT_DB_PATH)
+  .action(async (arc, options) => {
+    try {
+      const result = await history({
+        arc,
+        character: options.character,
+        only: options.only as 'kinks' | 'outfits' | 'locations' | 'relations' | undefined,
+        search: options.search,
+        dbPath: options.db,
+      });
+
+      console.log(`=== ${arc.toUpperCase()} - Arc History ===\n`);
+
+      if (!options.only || options.only === 'kinks') {
+        if (result.kinks.length > 0) {
+          console.log('🔥 Kinks (chronological):');
+          for (const kink of result.kinks) {
+            const star = kink.isFirst ? ' ⭐' : '';
+            console.log(`  ${kink.chapter}  ${kink.kink}${star}`);
+          }
+          console.log();
+        }
+      }
+
+      if (!options.only || options.only === 'outfits') {
+        if (result.outfits.length > 0) {
+          console.log('👗 Outfits:');
+          for (const outfit of result.outfits) {
+            console.log(`  ${outfit.chapter}  ${outfit.character}: ${outfit.outfit}`);
+          }
+          console.log();
+        }
+      }
+
+      if (!options.only || options.only === 'locations') {
+        if (result.locations.length > 0) {
+          console.log('📍 Locations:');
+          for (const location of result.locations) {
+            console.log(`  ${location.chapter}  ${location.location}`);
+          }
+          console.log();
+        }
+      }
+
+      if (!options.only || options.only === 'relations') {
+        if (result.relations.length > 0) {
+          console.log('💕 Relations (from DB):');
+          for (const relation of result.relations) {
+            console.log(
+              `  ${relation.chapter}  ${relation.source} → ${relation.type} → ${relation.target}`,
+            );
+          }
+          console.log();
+        }
+      }
+
+      if (
+        result.kinks.length === 0 &&
+        result.outfits.length === 0 &&
+        result.locations.length === 0 &&
+        result.relations.length === 0
+      ) {
+        console.log('No history found for the specified criteria.');
       }
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);

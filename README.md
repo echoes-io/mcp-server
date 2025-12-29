@@ -100,6 +100,8 @@ Configure in your MCP client (e.g., Claude Desktop, Kiro):
 | `search` | Search chapters, entities, or relations |
 | `stats` | Get aggregate statistics |
 | `check-consistency` | Analyze arc for narrative inconsistencies |
+| `graph-export` | Export knowledge graph in various formats |
+| `history` | Query character/arc history (kinks, outfits, locations, relations) |
 
 ## Available Prompts
 

@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
 import { getPrompt, PROMPTS } from './prompts/index.js';
 import { graphExport, graphExportConfig, graphExportSchema } from './tools/graph-export.js';
+import { history, historyConfig, historySchema } from './tools/history.js';
 import { index, indexConfig, indexSchema } from './tools/index.js';
 import { list, listConfig, listSchema } from './tools/list.js';
 import { search, searchConfig, searchSchema } from './tools/search.js';
@@ -112,6 +113,21 @@ export function createServer(): McpServer {
     async (args) => {
       try {
         return success(await graphExport(args));
+      } catch (err) {
+        return formatError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    historyConfig.name,
+    {
+      description: historyConfig.description,
+      inputSchema: historySchema,
+    },
+    async (args) => {
+      try {
+        return success(await history(args));
       } catch (err) {
         return formatError(err);
       }
