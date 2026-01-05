@@ -1,3 +1,23 @@
+# [7.0.0](https://github.com/echoes-io/mcp-server/compare/v6.2.0...v7.0.0) (2026-01-05)
+
+
+### Features
+
+* complete Human-in-the-Loop (HITL) review system - Phase 2 ([7b26a84](https://github.com/echoes-io/mcp-server/commit/7b26a847177bcb8237b1a284b2c8133680cde8a1))
+* **consistency:** complete outfit-claims rule and achieve 100% test coverage ([f54df05](https://github.com/echoes-io/mcp-server/commit/f54df05946a6e8025f18c09c3dee4948b32e949d))
+* implement graph-export tool with Mermaid, JSON, and DOT formats ([0857736](https://github.com/echoes-io/mcp-server/commit/0857736c0d788ebc0722fc5892fcf5143edf6ec9))
+* implement history tool for character arc tracking ([7be0419](https://github.com/echoes-io/mcp-server/commit/7be0419d146e172d96cf967f7c91f7c48bf5802c))
+* implement Human-in-the-Loop (HITL) review system - Phase 1 ([25ec2d5](https://github.com/echoes-io/mcp-server/commit/25ec2d593f343bd1884e72646b90e3222bcadc66))
+
+
+### BREAKING CHANGES
+
+* **consistency:** None
+
+Closes: Phase 2 Consistency Checker completion
+Coverage: 100% (statements, functions, lines), 94.44% branches
+Tests: 267 tests passing, 0 linting warnings
+
 # [6.2.0](https://github.com/echoes-io/mcp-server/compare/v6.1.0...v6.2.0) (2025-12-28)
 
 
