@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 import { getPrompt, PROMPTS } from './prompts/index.js';
+import { arcResume, arcResumeConfig, arcResumeSchema } from './tools/arc-resume.js';
 import { graphExport, graphExportConfig, graphExportSchema } from './tools/graph-export.js';
 import { history, historyConfig, historySchema } from './tools/history.js';
 import { index, indexConfig, indexSchema } from './tools/index.js';
@@ -180,6 +181,21 @@ export function createServer(): McpServer {
     async (args) => {
       try {
         return success(await reviewApply(args));
+      } catch (err) {
+        return formatError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    arcResumeConfig.name,
+    {
+      description: arcResumeConfig.description,
+      inputSchema: arcResumeSchema,
+    },
+    (args) => {
+      try {
+        return success(arcResume(args));
       } catch (err) {
         return formatError(err);
       }
