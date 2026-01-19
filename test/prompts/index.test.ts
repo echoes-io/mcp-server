@@ -35,8 +35,9 @@ describe('prompts', () => {
 
   describe('PROMPTS', () => {
     it('exports all prompt configs', () => {
-      expect(PROMPTS).toHaveLength(7);
+      expect(PROMPTS).toHaveLength(8);
       expect(PROMPTS.map((p) => p.name)).toEqual([
+        'arc-resume',
         'new-chapter',
         'revise-chapter',
         'expand-chapter',

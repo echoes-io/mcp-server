@@ -99,7 +99,6 @@ Configure in your MCP client (e.g., Claude Desktop, Kiro):
 | `index` | Index timeline content into LanceDB |
 | `search` | Search chapters, entities, or relations |
 | `stats` | Get aggregate statistics |
-| `arc-resume` | Load complete context for resuming work on an arc |
 | `check-consistency` | Analyze arc for narrative inconsistencies |
 | `graph-export` | Export knowledge graph in various formats |
 | `history` | Query character/arc history (kinks, outfits, locations, relations) |
@@ -111,6 +110,7 @@ Configure in your MCP client (e.g., Claude Desktop, Kiro):
 
 | Prompt | Arguments | Description |
 |--------|-----------|-------------|
+| `arc-resume` | arc, episode?, lastChapters? | Load complete context for resuming work on an arc |
 | `new-chapter` | arc, chapter | Create a new chapter |
 | `revise-chapter` | arc, chapter | Revise an existing chapter |
 | `expand-chapter` | arc, chapter, target | Expand chapter to target word count |

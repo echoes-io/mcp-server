@@ -1,48 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-import z from 'zod';
-
-import type { ToolConfig } from '../types.js';
-import { parseChapter } from '../utils.js';
-
-export const arcResumeConfig: ToolConfig = {
-  name: 'arc-resume',
-  description:
-    'Load complete context for resuming work on an arc: episode outline, character sheets, and recent chapters.',
-  arguments: {
-    arc: 'Arc name (e.g., "cri", "ale", "gio").',
-    episode: 'Episode number (optional - defaults to latest episode).',
-    lastChapters: 'Number of recent chapters to include (default: 3).',
-    contentPath: 'Path to content directory (default: ./content).',
-    docsPath: 'Path to docs directory (default: ./docs).',
-  },
-};
-
-export const arcResumeSchema = z.object({
-  arc: z.string().describe(arcResumeConfig.arguments.arc),
-  episode: z.number().optional().describe(arcResumeConfig.arguments.episode),
-  lastChapters: z.number().optional().describe(arcResumeConfig.arguments.lastChapters),
-  contentPath: z.string().optional().describe(arcResumeConfig.arguments.contentPath),
-  docsPath: z.string().optional().describe(arcResumeConfig.arguments.docsPath),
-});
-
-export type ArcResumeInput = z.infer<typeof arcResumeSchema>;
-
-export interface ArcResumeOutput {
-  arc: string;
-  episode: number;
-  episodeOutline: string;
-  characters: Record<string, string>;
-  recentChapters: Array<{
-    file: string;
-    pov: string;
-    title: string;
-    wordCount: number;
-    excerpt: string;
-  }>;
-}
-
 interface ChapterFile {
   file: string;
   episode: number;
@@ -54,11 +12,13 @@ interface ChapterFile {
   mtime: number;
 }
 
-export function arcResume(input: ArcResumeInput): ArcResumeOutput {
-  const parsed = arcResumeSchema.parse(input);
-  const { arc, episode, contentPath = './content', docsPath = './docs' } = parsed;
-  const lastChapters = parsed.lastChapters ?? 3;
-
+export function generateArcResumePrompt(
+  arc: string,
+  episode: number | undefined,
+  lastChapters: number,
+  contentPath: string,
+  docsPath: string,
+): string {
   // Scan content directory for chapters
   const arcDir = join(contentPath, arc);
 
@@ -80,17 +40,29 @@ export function arcResume(input: ArcResumeInput): ArcResumeOutput {
       for (const file of files) {
         const filePath = join(arcDir, entry.name, file);
         const content = readFileSync(filePath, 'utf-8');
-        const { metadata, stats } = parseChapter(content);
+        const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        if (!frontmatterMatch) continue;
+
+        const metadata: Record<string, unknown> = {};
+        for (const line of frontmatterMatch[1].split('\n')) {
+          const [key, ...valueParts] = line.split(':');
+          if (key && valueParts.length) {
+            const value = valueParts.join(':').trim();
+            metadata[key.trim()] = Number.isNaN(Number(value)) ? value : Number(value);
+          }
+        }
+
+        const wordCount = content.split(/\s+/).length;
         const mtime = statSync(filePath).mtimeMs;
 
         chapters.push({
           file: filePath,
-          episode: metadata.episode,
-          chapter: metadata.chapter,
-          pov: metadata.pov,
-          title: metadata.title,
-          excerpt: metadata.summary || '',
-          wordCount: stats.wordCount,
+          episode: metadata.episode as number,
+          chapter: metadata.chapter as number,
+          pov: metadata.pov as string,
+          title: metadata.title as string,
+          excerpt: (metadata.excerpt as string) || '',
+          wordCount,
           mtime,
         });
       }
@@ -102,17 +74,29 @@ export function arcResume(input: ArcResumeInput): ArcResumeOutput {
     for (const file of files) {
       const filePath = join(arcDir, file);
       const content = readFileSync(filePath, 'utf-8');
-      const { metadata, stats } = parseChapter(content);
+      const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+      if (!frontmatterMatch) continue;
+
+      const metadata: Record<string, unknown> = {};
+      for (const line of frontmatterMatch[1].split('\n')) {
+        const [key, ...valueParts] = line.split(':');
+        if (key && valueParts.length) {
+          const value = valueParts.join(':').trim();
+          metadata[key.trim()] = Number.isNaN(Number(value)) ? value : Number(value);
+        }
+      }
+
+      const wordCount = content.split(/\s+/).length;
       const mtime = statSync(filePath).mtimeMs;
 
       chapters.push({
         file: filePath,
-        episode: metadata.episode,
-        chapter: metadata.chapter,
-        pov: metadata.pov,
-        title: metadata.title,
-        excerpt: metadata.summary || '',
-        wordCount: stats.wordCount,
+        episode: metadata.episode as number,
+        chapter: metadata.chapter as number,
+        pov: metadata.pov as string,
+        title: metadata.title as string,
+        excerpt: (metadata.excerpt as string) || '',
+        wordCount,
         mtime,
       });
     }
@@ -135,13 +119,7 @@ export function arcResume(input: ArcResumeInput): ArcResumeOutput {
   }
 
   // Get recent chapters
-  const recentChapters = episodeChapters.slice(0, lastChapters).map((c) => ({
-    file: c.file,
-    pov: c.pov,
-    title: c.title,
-    wordCount: c.wordCount,
-    excerpt: c.excerpt,
-  }));
+  const recentChapters = episodeChapters.slice(0, lastChapters);
 
   // Read episode outline
   const episodesDir = join(docsPath, 'episodes');
@@ -172,11 +150,29 @@ export function arcResume(input: ArcResumeInput): ArcResumeOutput {
     // Characters directory might not exist
   }
 
-  return {
-    arc,
-    episode: targetEpisode,
-    episodeOutline,
-    characters,
-    recentChapters,
-  };
+  // Build prompt
+  let prompt = `# Arc Resume: ${arc} - Episode ${targetEpisode}\n\n`;
+
+  prompt += '## Episode Outline\n\n';
+  prompt += `${episodeOutline}\n\n`;
+
+  if (Object.keys(characters).length > 0) {
+    prompt += '## Characters\n\n';
+    for (const [name, content] of Object.entries(characters)) {
+      prompt += `### ${name}\n\n${content}\n\n`;
+    }
+  }
+
+  prompt += '## Recent Chapters\n\n';
+  for (const chapter of recentChapters) {
+    prompt += `### Chapter ${chapter.chapter}: ${chapter.title} (${chapter.pov})\n\n`;
+    prompt += `**File**: ${chapter.file}\n`;
+    prompt += `**Word Count**: ${chapter.wordCount}\n`;
+    if (chapter.excerpt) {
+      prompt += `**Excerpt**: ${chapter.excerpt}\n`;
+    }
+    prompt += '\n';
+  }
+
+  return prompt;
 }

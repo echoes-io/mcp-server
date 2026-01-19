@@ -3,6 +3,8 @@ import { join } from 'node:path';
 
 import z from 'zod';
 
+import { generateArcResumePrompt } from './arc-resume.js';
+
 export interface PromptConfig {
   name: string;
   description: string;
@@ -10,6 +12,18 @@ export interface PromptConfig {
 }
 
 export const PROMPTS: PromptConfig[] = [
+  {
+    name: 'arc-resume',
+    description: 'Load complete context for resuming work on an arc',
+    args: {
+      arc: z.string().describe('Arc name'),
+      episode: z.string().optional().describe('Episode number (optional - defaults to latest)'),
+      lastChapters: z
+        .string()
+        .optional()
+        .describe('Number of recent chapters to include (default: 3)'),
+    },
+  },
   {
     name: 'new-chapter',
     description: 'Create a new chapter for a timeline arc',
@@ -100,6 +114,11 @@ function validateArgs(promptName: string, args: Record<string, string>, contentP
   };
 
   switch (promptName) {
+    case 'arc-resume':
+      requireArcExists(args.arc);
+      if (args.episode) requireNumber(args.episode, 'Episode');
+      if (args.lastChapters) requireNumber(args.lastChapters, 'Last chapters');
+      break;
     case 'new-chapter':
     case 'revise-chapter':
     case 'expand-chapter':
@@ -144,6 +163,7 @@ function substitutePlaceholders(
 export interface GetPromptOptions {
   timeline?: string;
   contentPath?: string;
+  docsPath?: string;
 }
 
 export function getPrompt(
@@ -153,6 +173,15 @@ export function getPrompt(
 ): string {
   const timeline = options.timeline ?? 'timeline';
   const contentPath = options.contentPath ?? 'content';
+  const docsPath = options.docsPath ?? join(process.cwd(), 'docs');
+
+  // Handle arc-resume specially (no template file)
+  if (name === 'arc-resume') {
+    validateArgs(name, args, contentPath);
+    const episode = args.episode ? Number(args.episode) : undefined;
+    const lastChapters = args.lastChapters ? Number(args.lastChapters) : 3;
+    return generateArcResumePrompt(args.arc, episode, lastChapters, contentPath, docsPath);
+  }
 
   // Validate .github repo
   const githubPath = getGithubPromptsPath();
