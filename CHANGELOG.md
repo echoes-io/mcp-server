@@ -1,3 +1,10 @@
+# [7.1.0](https://github.com/echoes-io/mcp-server/compare/v7.0.0...v7.1.0) (2026-01-19)
+
+
+### Features
+
+* add arc-resume tool for loading arc context ([f0feeac](https://github.com/echoes-io/mcp-server/commit/f0feeac876aba50bb185604e95d3cdcd86df7d2b))
+
 # [7.0.0](https://github.com/echoes-io/mcp-server/compare/v6.2.0...v7.0.0) (2026-01-05)
 
 
