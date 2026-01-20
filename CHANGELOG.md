@@ -1,3 +1,10 @@
+## [7.1.1](https://github.com/echoes-io/mcp-server/compare/v7.1.0...v7.1.1) (2026-01-20)
+
+
+### Performance Improvements
+
+* :truck: moved "arc-resume" from tool to input ([f8b9337](https://github.com/echoes-io/mcp-server/commit/f8b9337edc43959469c823d476e5b6ff39debcb4))
+
 # [7.1.0](https://github.com/echoes-io/mcp-server/compare/v7.0.0...v7.1.0) (2026-01-19)
 
 
