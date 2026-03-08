@@ -153,6 +153,13 @@ export function generateArcResumePrompt(
   // Build prompt
   let prompt = `# Arc Resume: ${arc} - Episode ${targetEpisode}\n\n`;
 
+  prompt += '## ⚠️ IMPORTANT: Do NOT write the next chapter immediately\n\n';
+  prompt += 'Use this context to understand where the arc left off. Then:\n';
+  prompt += '1. Summarize the current state of the arc to the user\n';
+  prompt += '2. Propose what the next chapter could be about (outline, not prose)\n';
+  prompt += '3. Discuss and refine with the user\n';
+  prompt += '4. Wait for explicit confirmation before writing\n\n';
+
   prompt += '## Episode Outline\n\n';
   prompt += `${episodeOutline}\n\n`;
 
