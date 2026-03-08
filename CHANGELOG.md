@@ -1,3 +1,10 @@
+## [8.0.1](https://github.com/echoes-io/mcp-server/compare/v8.0.0...v8.0.1) (2026-03-08)
+
+
+### Bug Fixes
+
+* prevent arc-resume from writing chapters without user confirmation ([236b2b7](https://github.com/echoes-io/mcp-server/commit/236b2b718d0a49438103dd4352964a9bd6ef0f0c))
+
 # [8.0.0](https://github.com/echoes-io/mcp-server/compare/v7.1.1...v8.0.0) (2026-03-08)
 
 
