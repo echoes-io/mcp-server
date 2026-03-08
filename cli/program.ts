@@ -13,6 +13,7 @@ import { reviewGenerate, reviewGenerateConfig } from '../lib/tools/review-genera
 import { reviewStatus, reviewStatusConfig } from '../lib/tools/review-status.js';
 import { search, searchConfig } from '../lib/tools/search.js';
 import { stats, statsConfig } from '../lib/tools/stats.js';
+import { timelineOverview, timelineOverviewConfig } from '../lib/tools/timeline-overview.js';
 import { wordsCount, wordsCountConfig } from '../lib/tools/words-count.js';
 import { getPackageConfig } from '../lib/utils.js';
 
@@ -491,6 +492,55 @@ program
       if (result.preview) {
         console.log('\n💡 Run without --dry-run to apply changes');
       }
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('overview')
+  .description(timelineOverviewConfig.description)
+  .argument('[contentPath]', timelineOverviewConfig.arguments.contentPath, './content')
+  .action((contentPath) => {
+    try {
+      const result = timelineOverview({ contentPath });
+
+      const statusIcon: Record<string, string> = {
+        planned: '⬜',
+        active: '🟢',
+        hiatus: '🟡',
+        complete: '✅',
+      };
+
+      for (const arc of result.arcs) {
+        const icon = statusIcon[arc.status];
+        console.log(
+          `${icon} ${arc.name} [${arc.status}] — ${arc.chapters} ch, ${arc.words.toLocaleString()} words (avg ${arc.avgWordsPerChapter})`,
+        );
+        if (arc.povs.length > 0) console.log(`   POVs: ${arc.povs.join(', ')}`);
+        if (arc.lastModified) console.log(`   Last modified: ${arc.lastModified}`);
+
+        for (const ep of arc.episodes) {
+          const epIcon = statusIcon[ep.status];
+          const chLabel = ep.plannedChapters
+            ? `${ep.chapters}/${ep.plannedChapters}`
+            : `${ep.chapters}`;
+          const avg = ep.avgWordsPerChapter > 0 ? ` (avg ${ep.avgWordsPerChapter})` : '';
+          console.log(
+            `   └─ ${epIcon} ${ep.name}: ${chLabel} ch, ${ep.words.toLocaleString()} words${avg}${ep.lastModified ? ` [${ep.lastModified}]` : ''}`,
+          );
+        }
+        console.log('');
+      }
+
+      console.log('─'.repeat(50));
+      const chLabel = result.totals.plannedChapters
+        ? `${result.totals.chapters}/${result.totals.plannedChapters} chapters (${Math.round((result.totals.chapters / result.totals.plannedChapters) * 100)}%)`
+        : `${result.totals.chapters} chapters`;
+      console.log(
+        `📊 Total: ${result.totals.arcs} arcs, ${result.totals.episodes} episodes, ${chLabel}, ${result.totals.words.toLocaleString()} words`,
+      );
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);
       process.exit(1);

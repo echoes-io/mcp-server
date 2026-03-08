@@ -15,6 +15,11 @@ import {
 import { reviewStatus, reviewStatusConfig, reviewStatusSchema } from './tools/review-status.js';
 import { search, searchConfig, searchSchema } from './tools/search.js';
 import { stats, statsConfig, statsSchema } from './tools/stats.js';
+import {
+  timelineOverview,
+  timelineOverviewConfig,
+  timelineOverviewSchema,
+} from './tools/timeline-overview.js';
 import { wordsCount, wordsCountConfig, wordsCountSchema } from './tools/words-count.js';
 import { getPackageConfig } from './utils.js';
 
@@ -180,6 +185,21 @@ export function createServer(): McpServer {
     async (args) => {
       try {
         return success(await reviewApply(args));
+      } catch (err) {
+        return formatError(err);
+      }
+    },
+  );
+
+  server.registerTool(
+    timelineOverviewConfig.name,
+    {
+      description: timelineOverviewConfig.description,
+      inputSchema: timelineOverviewSchema,
+    },
+    async (args) => {
+      try {
+        return success(timelineOverview(args));
       } catch (err) {
         return formatError(err);
       }
