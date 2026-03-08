@@ -1,3 +1,24 @@
+# [8.0.0](https://github.com/echoes-io/mcp-server/compare/v7.1.1...v8.0.0) (2026-03-08)
+
+
+* feat!: replace custom RAG with FlowRAG pipeline ([061ddf5](https://github.com/echoes-io/mcp-server/commit/061ddf51e7ec2aaec02ad8ff85113a6ec79041b0))
+
+
+### BREAKING CHANGES
+
+* remove lib/database/ and lib/indexer/ modules,
+all RAG operations now go through @flowrag/* packages.
+
+- Add FlowRAG integration layer (lib/rag/): schema, parser, factory
+- Rewire all tools to use FlowRAG storage (KV, vector, graph)
+- Drop Mermaid export (JSON/DOT only)
+- Remove direct deps: @google/genai, @huggingface/transformers,
+  apache-arrow, @lancedb/lancedb, listr2
+- Fix all 12 lint warnings (no-explicit-any, unused imports, formatting)
+- Exclude type-only files from coverage
+- Achieve 100% line/function coverage, 82% branch (249 tests)
+- Delete ~930 LOC of custom RAG code (-4301/+2673 net)
+
 ## [7.1.1](https://github.com/echoes-io/mcp-server/compare/v7.1.0...v7.1.1) (2026-01-20)
 
 
