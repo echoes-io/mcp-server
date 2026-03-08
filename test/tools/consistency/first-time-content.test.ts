@@ -2,7 +2,30 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@flowrag/provider-local', () => ({
+  LocalEmbedder: class {
+    readonly modelName = 'test';
+    readonly dimensions = 10;
+    async embed() {
+      return Array(10).fill(0.1);
+    }
+    async embedBatch(texts: string[]) {
+      // Bag-of-characters embedding: similar texts → similar vectors
+      return texts.map((t) => {
+        const lower = t.toLowerCase();
+        const vec = Array(10).fill(0);
+        for (let i = 0; i < lower.length; i++) {
+          vec[lower.charCodeAt(i) % 10] += 1;
+        }
+        // Normalize
+        const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0)) || 1;
+        return vec.map((v) => v / norm);
+      });
+    }
+  },
+}));
 
 import { checkFirstTimeContent } from '../../../lib/tools/consistency/rules/first-time-content.js';
 

@@ -3,8 +3,7 @@ import { readFile } from 'node:fs/promises';
 import z from 'zod';
 
 import { DEFAULT_DB_PATH } from '../constants.js';
-import { Database } from '../database/index.js';
-import type { EntityType, RelationType } from '../database/schemas.js';
+import { createEchoesRAG } from '../rag/index.js';
 import type { ToolConfig } from '../types.js';
 
 export const reviewApplyConfig: ToolConfig = {
@@ -18,7 +17,7 @@ export const reviewApplyConfig: ToolConfig = {
 };
 
 export const reviewApplySchema = z.object({
-  file: z.string().describe(reviewApplyConfig.arguments.file),
+  file: z.string().min(1).describe(reviewApplyConfig.arguments.file),
   dryRun: z.boolean().optional().describe(reviewApplyConfig.arguments.dryRun),
   dbPath: z.string().default(DEFAULT_DB_PATH).describe(reviewApplyConfig.arguments.dbPath),
 });
@@ -26,10 +25,13 @@ export const reviewApplySchema = z.object({
 export type ReviewApplyInput = z.infer<typeof reviewApplySchema>;
 
 // Simplified YAML parser for our specific format
-function parseYaml(content: string): any {
+// biome-ignore lint/suspicious/noExplicitAny: dynamic YAML parser for review files
+function parseYaml(content: string): Record<string, any> {
   const lines = content.split('\n').filter((line) => !line.trim().startsWith('#') && line.trim());
-  const result: any = {};
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic structure
+  const result: Record<string, any> = {};
   let currentSection = '';
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic structure
   let currentItem: any = null;
   let inAdditions = false;
 
@@ -50,12 +52,8 @@ function parseYaml(content: string): any {
 
     if (trimmed.startsWith('- ')) {
       currentItem = {};
-      if (inAdditions) {
-        // Handle additions section
-        continue;
-      } else {
-        result[currentSection].push(currentItem);
-      }
+      if (!inAdditions) result[currentSection].push(currentItem);
+      continue;
     }
 
     if (trimmed.includes(': ') && currentItem) {
@@ -64,18 +62,15 @@ function parseYaml(content: string): any {
       const cleanKey = key.replace(/^\s*/, '');
 
       if (cleanKey === 'aliases' || cleanKey === 'chapters') {
-        // Parse array format: [item1, item2]
         const arrayMatch = value.match(/\[(.*)\]/);
-        if (arrayMatch) {
-          currentItem[cleanKey] = arrayMatch[1]
-            .split(',')
-            .map((item) => item.trim().replace(/^"(.*)"$/, '$1'))
-            .filter((item) => item);
-        } else {
-          currentItem[cleanKey] = [];
-        }
+        currentItem[cleanKey] = arrayMatch
+          ? arrayMatch[1]
+              .split(',')
+              .map((item) => item.trim().replace(/^"(.*)"$/, '$1'))
+              .filter(Boolean)
+          : [];
       } else if (cleanKey === 'weight') {
-        currentItem[cleanKey] = parseFloat(value);
+        currentItem[cleanKey] = Number.parseFloat(value);
       } else {
         currentItem[cleanKey] = value;
       }
@@ -88,18 +83,8 @@ function parseYaml(content: string): any {
 interface ApplyResult {
   preview: boolean;
   changes: {
-    entities: {
-      approved: number;
-      rejected: number;
-      modified: number;
-      added: number;
-    };
-    relations: {
-      approved: number;
-      rejected: number;
-      modified: number;
-      added: number;
-    };
+    entities: { approved: number; rejected: number; modified: number; added: number };
+    relations: { approved: number; rejected: number; modified: number; added: number };
   };
   details: string[];
 }
@@ -108,12 +93,13 @@ export async function reviewApply(input: ReviewApplyInput): Promise<ApplyResult>
   const { file, dbPath } = reviewApplySchema.parse(input);
   const dryRun = input.dryRun ?? false;
 
-  // Read and parse YAML file
   const content = await readFile(file, 'utf8');
   const reviewData = parseYaml(content);
 
-  const db = new Database(dbPath);
-  await db.connect();
+  // Extract arc from first entity ID or metadata
+  const firstEntityId = reviewData.entities?.[0]?.id || '';
+  const arc = firstEntityId.split(':')[0] || reviewData.metadata?.arc || 'unknown';
+  const { storage } = createEchoesRAG({ dbPath, arc });
 
   const result: ApplyResult = {
     preview: dryRun,
@@ -124,234 +110,68 @@ export async function reviewApply(input: ReviewApplyInput): Promise<ApplyResult>
     details: [],
   };
 
-  // Process entities
   if (reviewData.entities) {
     for (const entity of reviewData.entities) {
       const status = entity._correction ? 'modified' : entity.status;
+      const correction = entity._correction || {};
 
-      if (status === 'approved') {
-        result.changes.entities.approved++;
-        result.details.push(`✅ Entity approved: ${entity.name}`);
-
-        if (!dryRun) {
-          await db.upsertEntities([
-            {
-              id: entity.id,
-              arc: entity.id.split(':')[0],
-              name: entity.name,
-              type: entity.type as EntityType,
-              description: entity.description,
-              aliases: entity.aliases || [],
-              vector: Array(384).fill(0), // Placeholder
-              chapters: [],
-              chapter_count: 0,
-              first_appearance: '',
-              indexed_at: Date.now(),
-              review_status: 'approved',
-              reviewed_at: Date.now(),
-              original_extraction: null,
-            } as any,
-          ]);
-        }
-      } else if (status === 'modified') {
-        result.changes.entities.modified++;
-        const correction = entity._correction || {};
-        result.details.push(
-          `✏️ Entity modified: ${entity.name} (${Object.keys(correction).join(', ')})`,
-        );
+      if (status === 'approved' || status === 'modified' || status === 'rejected') {
+        result.changes.entities[status as 'approved' | 'modified' | 'rejected']++;
+        const icon = status === 'approved' ? '✅' : status === 'modified' ? '✏️' : '❌';
+        const suffix = status === 'modified' ? ` (${Object.keys(correction).join(', ')})` : '';
+        result.details.push(`${icon} Entity ${status}: ${entity.name}${suffix}`);
 
         if (!dryRun) {
-          await db.upsertEntities([
-            {
-              id: entity.id,
-              arc: entity.id.split(':')[0],
-              name: entity.name,
-              type: entity.type as EntityType,
-              description: correction.description || entity.description,
+          await storage.graph.addEntity({
+            id: entity.id,
+            name: entity.name,
+            type: entity.type,
+            description: correction.description || entity.description,
+            sourceChunkIds: [],
+            fields: {
               aliases: correction.aliases || entity.aliases || [],
-              vector: Array(384).fill(0), // Placeholder
-              chapters: [],
-              chapter_count: 0,
-              first_appearance: '',
-              indexed_at: Date.now(),
-              review_status: 'modified',
+              review_status: status,
               reviewed_at: Date.now(),
-              original_extraction: JSON.stringify(entity),
-            } as any,
-          ]);
-        }
-      } else if (status === 'rejected') {
-        result.changes.entities.rejected++;
-        result.details.push(`❌ Entity rejected: ${entity.name}`);
-
-        // Note: In a full implementation, we might delete or mark as rejected
-        if (!dryRun) {
-          await db.upsertEntities([
-            {
-              id: entity.id,
-              arc: entity.id.split(':')[0],
-              name: entity.name,
-              type: entity.type as EntityType,
-              description: entity.description,
-              aliases: entity.aliases || [],
-              vector: Array(384).fill(0), // Placeholder
-              chapters: [],
-              chapter_count: 0,
-              first_appearance: '',
-              indexed_at: Date.now(),
-              review_status: 'rejected',
-              reviewed_at: Date.now(),
-              original_extraction: null,
-            } as any,
-          ]);
+              ...(status === 'modified' ? { original_extraction: JSON.stringify(entity) } : {}),
+            },
+          });
         }
       }
     }
   }
 
-  // Process relations
   if (reviewData.relations) {
     for (const relation of reviewData.relations) {
       const status = relation._correction ? 'modified' : relation.status;
+      const correction = relation._correction || {};
 
-      if (status === 'approved') {
-        result.changes.relations.approved++;
+      if (status === 'approved' || status === 'modified' || status === 'rejected') {
+        result.changes.relations[status as 'approved' | 'modified' | 'rejected']++;
+        const icon = status === 'approved' ? '✅' : status === 'modified' ? '✏️' : '❌';
         result.details.push(
-          `✅ Relation approved: ${relation.source} → ${relation.type} → ${relation.target}`,
+          `${icon} Relation ${status}: ${relation.source} → ${relation.type} → ${relation.target}`,
         );
 
         if (!dryRun) {
-          await db.upsertRelations([
-            {
-              id: relation.id,
-              arc: relation.id.split(':')[0],
-              source_entity: `${relation.id.split(':')[0]}:CHARACTER:${relation.source}`,
-              target_entity: `${relation.id.split(':')[0]}:CHARACTER:${relation.target}`,
-              type: relation.type as RelationType,
-              description: relation.description,
-              weight: relation.weight,
-              chapters: relation.chapters || [],
-              indexed_at: Date.now(),
-              review_status: 'approved',
-              reviewed_at: Date.now(),
-              original_extraction: null,
-            } as any,
-          ]);
-        }
-      } else if (status === 'modified') {
-        result.changes.relations.modified++;
-        const correction = relation._correction || {};
-        result.details.push(
-          `✏️ Relation modified: ${relation.source} → ${relation.type} → ${relation.target}`,
-        );
-
-        if (!dryRun) {
-          await db.upsertRelations([
-            {
-              id: relation.id,
-              arc: relation.id.split(':')[0],
-              source_entity: `${relation.id.split(':')[0]}:CHARACTER:${relation.source}`,
-              target_entity: `${relation.id.split(':')[0]}:CHARACTER:${relation.target}`,
-              type: (correction.type || relation.type) as RelationType,
-              description: correction.description || relation.description,
+          await storage.graph.addRelation({
+            id: relation.id,
+            sourceId: `CHARACTER:${relation.source}`,
+            targetId: `CHARACTER:${relation.target}`,
+            type: correction.type || relation.type,
+            description: correction.description || relation.description,
+            keywords: [],
+            sourceChunkIds: correction.chapters || relation.chapters || [],
+            fields: {
               weight: correction.weight || relation.weight,
-              chapters: correction.chapters || relation.chapters || [],
-              indexed_at: Date.now(),
-              review_status: 'modified',
+              review_status: status,
               reviewed_at: Date.now(),
-              original_extraction: JSON.stringify(relation),
-            } as any,
-          ]);
-        }
-      } else if (status === 'rejected') {
-        result.changes.relations.rejected++;
-        result.details.push(
-          `❌ Relation rejected: ${relation.source} → ${relation.type} → ${relation.target}`,
-        );
-
-        if (!dryRun) {
-          await db.upsertRelations([
-            {
-              id: relation.id,
-              arc: relation.id.split(':')[0],
-              source_entity: `${relation.id.split(':')[0]}:CHARACTER:${relation.source}`,
-              target_entity: `${relation.id.split(':')[0]}:CHARACTER:${relation.target}`,
-              type: relation.type as RelationType,
-              description: relation.description,
-              weight: relation.weight,
-              chapters: relation.chapters || [],
-              indexed_at: Date.now(),
-              review_status: 'rejected',
-              reviewed_at: Date.now(),
-              original_extraction: null,
-            } as any,
-          ]);
+              ...(status === 'modified' ? { original_extraction: JSON.stringify(relation) } : {}),
+            },
+          });
         }
       }
     }
   }
 
-  // Process additions
-  if (reviewData.additions) {
-    if (reviewData.additions.entities) {
-      for (const entity of reviewData.additions.entities) {
-        result.changes.entities.added++;
-        result.details.push(`➕ Entity added: ${entity.name}`);
-
-        if (!dryRun) {
-          const arc = reviewData.metadata?.arc || 'unknown';
-          await db.upsertEntities([
-            {
-              id: `${arc}:${entity.type.toUpperCase()}:${entity.name}`,
-              arc,
-              name: entity.name,
-              type: entity.type as EntityType,
-              description: entity.description,
-              aliases: entity.aliases || [],
-              vector: Array(384).fill(0), // Placeholder
-              chapters: [],
-              chapter_count: 0,
-              first_appearance: '',
-              indexed_at: Date.now(),
-              review_status: 'approved',
-              reviewed_at: Date.now(),
-              original_extraction: null,
-            } as any,
-          ]);
-        }
-      }
-    }
-
-    if (reviewData.additions.relations) {
-      for (const relation of reviewData.additions.relations) {
-        result.changes.relations.added++;
-        result.details.push(
-          `➕ Relation added: ${relation.source} → ${relation.type} → ${relation.target}`,
-        );
-
-        if (!dryRun) {
-          const arc = reviewData.metadata?.arc || 'unknown';
-          await db.upsertRelations([
-            {
-              id: `${arc}:${relation.source}:${relation.type}:${relation.target}`,
-              arc,
-              source_entity: `${arc}:CHARACTER:${relation.source}`,
-              target_entity: `${arc}:CHARACTER:${relation.target}`,
-              type: relation.type as RelationType,
-              description: relation.description,
-              weight: 0.8,
-              chapters: relation.chapters || [],
-              indexed_at: Date.now(),
-              review_status: 'approved',
-              reviewed_at: Date.now(),
-              original_extraction: null,
-            } as any,
-          ]);
-        }
-      }
-    }
-  }
-
-  db.close();
   return result;
 }

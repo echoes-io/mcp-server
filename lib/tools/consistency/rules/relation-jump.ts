@@ -1,4 +1,4 @@
-import { Database } from '../../../database/index.js';
+import { createEchoesRAG } from '../../../rag/index.js';
 import type { Issue } from '../types.js';
 
 interface RelationChange {
@@ -33,11 +33,20 @@ function isDrasticTypeChange(from: string, to: string): boolean {
 }
 
 export async function checkRelationJump(dbPath: string, arc: string): Promise<Issue[]> {
-  const db = new Database(dbPath);
-  await db.connect();
+  const { storage } = createEchoesRAG({ dbPath, arc });
 
-  const relations = await db.getRelations(arc);
-  db.close();
+  const entities = await storage.graph.getEntities();
+  const relations: {
+    sourceId: string;
+    targetId: string;
+    type: string;
+    sourceChunkIds: string[];
+    fields?: Record<string, unknown>;
+  }[] = [];
+  for (const entity of entities) {
+    const rels = await storage.graph.getRelations(entity.id, 'out');
+    relations.push(...rels);
+  }
 
   if (relations.length === 0) return [];
 
@@ -47,9 +56,9 @@ export async function checkRelationJump(dbPath: string, arc: string): Promise<Is
   const pairs = new Map<string, RelationChange[]>();
 
   for (const rel of relations) {
-    const key = `${rel.source_entity}:${rel.target_entity}`;
+    const key = `${rel.sourceId}:${rel.targetId}`;
 
-    for (const chapterId of rel.chapters) {
+    for (const chapterId of rel.sourceChunkIds) {
       const { episode, chapter } = parseChapterId(chapterId);
 
       if (!pairs.has(key)) {
@@ -61,7 +70,7 @@ export async function checkRelationJump(dbPath: string, arc: string): Promise<Is
         pairArray.push({
           chapter: chapterId,
           type: rel.type,
-          weight: rel.weight,
+          weight: Number(rel.fields?.weight ?? 0.5),
           episode,
           chapterNum: chapter,
         });

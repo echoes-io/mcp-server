@@ -1,98 +1,88 @@
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Database } from '../../lib/database/index.js';
-import type { EntityType, RelationType } from '../../lib/database/schemas.js';
+vi.mock('@flowrag/provider-local', () => ({
+  LocalEmbedder: class {
+    readonly modelName = 'test';
+    readonly dimensions = 3;
+    async embed() {
+      return [0.1, 0.2, 0.3];
+    }
+    async embedBatch(texts: string[]) {
+      return texts.map(() => [0.1, 0.2, 0.3]);
+    }
+  },
+}));
+
+vi.mock('@flowrag/provider-gemini', () => ({
+  GeminiExtractor: class {
+    readonly modelName = 'test';
+    async extractEntities() {
+      return { entities: [], relations: [] };
+    }
+  },
+}));
+
+import { createEchoesRAG } from '../../lib/rag/index.js';
 import { reviewApply } from '../../lib/tools/review-apply.js';
 import { reviewGenerate } from '../../lib/tools/review-generate.js';
 import { reviewStatus } from '../../lib/tools/review-status.js';
 
 describe('review tools', () => {
-  let testDir: string;
+  let tempDir: string;
   let dbPath: string;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `echoes-test-${Date.now()}`);
-    mkdirSync(testDir, { recursive: true });
-    dbPath = join(testDir, 'test.db');
+    tempDir = mkdtempSync(join(tmpdir(), 'echoes-review-test-'));
+    dbPath = join(tempDir, 'db');
   });
 
   afterEach(() => {
-    rmSync(testDir, { recursive: true, force: true });
+    rmSync(tempDir, { recursive: true, force: true });
   });
 
   async function seedData() {
-    const db = new Database(dbPath);
-    await db.connect();
+    const { storage } = createEchoesRAG({ dbPath, arc: 'arc1' });
 
-    // Add entities with different review statuses
-    await db.upsertEntities([
-      {
-        id: 'arc1:CHARACTER:Alice',
-        arc: 'arc1',
-        name: 'Alice',
-        type: 'CHARACTER' as EntityType,
-        description: 'Main character',
-        aliases: ['Ali'],
-        vector: Array(384).fill(0.1),
-        chapters: ['arc1:1:1'],
-        chapter_count: 1,
-        first_appearance: 'arc1:1:1',
-        indexed_at: Date.now(),
-        review_status: 'pending',
-        reviewed_at: null,
-        original_extraction: null,
-      } as any,
-      {
-        id: 'arc1:CHARACTER:Bob',
-        arc: 'arc1',
-        name: 'Bob',
-        type: 'CHARACTER' as EntityType,
-        description: 'Secondary character',
-        aliases: [],
-        vector: Array(384).fill(0.2),
-        chapters: ['arc1:1:1'],
-        chapter_count: 1,
-        first_appearance: 'arc1:1:1',
-        indexed_at: Date.now(),
-        review_status: 'approved',
-        reviewed_at: Date.now(),
-        original_extraction: null,
-      } as any,
-    ]);
+    await storage.graph.addEntity({
+      id: 'CHARACTER:Alice',
+      name: 'Alice',
+      type: 'CHARACTER',
+      description: 'Main character',
+      sourceChunkIds: ['1:1'],
+      fields: { aliases: ['Ali'], review_status: 'pending' },
+    });
 
-    // Add relations with different review statuses
-    await db.upsertRelations([
-      {
-        id: 'arc1:Alice:LOVES:Bob',
-        arc: 'arc1',
-        source_entity: 'arc1:CHARACTER:Alice',
-        target_entity: 'arc1:CHARACTER:Bob',
-        type: 'LOVES' as RelationType,
-        description: 'Alice loves Bob',
-        weight: 0.9,
-        chapters: ['arc1:1:1'],
-        indexed_at: Date.now(),
-        review_status: 'pending',
-        reviewed_at: null,
-        original_extraction: null,
-      } as any,
-    ]);
+    await storage.graph.addEntity({
+      id: 'CHARACTER:Bob',
+      name: 'Bob',
+      type: 'CHARACTER',
+      description: 'Secondary character',
+      sourceChunkIds: ['1:1'],
+      fields: { aliases: [], review_status: 'approved', reviewed_at: Date.now() },
+    });
 
-    db.close();
+    await storage.graph.addRelation({
+      id: 'Alice:LOVES:Bob',
+      sourceId: 'CHARACTER:Alice',
+      targetId: 'CHARACTER:Bob',
+      type: 'LOVES',
+      description: 'Alice loves Bob',
+      keywords: [],
+      sourceChunkIds: ['1:1'],
+      fields: { weight: 0.9, review_status: 'pending' },
+    });
   }
 
   describe('reviewStatus', () => {
     it('should return review statistics', async () => {
       await seedData();
 
-      const result = await reviewStatus({
-        arc: 'arc1',
-        dbPath,
-      });
+      const result = await reviewStatus({ arc: 'arc1', dbPath });
 
       expect(result.arc).toBe('arc1');
       expect(result.entities.total).toBe(2);
@@ -103,23 +93,31 @@ describe('review tools', () => {
     });
 
     it('should handle empty database', async () => {
-      const result = await reviewStatus({
-        arc: 'nonexistent',
-        dbPath,
-      });
+      const result = await reviewStatus({ arc: 'nonexistent', dbPath });
 
       expect(result.arc).toBe('nonexistent');
       expect(result.entities.total).toBe(0);
       expect(result.relations.total).toBe(0);
     });
 
+    it('should default to pending when no review_status field', async () => {
+      const { storage } = createEchoesRAG({ dbPath, arc: 'arc2' });
+      await storage.graph.addEntity({
+        id: 'CHARACTER:NoFields',
+        name: 'NoFields',
+        type: 'CHARACTER',
+        description: 'No fields',
+        sourceChunkIds: ['1:1'],
+      });
+
+      const result = await reviewStatus({ arc: 'arc2', dbPath });
+
+      expect(result.entities.total).toBe(1);
+      expect(result.entities.pending).toBe(1);
+    });
+
     it('should validate input parameters', async () => {
-      await expect(
-        reviewStatus({
-          arc: '',
-          dbPath,
-        }),
-      ).rejects.toThrow();
+      await expect(reviewStatus({ arc: '', dbPath })).rejects.toThrow();
     });
   });
 
@@ -127,14 +125,11 @@ describe('review tools', () => {
     it('should generate review file for pending items', async () => {
       await seedData();
 
-      const result = await reviewGenerate({
-        arc: 'arc1',
-        dbPath,
-      });
+      const result = await reviewGenerate({ arc: 'arc1', dbPath });
 
       expect(result.file).toBe('.echoes-review.yaml');
       expect(result.stats.entities).toBe(1); // Only pending Alice
-      expect(result.stats.relations).toBe(1); // Only pending relation
+      expect(result.stats.relations).toBe(1);
       expect(result.content).toContain('Arc: arc1');
       expect(result.content).toContain('name: "Alice"');
       expect(result.content).toContain('status: pending');
@@ -143,23 +138,16 @@ describe('review tools', () => {
     it('should generate review file for all items', async () => {
       await seedData();
 
-      const result = await reviewGenerate({
-        arc: 'arc1',
-        filter: 'all',
-        dbPath,
-      });
+      const result = await reviewGenerate({ arc: 'arc1', filter: 'all', dbPath });
 
-      expect(result.stats.entities).toBe(2); // Both Alice and Bob
+      expect(result.stats.entities).toBe(2);
       expect(result.stats.relations).toBe(1);
       expect(result.content).toContain('name: "Alice"');
       expect(result.content).toContain('name: "Bob"');
     });
 
     it('should handle empty database', async () => {
-      const result = await reviewGenerate({
-        arc: 'nonexistent',
-        dbPath,
-      });
+      const result = await reviewGenerate({ arc: 'nonexistent', dbPath });
 
       expect(result.stats.entities).toBe(0);
       expect(result.stats.relations).toBe(0);
@@ -168,20 +156,11 @@ describe('review tools', () => {
     });
 
     it('should validate input parameters', async () => {
-      await expect(
-        reviewGenerate({
-          arc: '',
-          dbPath,
-        }),
-      ).rejects.toThrow();
+      await expect(reviewGenerate({ arc: '', dbPath })).rejects.toThrow();
     });
 
     it('should use custom output file', async () => {
-      const result = await reviewGenerate({
-        arc: 'test',
-        output: 'custom-review.yaml',
-        dbPath,
-      });
+      const result = await reviewGenerate({ arc: 'test', output: 'custom-review.yaml', dbPath });
 
       expect(result.file).toBe('custom-review.yaml');
     });
@@ -214,16 +193,10 @@ additions:
   entities: []
   relations: []`;
 
-      // Write test file
-      const fs = await import('node:fs/promises');
-      const testFile = join(testDir, 'test-review.yaml');
-      await fs.writeFile(testFile, yamlContent, 'utf8');
+      const testFile = join(tempDir, 'test-review.yaml');
+      await writeFile(testFile, yamlContent, 'utf8');
 
-      const result = await reviewApply({
-        file: testFile,
-        dryRun: true,
-        dbPath,
-      });
+      const result = await reviewApply({ file: testFile, dryRun: true, dbPath });
 
       expect(result.preview).toBe(true);
       expect(result.changes.entities.approved).toBe(1);
@@ -233,21 +206,39 @@ additions:
     });
 
     it('should validate input parameters', async () => {
-      await expect(
-        reviewApply({
-          file: '',
-          dbPath,
-        }),
-      ).rejects.toThrow();
+      await expect(reviewApply({ file: '', dbPath })).rejects.toThrow();
+    });
+
+    it('should apply changes when not dry run', async () => {
+      const yamlContent = `entities:
+  - id: "arc1:CHARACTER:Alice"
+    name: "Alice"
+    type: "CHARACTER"
+    description: "Updated"
+    status: approved
+
+relations:
+  - id: "arc1:Alice:LOVES:Bob"
+    source: "Alice"
+    target: "Bob"
+    type: "LOVES"
+    description: "Updated"
+    weight: 0.9
+    chapters: []
+    status: approved`;
+
+      const testFile = join(tempDir, 'apply-review.yaml');
+      await writeFile(testFile, yamlContent, 'utf8');
+
+      const result = await reviewApply({ file: testFile, dryRun: false, dbPath });
+
+      expect(result.preview).toBe(false);
+      expect(result.changes.entities.approved).toBe(1);
+      expect(result.changes.relations.approved).toBe(1);
     });
 
     it('should handle missing file', async () => {
-      await expect(
-        reviewApply({
-          file: 'nonexistent.yaml',
-          dbPath,
-        }),
-      ).rejects.toThrow();
+      await expect(reviewApply({ file: 'nonexistent.yaml', dbPath })).rejects.toThrow();
     });
   });
 });

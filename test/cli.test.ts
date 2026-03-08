@@ -4,89 +4,30 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
-// Mock embeddings module before importing Database
-vi.mock('../lib/indexer/embeddings.js', () => ({
-  getEmbeddingModel: vi.fn(() => 'test/model'),
-  getEmbeddingDtype: vi.fn(() => 'fp32'),
-  getEmbeddingDimension: vi.fn(() => Promise.resolve(384)),
-  generateEmbedding: vi.fn(() => Promise.resolve(Array(384).fill(0.1))),
-  preloadModel: vi.fn(() => Promise.resolve()),
+vi.mock('@flowrag/provider-local', () => ({
+  LocalEmbedder: class {
+    readonly modelName = 'test';
+    readonly dimensions = 3;
+    async embed() {
+      return [0.1, 0.2, 0.3];
+    }
+    async embedBatch(texts: string[]) {
+      return texts.map(() => [0.1, 0.2, 0.3]);
+    }
+  },
 }));
 
-// Mock extractor
-vi.mock('../lib/indexer/extractor.js', () => ({
-  extractEntities: vi.fn(() => Promise.resolve({ entities: [], relations: [] })),
+vi.mock('@flowrag/provider-gemini', () => ({
+  GeminiExtractor: class {
+    readonly modelName = 'test';
+    async extractEntities() {
+      return { entities: [], relations: [] };
+    }
+  },
 }));
 
 import { program } from '../cli/program.js';
-import { Database } from '../lib/database/index.js';
-import type {
-  ChapterRecord,
-  EntityRecord,
-  EntityType,
-  RelationRecord,
-  RelationType,
-} from '../lib/database/schemas.js';
-
-const EMBEDDING_DIM = 384;
-
-const createChapter = (id: string, arc: string, content: string): ChapterRecord => ({
-  id,
-  file_path: `${arc}/${id}.md`,
-  file_hash: 'hash',
-  arc,
-  episode: 1,
-  chapter: 1,
-  pov: 'Alice',
-  title: 'Test Chapter',
-  location: 'Rome',
-  date: '',
-  content,
-  summary: '',
-  word_count: content.split(' ').length,
-  char_count: content.length,
-  paragraph_count: 1,
-  vector: Array(EMBEDDING_DIM).fill(0.1),
-  entities: [],
-  indexed_at: Date.now(),
-});
-
-const createEntity = (
-  id: string,
-  arc: string,
-  name: string,
-  type: EntityType = 'CHARACTER',
-): EntityRecord => ({
-  id,
-  arc,
-  name,
-  type,
-  description: 'Test entity',
-  aliases: [],
-  vector: Array(EMBEDDING_DIM).fill(0.1),
-  chapters: [],
-  chapter_count: 1,
-  first_appearance: '',
-  indexed_at: Date.now(),
-});
-
-const createRelation = (
-  id: string,
-  arc: string,
-  source: string,
-  target: string,
-  type: RelationType,
-): RelationRecord => ({
-  id,
-  arc,
-  source_entity: source,
-  target_entity: target,
-  type,
-  description: 'Test relation',
-  weight: 0.5,
-  chapters: ['ch1'],
-  indexed_at: Date.now(),
-});
+import { createEchoesRAG } from '../lib/rag/index.js';
 
 describe('CLI program', () => {
   it('has correct name and version', () => {
@@ -148,9 +89,8 @@ describe('CLI program', () => {
 
         await program.parseAsync(['node', 'test', 'words-count', file1, file2]);
 
-        // Verifies forEach runs multiple times and adds blank line between files
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('test1.md'));
-        expect(consoleLogSpy).toHaveBeenCalledWith(''); // blank line between files
+        expect(consoleLogSpy).toHaveBeenCalledWith('');
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('test2.md'));
       });
 
@@ -166,37 +106,32 @@ describe('CLI program', () => {
     });
 
     describe('stats', () => {
-      const createStatsChapter = (
-        id: string,
-        arc: string,
-        pov: string,
-        wordCount: number,
-      ): ChapterRecord => ({
-        id,
-        file_path: `${arc}/ch001.md`,
-        file_hash: 'hash',
-        arc,
-        episode: 1,
-        chapter: 1,
-        pov,
-        title: 'Test',
-        location: '',
-        date: '',
-        content: 'Test',
-        summary: '',
-        word_count: wordCount,
-        char_count: 100,
-        paragraph_count: 1,
-        vector: Array(EMBEDDING_DIM).fill(0),
-        entities: [],
-        indexed_at: Date.now(),
-      });
+      async function seedStatsChapters(
+        dbPath: string,
+        chapters: Array<{ arc: string; pov: string; wordCount: number }>,
+      ) {
+        for (const ch of chapters) {
+          const { storage } = createEchoesRAG({ dbPath, arc: ch.arc });
+          await storage.kv.set(`doc:${ch.arc}:1:${chapters.indexOf(ch) + 1}`, {
+            metadata: {
+              fields: {
+                arc: ch.arc,
+                episode: '1',
+                chapter: String(chapters.indexOf(ch) + 1),
+                pov: ch.pov,
+                title: 'Test',
+                location: '',
+                date: '',
+                word_count: String(ch.wordCount),
+              },
+            },
+          });
+        }
+      }
 
       it('outputs statistics from database', async () => {
         const dbPath = join(tempDir, 'db');
-        const db = new Database(dbPath);
-        await db.upsertChapters([createStatsChapter('bloom:1:1', 'bloom', 'Alice', 1000)]);
-        db.close();
+        await seedStatsChapters(dbPath, [{ arc: 'bloom', pov: 'Alice', wordCount: 1000 }]);
 
         await program.parseAsync(['node', 'test', 'stats', '--db', dbPath]);
 
@@ -209,12 +144,10 @@ describe('CLI program', () => {
 
       it('filters by arc', async () => {
         const dbPath = join(tempDir, 'db');
-        const db = new Database(dbPath);
-        await db.upsertChapters([
-          createStatsChapter('bloom:1:1', 'bloom', 'Alice', 1000),
-          createStatsChapter('work:1:1', 'work', 'Bob', 2000),
+        await seedStatsChapters(dbPath, [
+          { arc: 'bloom', pov: 'Alice', wordCount: 1000 },
+          { arc: 'work', pov: 'Bob', wordCount: 2000 },
         ]);
-        db.close();
 
         await program.parseAsync(['node', 'test', 'stats', '--db', dbPath, '--arc', 'bloom']);
 
@@ -223,17 +156,14 @@ describe('CLI program', () => {
 
       it('shows POVs sorted by count descending', async () => {
         const dbPath = join(tempDir, 'db');
-        const db = new Database(dbPath);
-        await db.upsertChapters([
-          createStatsChapter('bloom:1:1', 'bloom', 'Alice', 1000),
-          createStatsChapter('bloom:1:2', 'bloom', 'Alice', 1000),
-          createStatsChapter('bloom:1:3', 'bloom', 'Bob', 500),
+        await seedStatsChapters(dbPath, [
+          { arc: 'bloom', pov: 'Alice', wordCount: 1000 },
+          { arc: 'bloom', pov: 'Alice', wordCount: 1000 },
+          { arc: 'bloom', pov: 'Bob', wordCount: 500 },
         ]);
-        db.close();
 
         await program.parseAsync(['node', 'test', 'stats', '--db', dbPath]);
 
-        // Verify POV output - Alice should come before Bob (2 > 1)
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('👤 POVs:'));
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('alice: 2'));
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('bob: 1'));
@@ -265,7 +195,6 @@ describe('CLI program', () => {
         const dbPath = join(tempDir, 'db');
         await program.parseAsync(['node', 'test', 'index', contentDir, '--db', dbPath]);
 
-        // listr2 handles progress output, we just check the summary
         expect(consoleLogSpy).toHaveBeenCalledWith('\n📊 Summary');
         expect(consoleLogSpy).toHaveBeenCalledWith('   📖 Indexed:   1 chapters');
       });
@@ -292,9 +221,26 @@ describe('CLI program', () => {
     describe('search', () => {
       it('searches chapters', async () => {
         const dbPath = join(tempDir, 'db');
-        const db = new Database(dbPath);
-        await db.upsertChapters([createChapter('bloom:1:1', 'bloom', 'Alice at the airport')]);
-        db.close();
+        const { storage } = createEchoesRAG({ dbPath, arc: 'bloom' });
+        await storage.vector.upsert([
+          {
+            id: 'bloom:1:1',
+            vector: [0.1, 0.2, 0.3],
+            metadata: {
+              _kind: 'chunk',
+              arc: 'bloom',
+              episode: '1',
+              chapter: '1',
+              pov: 'Alice',
+              title: 'Test',
+              location: 'Airport',
+              date: '',
+              file_path: 'bloom/ch1.md',
+              file_hash: 'h',
+              word_count: '10',
+            },
+          },
+        ]);
 
         await program.parseAsync(['node', 'test', 'search', 'airport', '--db', dbPath]);
 
@@ -303,11 +249,21 @@ describe('CLI program', () => {
 
       it('searches entities', async () => {
         const dbPath = join(tempDir, 'db');
-        const db = new Database(dbPath);
-        await db.upsertEntities([
-          createEntity('bloom:CHARACTER:Alice', 'bloom', 'Alice', 'CHARACTER'),
+        const { storage } = createEchoesRAG({ dbPath, arc: 'bloom' });
+        await storage.graph.addEntity({
+          id: 'CHARACTER:Alice',
+          name: 'Alice',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
+        await storage.vector.upsert([
+          {
+            id: 'entity:CHARACTER:Alice',
+            vector: [0.1, 0.2, 0.3],
+            metadata: { _kind: 'entity', entityId: 'CHARACTER:Alice' },
+          },
         ]);
-        db.close();
 
         await program.parseAsync([
           'node',
@@ -318,6 +274,8 @@ describe('CLI program', () => {
           dbPath,
           '--type',
           'entities',
+          '--arc',
+          'bloom',
         ]);
 
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Found 1 entities'));
@@ -325,11 +283,30 @@ describe('CLI program', () => {
 
       it('searches relations', async () => {
         const dbPath = join(tempDir, 'db');
-        const db = new Database(dbPath);
-        await db.upsertRelations([
-          createRelation('bloom:Alice:LOVES:Bob', 'bloom', 'Alice', 'Bob', 'LOVES'),
-        ]);
-        db.close();
+        const { storage } = createEchoesRAG({ dbPath, arc: 'bloom' });
+        await storage.graph.addEntity({
+          id: 'CHARACTER:Alice',
+          name: 'Alice',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
+        await storage.graph.addEntity({
+          id: 'CHARACTER:Bob',
+          name: 'Bob',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
+        await storage.graph.addRelation({
+          id: 'r1',
+          sourceId: 'CHARACTER:Alice',
+          targetId: 'CHARACTER:Bob',
+          type: 'LOVES',
+          description: 'Alice loves Bob',
+          keywords: [],
+          sourceChunkIds: ['1:1'],
+        });
 
         await program.parseAsync([
           'node',
@@ -369,9 +346,14 @@ describe('CLI program', () => {
     describe('list', () => {
       it('lists entities', async () => {
         const dbPath = join(tempDir, 'db');
-        const db = new Database(dbPath);
-        await db.upsertEntities([createEntity('bloom:CHARACTER:Alice', 'bloom', 'Alice')]);
-        db.close();
+        const { storage } = createEchoesRAG({ dbPath, arc: 'bloom' });
+        await storage.graph.addEntity({
+          id: 'CHARACTER:Alice',
+          name: 'Alice',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
 
         await program.parseAsync(['node', 'test', 'list', 'entities', '--db', dbPath]);
 
@@ -380,11 +362,30 @@ describe('CLI program', () => {
 
       it('lists relations', async () => {
         const dbPath = join(tempDir, 'db');
-        const db = new Database(dbPath);
-        await db.upsertRelations([
-          createRelation('bloom:Alice:LOVES:Bob', 'bloom', 'Alice', 'Bob', 'LOVES'),
-        ]);
-        db.close();
+        const { storage } = createEchoesRAG({ dbPath, arc: 'bloom' });
+        await storage.graph.addEntity({
+          id: 'CHARACTER:Alice',
+          name: 'Alice',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
+        await storage.graph.addEntity({
+          id: 'CHARACTER:Bob',
+          name: 'Bob',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
+        await storage.graph.addRelation({
+          id: 'r1',
+          sourceId: 'CHARACTER:Alice',
+          targetId: 'CHARACTER:Bob',
+          type: 'LOVES',
+          description: 'Test',
+          keywords: [],
+          sourceChunkIds: ['1:1'],
+        });
 
         await program.parseAsync(['node', 'test', 'list', 'relations', '--db', dbPath]);
 
@@ -396,6 +397,271 @@ describe('CLI program', () => {
         const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
         await program.parseAsync(['node', 'test', 'list', 'entities', '--db', '/nonexistent/path']);
+
+        expect(mockError).toHaveBeenCalled();
+        expect(mockExit).toHaveBeenCalledWith(1);
+      });
+    });
+
+    describe('history', () => {
+      it('outputs history for an arc', async () => {
+        const dbPath = join(tempDir, 'db');
+        const { storage } = createEchoesRAG({ dbPath, arc: 'bloom' });
+        await storage.kv.set('doc:1:1', {
+          metadata: {
+            fields: {
+              arc: 'bloom',
+              episode: 1,
+              chapter: 1,
+              pov: 'Alice',
+              title: 'Ch1',
+              location: 'Park',
+              kink: 'primo bondage',
+              outfit: 'Alice: red dress',
+            },
+          },
+        });
+        await storage.graph.addEntity({
+          id: 'CHARACTER:Alice',
+          name: 'Alice',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
+        await storage.graph.addEntity({
+          id: 'CHARACTER:Bob',
+          name: 'Bob',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
+        await storage.graph.addRelation({
+          id: 'r1',
+          sourceId: 'CHARACTER:Alice',
+          targetId: 'CHARACTER:Bob',
+          type: 'LOVES',
+          description: 'Test',
+          keywords: [],
+          sourceChunkIds: ['1:1'],
+        });
+
+        await program.parseAsync(['node', 'test', 'history', 'bloom', '--db', dbPath]);
+
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Arc History'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Kinks'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Outfits'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Locations'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Relations'));
+      });
+
+      it('shows empty message when no history', async () => {
+        const dbPath = join(tempDir, 'db');
+        createEchoesRAG({ dbPath, arc: 'bloom' });
+
+        await program.parseAsync(['node', 'test', 'history', 'bloom', '--db', dbPath]);
+
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('No history found'));
+      });
+
+      it('exits with error on failure', async () => {
+        const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+        const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        await program.parseAsync(['node', 'test', 'history', 'bloom', '--db', '/nonexistent/path']);
+
+        expect(mockError).toHaveBeenCalled();
+        expect(mockExit).toHaveBeenCalledWith(1);
+      });
+    });
+
+    describe('graph', () => {
+      it('exports graph in json format', async () => {
+        const dbPath = join(tempDir, 'db');
+        const { storage } = createEchoesRAG({ dbPath, arc: 'bloom' });
+        await storage.graph.addEntity({
+          id: 'CHARACTER:Alice',
+          name: 'Alice',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
+
+        await program.parseAsync([
+          'node',
+          'test',
+          'graph',
+          'bloom',
+          '--format',
+          'json',
+          '--db',
+          dbPath,
+        ]);
+
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Alice'));
+      });
+
+      it('exits with error on failure', async () => {
+        const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+        const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        await program.parseAsync(['node', 'test', 'graph', 'bloom', '--db', '/nonexistent/path']);
+
+        expect(mockError).toHaveBeenCalled();
+        expect(mockExit).toHaveBeenCalledWith(1);
+      });
+    });
+
+    describe('review-generate', () => {
+      it('generates review file', async () => {
+        const dbPath = join(tempDir, 'db');
+        const { storage } = createEchoesRAG({ dbPath, arc: 'bloom' });
+        await storage.graph.addEntity({
+          id: 'CHARACTER:Alice',
+          name: 'Alice',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
+
+        const outputFile = join(tempDir, 'review.yaml');
+        await program.parseAsync([
+          'node',
+          'test',
+          'review-generate',
+          'bloom',
+          '--output',
+          outputFile,
+          '--db',
+          dbPath,
+        ]);
+
+        expect(consoleLogSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Review file generated'),
+        );
+      });
+
+      it('exits with error on failure', async () => {
+        const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+        const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        await program.parseAsync([
+          'node',
+          'test',
+          'review-generate',
+          'bloom',
+          '--db',
+          '/nonexistent/path',
+        ]);
+
+        expect(mockError).toHaveBeenCalled();
+        expect(mockExit).toHaveBeenCalledWith(1);
+      });
+    });
+
+    describe('review-status', () => {
+      it('shows review status', async () => {
+        const dbPath = join(tempDir, 'db');
+        const { storage } = createEchoesRAG({ dbPath, arc: 'bloom' });
+        await storage.graph.addEntity({
+          id: 'CHARACTER:Alice',
+          name: 'Alice',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
+
+        await program.parseAsync(['node', 'test', 'review-status', 'bloom', '--db', dbPath]);
+
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Review Status'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Entities'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Relations'));
+      });
+
+      it('exits with error on failure', async () => {
+        const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+        const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        await program.parseAsync([
+          'node',
+          'test',
+          'review-status',
+          'bloom',
+          '--db',
+          '/nonexistent/path',
+        ]);
+
+        expect(mockError).toHaveBeenCalled();
+        expect(mockExit).toHaveBeenCalledWith(1);
+      });
+    });
+
+    describe('review-apply', () => {
+      it('applies review file in dry-run mode', async () => {
+        const dbPath = join(tempDir, 'db');
+        const { storage } = createEchoesRAG({ dbPath, arc: 'bloom' });
+        await storage.graph.addEntity({
+          id: 'bloom:CHARACTER:Alice',
+          name: 'Alice',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
+
+        const reviewFile = join(tempDir, 'review.yaml');
+        writeFileSync(
+          reviewFile,
+          'entities:\n  - id: bloom:CHARACTER:Alice\n    name: Alice\n    type: CHARACTER\n    description: Test\n    status: approved\n',
+        );
+
+        await program.parseAsync([
+          'node',
+          'test',
+          'review-apply',
+          reviewFile,
+          '--dry-run',
+          '--db',
+          dbPath,
+        ]);
+
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('DRY RUN'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Summary'));
+      });
+
+      it('applies review file', async () => {
+        const dbPath = join(tempDir, 'db');
+        const { storage } = createEchoesRAG({ dbPath, arc: 'bloom' });
+        await storage.graph.addEntity({
+          id: 'bloom:CHARACTER:Alice',
+          name: 'Alice',
+          type: 'CHARACTER',
+          description: 'Test',
+          sourceChunkIds: ['1:1'],
+        });
+
+        const reviewFile = join(tempDir, 'review.yaml');
+        writeFileSync(
+          reviewFile,
+          'entities:\n  - id: bloom:CHARACTER:Alice\n    name: Alice\n    type: CHARACTER\n    description: Test\n    status: approved\n',
+        );
+
+        await program.parseAsync(['node', 'test', 'review-apply', reviewFile, '--db', dbPath]);
+
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Applied changes'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Details'));
+      });
+
+      it('exits with error on failure', async () => {
+        const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+        const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        await program.parseAsync([
+          'node',
+          'test',
+          'review-apply',
+          '/nonexistent/file.yaml',
+          '--db',
+          join(tempDir, 'db'),
+        ]);
 
         expect(mockError).toHaveBeenCalled();
         expect(mockExit).toHaveBeenCalledWith(1);

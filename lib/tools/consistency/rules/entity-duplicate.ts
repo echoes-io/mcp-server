@@ -1,4 +1,4 @@
-import { Database } from '../../../database/index.js';
+import { createEchoesRAG } from '../../../rag/index.js';
 import type { Issue } from '../types.js';
 
 // Simple Levenshtein distance
@@ -76,11 +76,8 @@ function groupSimilarEntities(names: string[]): string[][] {
 }
 
 export async function checkEntityDuplicate(dbPath: string, arc: string): Promise<Issue[]> {
-  const db = new Database(dbPath);
-  await db.connect();
-
-  const entities = await db.getEntities(arc);
-  db.close();
+  const { storage } = createEchoesRAG({ dbPath, arc });
+  const entities = await storage.graph.getEntities();
 
   if (entities.length === 0) return [];
 

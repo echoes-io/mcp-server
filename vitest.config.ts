@@ -7,6 +7,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'json-summary'],
       include: ['cli/program.ts', 'lib/**/*.ts'],
+      exclude: ['lib/types.ts', 'lib/tools/consistency/types.ts'],
     },
   },
 });

@@ -1,8 +1,8 @@
 import z from 'zod';
 
 import { DEFAULT_DB_PATH } from '../constants.js';
-import { Database } from '../database/index.js';
-import { ENTITY_TYPES, RELATION_TYPES } from '../database/schemas.js';
+import { createEchoesRAG } from '../rag/index.js';
+import { ENTITY_TYPES, RELATION_TYPES } from '../rag/schema.js';
 import type { ToolConfig } from '../types.js';
 
 export const listConfig: ToolConfig = {
@@ -52,38 +52,44 @@ export interface RelationResult {
 export async function list(input: ListInput): Promise<ListOutput> {
   const { type, arc, entityType, relationType, dbPath } = listSchema.parse(input);
 
-  const db = new Database(dbPath);
-  await db.connect();
+  const { storage } = createEchoesRAG({ dbPath, arc });
 
-  try {
-    if (type === 'entities') {
-      const entities = await db.getEntities(arc, entityType);
-      return {
-        type: 'entities',
-        results: entities.map((e) => ({
-          id: e.id,
-          name: e.name,
-          type: e.type,
-          description: e.description,
-          aliases: e.aliases,
-          chapter_count: e.chapter_count,
-        })),
-      };
-    }
-
-    const relations = await db.getRelations(arc, relationType);
+  if (type === 'entities') {
+    const entities = await storage.graph.getEntities(entityType ? { type: entityType } : undefined);
     return {
-      type: 'relations',
-      results: relations.map((r) => ({
-        id: r.id,
-        source_entity: r.source_entity,
-        target_entity: r.target_entity,
-        type: r.type,
-        description: r.description,
-        chapters: r.chapters,
+      type: 'entities',
+      results: entities.map((e) => ({
+        id: e.id,
+        name: e.name,
+        type: e.type,
+        description: e.description,
+        aliases: (e.fields?.aliases as string[]) ?? [],
+        chapter_count: e.sourceChunkIds.length,
       })),
     };
-  } finally {
-    db.close();
   }
+
+  // type === 'relations'
+  const entities = await storage.graph.getEntities();
+  const seen = new Set<string>();
+  const results: RelationResult[] = [];
+
+  for (const entity of entities) {
+    const rels = await storage.graph.getRelations(entity.id, 'out');
+    for (const r of rels) {
+      if (seen.has(r.id)) continue;
+      seen.add(r.id);
+      if (relationType && r.type !== relationType) continue;
+      results.push({
+        id: r.id,
+        source_entity: r.sourceId,
+        target_entity: r.targetId,
+        type: r.type,
+        description: r.description,
+        chapters: r.sourceChunkIds ?? [],
+      });
+    }
+  }
+
+  return { type: 'relations', results };
 }

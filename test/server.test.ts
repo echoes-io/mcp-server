@@ -8,17 +8,26 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 
 type MCPContent = Array<{ type: string; text: string }>;
 
-// Mock embeddings and extractor for faster tests
-vi.mock('../lib/indexer/embeddings.js', () => ({
-  getEmbeddingModel: vi.fn(() => 'test/model'),
-  getEmbeddingDtype: vi.fn(() => 'fp32'),
-  getEmbeddingDimension: vi.fn(() => Promise.resolve(384)),
-  generateEmbedding: vi.fn(() => Promise.resolve(Array(384).fill(0.1))),
-  preloadModel: vi.fn(() => Promise.resolve()),
+vi.mock('@flowrag/provider-local', () => ({
+  LocalEmbedder: class {
+    readonly modelName = 'test';
+    readonly dimensions = 3;
+    async embed() {
+      return [0.1, 0.2, 0.3];
+    }
+    async embedBatch(texts: string[]) {
+      return texts.map(() => [0.1, 0.2, 0.3]);
+    }
+  },
 }));
 
-vi.mock('../lib/indexer/extractor.js', () => ({
-  extractEntities: vi.fn(() => Promise.resolve({ entities: [], relations: [] })),
+vi.mock('@flowrag/provider-gemini', () => ({
+  GeminiExtractor: class {
+    readonly modelName = 'test';
+    async extractEntities() {
+      return { entities: [], relations: [] };
+    }
+  },
 }));
 
 import { createServer, formatError, startServer } from '../lib/server.js';
@@ -111,7 +120,6 @@ describe('MCP Server', () => {
   });
 
   it('executes stats tool', async () => {
-    // First index some content
     const contentDir = join(tempDir, 'content', 'bloom', 'ep01');
     mkdirSync(contentDir, { recursive: true });
     writeFileSync(
@@ -134,7 +142,6 @@ describe('MCP Server', () => {
   });
 
   it('executes search tool', async () => {
-    // First index some content
     const contentDir = join(tempDir, 'content', 'bloom', 'ep01');
     mkdirSync(contentDir, { recursive: true });
     writeFileSync(

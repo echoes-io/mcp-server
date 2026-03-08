@@ -1,13 +1,12 @@
 import { Command } from '@commander-js/extra-typings';
 
 import { DEFAULT_DB_PATH } from '../lib/constants.js';
-import type { EntityType, RelationType } from '../lib/database/schemas.js';
-import { runIndexTasks } from '../lib/indexer/tasks.js';
+import type { EntityType, RelationType } from '../lib/rag/schema.js';
 import { startServer } from '../lib/server.js';
 import { checkConsistency, checkConsistencyConfig } from '../lib/tools/consistency/index.js';
 import { graphExport, graphExportConfig } from '../lib/tools/graph-export.js';
 import { history, historyConfig } from '../lib/tools/history.js';
-import { indexConfig } from '../lib/tools/index.js';
+import { index, indexConfig } from '../lib/tools/index.js';
 import { type ListInput, list, listConfig } from '../lib/tools/list.js';
 import { reviewApply, reviewApplyConfig } from '../lib/tools/review-apply.js';
 import { reviewGenerate, reviewGenerateConfig } from '../lib/tools/review-generate.js';
@@ -89,8 +88,7 @@ program
   .option('--force', indexConfig.arguments.force)
   .action(async (contentPath, { db, arc, force }) => {
     try {
-      // Use default renderer for CLI (shows progress bar)
-      const result = await runIndexTasks({ contentPath, arc, force, dbPath: db });
+      const result = await index({ contentPath, arc, force, dbPath: db });
 
       console.log('\n📊 Summary');
       console.log(`   📖 Indexed:   ${result.indexed} chapters`);
@@ -281,7 +279,7 @@ program
   .command('graph')
   .description(graphExportConfig.description)
   .argument('<arc>', graphExportConfig.arguments.arc)
-  .option('--format <format>', 'Output format: mermaid, json, or dot', 'mermaid')
+  .option('--format <format>', 'Output format: json or dot', 'json')
   .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
   .option('--entity-types <types>', 'Filter by entity types (comma-separated)')
   .option('--relation-types <types>', 'Filter by relation types (comma-separated)')
@@ -290,7 +288,7 @@ program
     try {
       const result = await graphExport({
         arc,
-        format: format as 'mermaid' | 'json' | 'dot',
+        format: format as 'json' | 'dot',
         entityTypes: entityTypes?.split(',') as EntityType[] | undefined,
         relationTypes: relationTypes?.split(',') as RelationType[] | undefined,
         characters: characters?.split(','),
@@ -299,11 +297,13 @@ program
 
       console.log(result.content);
 
+      /* v8 ignore start -- TTY-only output */
       if (process.stderr.isTTY) {
         console.error(
           `\n📊 Graph exported: ${result.stats.nodes} nodes, ${result.stats.edges} edges`,
         );
       }
+      /* v8 ignore stop */
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);
       process.exit(1);

@@ -1,7 +1,7 @@
 import z from 'zod';
 
 import { DEFAULT_DB_PATH } from '../constants.js';
-import { Database } from '../database/index.js';
+import { createEchoesRAG } from '../rag/index.js';
 import type { ToolConfig } from '../types.js';
 
 export const historyConfig: ToolConfig = {
@@ -34,18 +34,15 @@ interface KinkEntry {
   kink: string;
   isFirst: boolean;
 }
-
 interface OutfitEntry {
   chapter: string;
   character: string;
   outfit: string;
 }
-
 interface LocationEntry {
   chapter: string;
   location: string;
 }
-
 interface RelationEntry {
   chapter: string;
   source: string;
@@ -64,8 +61,6 @@ interface HistoryResult {
 
 function parseOutfitField(outfitField: string): Array<{ character: string; outfit: string }> {
   if (!outfitField) return [];
-
-  // Parse "Nic: Business casual | Vi: Outfit professionale"
   return outfitField
     .split('|')
     .map((part) => {
@@ -76,8 +71,7 @@ function parseOutfitField(outfitField: string): Array<{ character: string; outfi
 }
 
 function isFirstTimeKink(kink: string): boolean {
-  const firstPatterns = /\b(primo|prima|first)\b/i;
-  return firstPatterns.test(kink);
+  return /\b(primo|prima|first)\b/i.test(kink);
 }
 
 function matchesSearch(text: string, search: string): boolean {
@@ -87,16 +81,7 @@ function matchesSearch(text: string, search: string): boolean {
 export async function history(input: HistoryInput): Promise<HistoryResult> {
   const { arc, character, only, search, dbPath } = historySchema.parse(input);
 
-  const db = new Database(dbPath);
-  await db.connect();
-
-  // Get all chapters for the arc
-  const chapters = await db.getChapters(arc);
-
-  // Get relations for the arc
-  const relations = await db.getRelations(arc);
-
-  db.close();
+  const { storage } = createEchoesRAG({ dbPath, arc });
 
   const result: HistoryResult = {
     arc,
@@ -107,81 +92,73 @@ export async function history(input: HistoryInput): Promise<HistoryResult> {
     relations: [],
   };
 
-  // Process chapters for kinks, outfits, and locations
-  for (const chapter of chapters) {
-    // Filter by character if specified
-    if (character && chapter.pov !== character) continue;
+  // Get chapter data from KV
+  const docKeys = await storage.kv.list('doc:');
+  for (const key of docKeys) {
+    const doc = await storage.kv.get<{ metadata?: { fields?: Record<string, unknown> } }>(key);
+    const f = doc?.metadata?.fields;
+    if (!f) continue;
 
-    const chapterKey = `ep${chapter.episode.toString().padStart(2, '0')}:ch${chapter.chapter.toString().padStart(3, '0')}`;
+    if (character && String(f.pov ?? '') !== character) continue;
 
-    // Process kinks (from chapter.kink field if available, otherwise skip)
-    if ((chapter as any).kink && (!only || only === 'kinks')) {
-      const kinks = (chapter as any).kink
+    const chapterKey = `ep${String(f.episode ?? '0').padStart(2, '0')}:ch${String(f.chapter ?? '0').padStart(3, '0')}`;
+
+    if (f.kink && (!only || only === 'kinks')) {
+      const kinks = String(f.kink)
         .split(',')
         .map((k: string) => k.trim())
-        .filter((k: string) => k);
+        .filter(Boolean);
       for (const kink of kinks) {
         if (!search || matchesSearch(kink, search)) {
-          result.kinks.push({
-            chapter: chapterKey,
-            kink,
-            isFirst: isFirstTimeKink(kink),
-          });
+          result.kinks.push({ chapter: chapterKey, kink, isFirst: isFirstTimeKink(kink) });
         }
       }
     }
 
-    // Process outfits (from chapter.outfit field if available, otherwise skip)
-    if ((chapter as any).outfit && (!only || only === 'outfits')) {
-      const outfits = parseOutfitField((chapter as any).outfit);
-      for (const { character: outfitChar, outfit } of outfits) {
-        if (!search || matchesSearch(`${outfitChar}: ${outfit}`, search)) {
-          result.outfits.push({
-            chapter: chapterKey,
-            character: outfitChar,
-            outfit,
-          });
+    if (f.outfit && (!only || only === 'outfits')) {
+      for (const { character: c, outfit } of parseOutfitField(String(f.outfit))) {
+        if (!search || matchesSearch(`${c}: ${outfit}`, search)) {
+          result.outfits.push({ chapter: chapterKey, character: c, outfit });
         }
       }
     }
 
-    // Process locations
-    if (chapter.location && (!only || only === 'locations')) {
-      if (!search || matchesSearch(chapter.location, search)) {
-        result.locations.push({
-          chapter: chapterKey,
-          location: chapter.location,
-        });
+    if (f.location && (!only || only === 'locations')) {
+      const loc = String(f.location);
+      if (!search || matchesSearch(loc, search)) {
+        result.locations.push({ chapter: chapterKey, location: loc });
       }
     }
   }
 
-  // Process relations
+  // Get relations from graph
   if (!only || only === 'relations') {
-    for (const relation of relations) {
-      const relationText = `${relation.source_entity} ${relation.type} ${relation.target_entity}`;
-      if (!search || matchesSearch(relationText, search)) {
-        // Find first chapter where this relation appears
-        const firstChapter = relation.chapters[0];
-        if (firstChapter) {
-          const [, episode, chapter] = firstChapter.split(':');
-          const chapterKey = `ep${episode}:ch${chapter}`;
-
+    const entities = await storage.graph.getEntities();
+    const seen = new Set<string>();
+    for (const entity of entities) {
+      const rels = await storage.graph.getRelations(entity.id, 'out');
+      for (const rel of rels) {
+        if (seen.has(rel.id)) continue;
+        seen.add(rel.id);
+        const text = `${rel.sourceId} ${rel.type} ${rel.targetId}`;
+        if (search && !matchesSearch(text, search)) continue;
+        const firstChunk = rel.sourceChunkIds[0];
+        if (firstChunk) {
+          const parts = firstChunk.split(':');
+          const chapterKey = `ep${parts[1] ?? '0'}:ch${parts[2] ?? '0'}`;
           result.relations.push({
             chapter: chapterKey,
-            source: relation.source_entity.split(':').pop() || '',
-            target: relation.target_entity.split(':').pop() || '',
-            type: relation.type,
+            source: rel.sourceId,
+            target: rel.targetId,
+            type: rel.type,
           });
         }
       }
     }
   }
 
-  // Sort all entries by chapter
   const sortByChapter = (a: { chapter: string }, b: { chapter: string }) =>
     a.chapter.localeCompare(b.chapter);
-
   result.kinks.sort(sortByChapter);
   result.outfits.sort(sortByChapter);
   result.locations.sort(sortByChapter);

@@ -1,9 +1,7 @@
 import z from 'zod';
 
 import { DEFAULT_DB_PATH } from '../constants.js';
-import { Database } from '../database/index.js';
-import type { ChapterRecord, EntityRecord, RelationRecord } from '../database/schemas.js';
-import { generateEmbedding } from '../indexer/embeddings.js';
+import { createEchoesRAG } from '../rag/index.js';
 import type { ToolConfig } from '../types.js';
 
 export const searchConfig: ToolConfig = {
@@ -82,7 +80,6 @@ export type SearchOutput =
   | { type: 'entities'; results: EntityResult[] }
   | { type: 'relations'; results: RelationResult[] };
 
-// Function overloads for better type inference
 export async function search(
   input: SearchInput & { type: 'chapters' },
 ): Promise<{ type: 'chapters'; results: ChapterResult[] }>;
@@ -96,60 +93,54 @@ export async function search(input: SearchInput): Promise<SearchOutput>;
 export async function search(input: SearchInput): Promise<SearchOutput> {
   const { query, type, arc, entityType, relationType, limit, dbPath } = searchSchema.parse(input);
 
-  const db = new Database(dbPath);
-  await db.connect();
+  const { rag, storage } = createEchoesRAG({ dbPath, arc });
 
   if (type === 'chapters') {
-    const vector = await generateEmbedding(query, db.embeddingModel);
-    const chapters = await db.searchChapters(vector, limit, arc);
-    db.close();
-
+    const results = await rag.search(query, { limit });
     return {
       type: 'chapters',
-      results: chapters.map((c: ChapterRecord & { _distance?: number }) => ({
-        id: c.id,
-        arc: c.arc,
-        episode: c.episode,
-        chapter: c.chapter,
-        pov: c.pov,
-        title: c.title,
-        location: c.location,
-        content: c.content.slice(0, 500) + (c.content.length > 500 ? '...' : ''),
-        word_count: c.word_count,
-        /* v8 ignore next */
-        score: 1 - (c._distance ?? 0),
-      })),
+      results: results.map((r) => {
+        const m = r.metadata ?? {};
+        const content = String(m.content ?? r.content ?? '');
+        return {
+          id: String(m.documentId ?? r.id),
+          arc: arc ?? String(m.arc ?? m.__ns ?? ''),
+          episode: Number(m.episode ?? 0),
+          chapter: Number(m.chapter ?? 0),
+          pov: String(m.pov ?? ''),
+          title: String(m.title ?? ''),
+          location: String(m.location ?? ''),
+          content: content.length > 500 ? `${content.slice(0, 500)}...` : content,
+          word_count: Number(m.word_count ?? 0),
+          score: r.score,
+        };
+      }),
     };
   }
 
   if (type === 'entities') {
-    const vector = await generateEmbedding(query, db.embeddingModel);
-    const entities = await db.searchEntities(vector, limit, arc, entityType);
-    db.close();
-
+    const results = await rag.searchEntities(query, { limit, type: entityType });
     return {
       type: 'entities',
-      results: entities.map((e: EntityRecord & { _distance?: number }) => ({
-        id: e.id,
-        arc: e.arc,
-        name: e.name,
-        type: e.type,
-        description: e.description,
-        aliases: e.aliases,
-        chapter_count: e.chapter_count,
-        /* v8 ignore next */
-        score: 1 - (e._distance ?? 0),
+      results: results.map((r) => ({
+        id: r.entity.id,
+        arc: arc ?? extractArc(r.entity.id),
+        name: r.entity.name,
+        type: r.entity.type,
+        description: r.entity.description,
+        aliases: (r.entity.fields?.aliases as string[]) ?? [],
+        chapter_count: r.entity.sourceChunkIds.length,
+        score: r.score,
       })),
     };
   }
 
   // type === 'relations'
-  const relations = await db.getRelations(arc, relationType);
-  db.close();
+  const entities = await storage.graph.getEntities();
+  const allRelations = await collectRelations(entities, storage, relationType);
 
-  // Filter relations by query (simple text match on source/target/description)
   const queryLower = query.toLowerCase();
-  const filtered = relations.filter(
+  const filtered = allRelations.filter(
     (r) =>
       r.source_entity.toLowerCase().includes(queryLower) ||
       r.target_entity.toLowerCase().includes(queryLower) ||
@@ -158,14 +149,59 @@ export async function search(input: SearchInput): Promise<SearchOutput> {
 
   return {
     type: 'relations',
-    results: filtered.slice(0, limit).map((r: RelationRecord) => ({
-      id: r.id,
-      arc: r.arc,
-      source_entity: r.source_entity,
-      target_entity: r.target_entity,
-      type: r.type,
-      description: r.description,
-      chapters: r.chapters,
+    results: filtered.slice(0, limit).map((r) => ({
+      ...r,
+      arc: arc ?? extractArc(r.id),
     })),
   };
+}
+
+function extractArc(namespacedId: string): string {
+  const i = namespacedId.indexOf(':');
+  return i >= 0 ? namespacedId.slice(0, i) : '';
+}
+
+async function collectRelations(
+  entities: { id: string }[],
+  storage: {
+    graph: {
+      getRelations(
+        id: string,
+        dir?: string,
+      ): Promise<
+        {
+          id: string;
+          sourceId: string;
+          targetId: string;
+          type: string;
+          description: string;
+          sourceChunkIds?: string[];
+        }[]
+      >;
+    };
+  },
+  typeFilter?: string,
+) {
+  const seen = new Set<string>();
+  const results: RelationResult[] = [];
+
+  for (const entity of entities) {
+    const rels = await storage.graph.getRelations(entity.id, 'out');
+    for (const r of rels) {
+      if (seen.has(r.id)) continue;
+      seen.add(r.id);
+      if (typeFilter && r.type !== typeFilter) continue;
+      results.push({
+        id: r.id,
+        arc: '',
+        source_entity: r.sourceId,
+        target_entity: r.targetId,
+        type: r.type,
+        description: r.description,
+        chapters: r.sourceChunkIds ?? [],
+      });
+    }
+  }
+
+  return results;
 }

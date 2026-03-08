@@ -1,3 +1,4 @@
+/* v8 ignore start */
 export interface Package {
   name: string;
   description: string;

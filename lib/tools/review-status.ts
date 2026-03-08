@@ -1,7 +1,7 @@
 import z from 'zod';
 
 import { DEFAULT_DB_PATH } from '../constants.js';
-import { Database } from '../database/index.js';
+import { createEchoesRAG } from '../rag/index.js';
 import type { ToolConfig } from '../types.js';
 
 export const reviewStatusConfig: ToolConfig = {
@@ -20,74 +20,47 @@ export const reviewStatusSchema = z.object({
 
 export type ReviewStatusInput = z.infer<typeof reviewStatusSchema>;
 
-interface ReviewStats {
-  arc: string;
-  entities: {
-    pending: number;
-    approved: number;
-    rejected: number;
-    modified: number;
-    total: number;
-  };
-  relations: {
-    pending: number;
-    approved: number;
-    rejected: number;
-    modified: number;
-    total: number;
-  };
+interface StatusCounts {
+  [key: string]: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  modified: number;
+  total: number;
 }
 
-function getReviewStatus(item: any): string {
-  return item.review_status || 'pending';
-}
-
-export async function reviewStatus(input: ReviewStatusInput): Promise<ReviewStats> {
+export async function reviewStatus(
+  input: ReviewStatusInput,
+): Promise<{ arc: string; entities: StatusCounts; relations: StatusCounts }> {
   const { arc, dbPath } = reviewStatusSchema.parse(input);
+  const { storage } = createEchoesRAG({ dbPath, arc });
 
-  const db = new Database(dbPath);
-  await db.connect();
-
-  const entities = await db.getEntities(arc);
-  const relations = await db.getRelations(arc);
-
-  db.close();
-
-  // Count entity statuses
-  const entityStats = {
+  const entityStats: StatusCounts = { pending: 0, approved: 0, rejected: 0, modified: 0, total: 0 };
+  const relationStats: StatusCounts = {
     pending: 0,
     approved: 0,
     rejected: 0,
     modified: 0,
-    total: entities.length,
+    total: 0,
   };
 
-  for (const entity of entities) {
-    const status = getReviewStatus(entity);
-    if (status in entityStats) {
-      (entityStats as any)[status]++;
+  const entities = await storage.graph.getEntities();
+  entityStats.total = entities.length;
+  for (const e of entities) {
+    const status = (e.fields?.review_status as string) || 'pending';
+    if (status in entityStats) entityStats[status]++;
+  }
+
+  const seen = new Set<string>();
+  for (const e of entities) {
+    for (const r of await storage.graph.getRelations(e.id, 'out')) {
+      if (seen.has(r.id)) continue;
+      seen.add(r.id);
+      relationStats.total++;
+      const status = (r.fields?.review_status as string) || 'pending';
+      if (status in relationStats) relationStats[status]++;
     }
   }
 
-  // Count relation statuses
-  const relationStats = {
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-    modified: 0,
-    total: relations.length,
-  };
-
-  for (const relation of relations) {
-    const status = getReviewStatus(relation);
-    if (status in relationStats) {
-      (relationStats as any)[status]++;
-    }
-  }
-
-  return {
-    arc,
-    entities: entityStats,
-    relations: relationStats,
-  };
+  return { arc, entities: entityStats, relations: relationStats };
 }

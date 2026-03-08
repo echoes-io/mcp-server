@@ -1,7 +1,9 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { generateEmbeddings } from '../../../indexer/embeddings.js';
+import { LocalEmbedder } from '@flowrag/provider-local';
+
+import { DEFAULT_EMBEDDING_MODEL } from '../../../constants.js';
 import { parseMarkdown } from '../../../utils.js';
 import type { ChapterRef, Issue } from '../types.js';
 
@@ -104,7 +106,11 @@ export async function checkFirstTimeContent(
 
   // Generate embeddings for all claims
   const texts = claims.map((c) => c.text);
-  const embeddings = await generateEmbeddings(texts);
+  const embedder = new LocalEmbedder({
+    model: process.env.ECHOES_EMBEDDING_MODEL ?? DEFAULT_EMBEDDING_MODEL,
+    dtype: (process.env.ECHOES_EMBEDDING_DTYPE as 'fp32' | 'q8' | 'q4') ?? 'fp32',
+  });
+  const embeddings = await embedder.embedBatch(texts);
 
   const issues: Issue[] = [];
   const reported = new Set<string>();

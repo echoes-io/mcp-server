@@ -1,3 +1,4 @@
+/* v8 ignore start */
 export type IssueSeverity = 'error' | 'warning' | 'info';
 
 export type IssueType =

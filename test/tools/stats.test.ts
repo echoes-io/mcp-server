@@ -2,75 +2,90 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Use a small, fast model for tests
-import { TEST_EMBEDDING_MODEL } from '../../lib/constants.js';
-import { Database } from '../../lib/database/index.js';
-import type { ChapterRecord } from '../../lib/database/schemas.js';
-import { generateEmbedding, resetExtractor } from '../../lib/indexer/embeddings.js';
+vi.mock('@flowrag/provider-local', () => ({
+  LocalEmbedder: class {
+    readonly modelName = 'test';
+    readonly dimensions = 3;
+    async embed() {
+      return [0.1, 0.2, 0.3];
+    }
+    async embedBatch(texts: string[]) {
+      return texts.map(() => [0.1, 0.2, 0.3]);
+    }
+  },
+}));
+
+vi.mock('@flowrag/provider-gemini', () => ({
+  GeminiExtractor: class {
+    readonly modelName = 'test';
+    async extractEntities() {
+      return { entities: [], relations: [] };
+    }
+  },
+}));
+
+import { createEchoesRAG } from '../../lib/rag/index.js';
 import { stats } from '../../lib/tools/stats.js';
-
-const TEST_MODEL = TEST_EMBEDDING_MODEL;
-const EMBEDDING_DIM = 384;
 
 describe('stats', () => {
   let tempDir: string;
   let dbPath: string;
 
-  beforeAll(async () => {
-    // Pre-load model to cache it
-    process.env.ECHOES_EMBEDDING_MODEL = TEST_MODEL;
-    await generateEmbedding('warmup');
-  });
-
   beforeEach(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'echoes-stats-test-'));
     dbPath = join(tempDir, 'db');
-    process.env.ECHOES_EMBEDDING_MODEL = TEST_MODEL;
-    resetExtractor();
   });
 
   afterEach(() => {
-    rmSync(tempDir, { recursive: true });
-    delete process.env.ECHOES_EMBEDDING_MODEL;
+    rmSync(tempDir, { recursive: true, force: true });
   });
 
-  const createChapter = (
-    arc: string,
-    episode: number,
-    chapter: number,
-    pov: string,
-    wordCount: number,
-  ): ChapterRecord => ({
-    id: `${arc}:${episode}:${chapter}`,
-    file_path: `${arc}/ep${episode}/ch${chapter}.md`,
-    file_hash: 'hash',
-    arc,
-    episode,
-    chapter,
-    pov,
-    title: 'Test',
-    location: '',
-    date: '',
-    content: 'Test',
-    summary: '',
-    word_count: wordCount,
-    char_count: 100,
-    paragraph_count: 1,
-    vector: Array(EMBEDDING_DIM).fill(0),
-    entities: [],
-    indexed_at: Date.now(),
-  });
+  async function seedChapters(
+    chapters: Array<{
+      arc: string;
+      episode: number;
+      chapter: number;
+      pov: string;
+      wordCount: number;
+    }>,
+  ) {
+    // Group by arc to seed into correct namespace
+    const byArc = new Map<string, typeof chapters>();
+    for (const ch of chapters) {
+      if (!byArc.has(ch.arc)) byArc.set(ch.arc, []);
+      byArc.get(ch.arc)?.push(ch);
+    }
+
+    for (const [arc, arcChapters] of byArc) {
+      const { storage } = createEchoesRAG({ dbPath, arc });
+      for (const ch of arcChapters) {
+        const key = `doc:${ch.arc}:${ch.episode}:${ch.chapter}`;
+        await storage.kv.set(key, {
+          metadata: {
+            fields: {
+              arc: ch.arc,
+              episode: String(ch.episode),
+              chapter: String(ch.chapter),
+              pov: ch.pov,
+              title: 'Test',
+              location: '',
+              date: '',
+              word_count: String(ch.wordCount),
+            },
+          },
+        });
+      }
+    }
+  }
 
   it('returns aggregate statistics', async () => {
-    const db = new Database(dbPath);
-    await db.upsertChapters([
-      createChapter('bloom', 1, 1, 'Alice', 1000),
-      createChapter('bloom', 1, 2, 'Bob', 2000),
-      createChapter('work', 1, 1, 'Alice', 1500),
+    await seedChapters([
+      { arc: 'bloom', episode: 1, chapter: 1, pov: 'Alice', wordCount: 1000 },
+      { arc: 'bloom', episode: 1, chapter: 2, pov: 'Bob', wordCount: 2000 },
+      { arc: 'work', episode: 1, chapter: 1, pov: 'Alice', wordCount: 1500 },
     ]);
-    db.close();
 
     const result = await stats({ dbPath });
 
@@ -82,12 +97,10 @@ describe('stats', () => {
   });
 
   it('filters by arc', async () => {
-    const db = new Database(dbPath);
-    await db.upsertChapters([
-      createChapter('bloom', 1, 1, 'Alice', 1000),
-      createChapter('work', 1, 1, 'Bob', 2000),
+    await seedChapters([
+      { arc: 'bloom', episode: 1, chapter: 1, pov: 'Alice', wordCount: 1000 },
+      { arc: 'work', episode: 1, chapter: 1, pov: 'Bob', wordCount: 2000 },
     ]);
-    db.close();
 
     const result = await stats({ arc: 'bloom', dbPath });
 
@@ -96,13 +109,11 @@ describe('stats', () => {
   });
 
   it('filters by multiple arcs', async () => {
-    const db = new Database(dbPath);
-    await db.upsertChapters([
-      createChapter('bloom', 1, 1, 'Alice', 1000),
-      createChapter('work', 1, 1, 'Bob', 2000),
-      createChapter('other', 1, 1, 'Carol', 500),
+    await seedChapters([
+      { arc: 'bloom', episode: 1, chapter: 1, pov: 'Alice', wordCount: 1000 },
+      { arc: 'work', episode: 1, chapter: 1, pov: 'Bob', wordCount: 2000 },
+      { arc: 'other', episode: 1, chapter: 1, pov: 'Carol', wordCount: 500 },
     ]);
-    db.close();
 
     const result = await stats({ arc: 'bloom, work', dbPath });
 
@@ -111,12 +122,10 @@ describe('stats', () => {
   });
 
   it('filters by pov', async () => {
-    const db = new Database(dbPath);
-    await db.upsertChapters([
-      createChapter('bloom', 1, 1, 'Alice', 1000),
-      createChapter('bloom', 1, 2, 'Bob', 2000),
+    await seedChapters([
+      { arc: 'bloom', episode: 1, chapter: 1, pov: 'Alice', wordCount: 1000 },
+      { arc: 'bloom', episode: 1, chapter: 2, pov: 'Bob', wordCount: 2000 },
     ]);
-    db.close();
 
     const result = await stats({ pov: 'Alice', dbPath });
 
@@ -125,13 +134,11 @@ describe('stats', () => {
   });
 
   it('normalizes POV to lowercase', async () => {
-    const db = new Database(dbPath);
-    await db.upsertChapters([
-      createChapter('bloom', 1, 1, 'Alice', 1000),
-      createChapter('bloom', 1, 2, 'alice', 2000),
-      createChapter('bloom', 1, 3, 'ALICE', 500),
+    await seedChapters([
+      { arc: 'bloom', episode: 1, chapter: 1, pov: 'Alice', wordCount: 1000 },
+      { arc: 'bloom', episode: 1, chapter: 2, pov: 'alice', wordCount: 2000 },
+      { arc: 'bloom', episode: 1, chapter: 3, pov: 'ALICE', wordCount: 500 },
     ]);
-    db.close();
 
     const result = await stats({ dbPath });
 
@@ -139,13 +146,11 @@ describe('stats', () => {
   });
 
   it('filters by multiple povs', async () => {
-    const db = new Database(dbPath);
-    await db.upsertChapters([
-      createChapter('bloom', 1, 1, 'Alice', 1000),
-      createChapter('bloom', 1, 2, 'Bob', 2000),
-      createChapter('bloom', 1, 3, 'Carol', 500),
+    await seedChapters([
+      { arc: 'bloom', episode: 1, chapter: 1, pov: 'Alice', wordCount: 1000 },
+      { arc: 'bloom', episode: 1, chapter: 2, pov: 'Bob', wordCount: 2000 },
+      { arc: 'bloom', episode: 1, chapter: 3, pov: 'Carol', wordCount: 500 },
     ]);
-    db.close();
 
     const result = await stats({ pov: 'alice, bob', dbPath });
 
@@ -157,17 +162,19 @@ describe('stats', () => {
   });
 
   it('throws error when arc not found', async () => {
-    const db = new Database(dbPath);
-    await db.upsertChapters([createChapter('bloom', 1, 1, 'Alice', 1000)]);
-    db.close();
+    await seedChapters([{ arc: 'bloom', episode: 1, chapter: 1, pov: 'Alice', wordCount: 1000 }]);
 
     await expect(stats({ arc: 'unknown', dbPath })).rejects.toThrow('No chapters found for arc');
   });
 
+  it('throws error when multi-arc filter matches nothing', async () => {
+    await seedChapters([{ arc: 'bloom', episode: 1, chapter: 1, pov: 'Alice', wordCount: 1000 }]);
+
+    await expect(stats({ arc: 'x,y', dbPath })).rejects.toThrow('No chapters found for arc');
+  });
+
   it('throws error when pov not found', async () => {
-    const db = new Database(dbPath);
-    await db.upsertChapters([createChapter('bloom', 1, 1, 'Alice', 1000)]);
-    db.close();
+    await seedChapters([{ arc: 'bloom', episode: 1, chapter: 1, pov: 'Alice', wordCount: 1000 }]);
 
     await expect(stats({ pov: 'Unknown', dbPath })).rejects.toThrow('No chapters found for POV');
   });

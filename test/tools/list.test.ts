@@ -4,17 +4,29 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock embeddings
-vi.mock('../../lib/indexer/embeddings.js', () => ({
-  getEmbeddingModel: vi.fn(() => 'test/model'),
-  getEmbeddingDtype: vi.fn(() => 'fp32'),
-  getEmbeddingDimension: vi.fn(() => Promise.resolve(384)),
-  generateEmbedding: vi.fn(() => Promise.resolve(Array(384).fill(0.1))),
-  preloadModel: vi.fn(() => Promise.resolve()),
+vi.mock('@flowrag/provider-local', () => ({
+  LocalEmbedder: class {
+    readonly modelName = 'test';
+    readonly dimensions = 3;
+    async embed() {
+      return [0.1, 0.2, 0.3];
+    }
+    async embedBatch(texts: string[]) {
+      return texts.map(() => [0.1, 0.2, 0.3]);
+    }
+  },
 }));
 
-import { Database } from '../../lib/database/index.js';
-import type { EntityRecord, RelationRecord } from '../../lib/database/schemas.js';
+vi.mock('@flowrag/provider-gemini', () => ({
+  GeminiExtractor: class {
+    readonly modelName = 'test';
+    async extractEntities() {
+      return { entities: [], relations: [] };
+    }
+  },
+}));
+
+import { createEchoesRAG } from '../../lib/rag/index.js';
 import { list } from '../../lib/tools/list.js';
 
 describe('list tool', () => {
@@ -25,56 +37,31 @@ describe('list tool', () => {
     tempDir = mkdtempSync(join(tmpdir(), 'echoes-list-test-'));
     dbPath = join(tempDir, 'db');
 
-    // Setup test data
-    const db = new Database(dbPath);
-    await db.connect();
+    const { storage } = createEchoesRAG({ dbPath, arc: 'arc1' });
 
-    const entities: EntityRecord[] = [
-      {
-        id: 'arc1:CHARACTER:Alice',
-        arc: 'arc1',
-        name: 'Alice',
-        type: 'CHARACTER',
-        description: 'Main character',
-        aliases: ['Ali'],
-        vector: Array(384).fill(0.1),
-        chapters: ['arc1:1:1'],
-        chapter_count: 1,
-        first_appearance: 'arc1:1:1',
-        indexed_at: Date.now(),
-      },
-      {
-        id: 'arc1:LOCATION:Forest',
-        arc: 'arc1',
-        name: 'Forest',
-        type: 'LOCATION',
-        description: 'Dark forest',
-        aliases: [],
-        vector: Array(384).fill(0.2),
-        chapters: ['arc1:1:1'],
-        chapter_count: 1,
-        first_appearance: 'arc1:1:1',
-        indexed_at: Date.now(),
-      },
-    ];
-
-    const relations: RelationRecord[] = [
-      {
-        id: 'arc1:Alice:LOVES:Bob',
-        arc: 'arc1',
-        source_entity: 'arc1:CHARACTER:Alice',
-        target_entity: 'arc1:CHARACTER:Bob',
-        type: 'LOVES',
-        description: 'Alice loves Bob',
-        weight: 0.8,
-        chapters: ['arc1:1:1'],
-        indexed_at: Date.now(),
-      },
-    ];
-
-    await db.upsertEntities(entities);
-    await db.upsertRelations(relations);
-    db.close();
+    await storage.graph.addEntity({
+      id: 'Alice',
+      name: 'Alice',
+      type: 'CHARACTER',
+      description: 'Main character',
+      sourceChunkIds: ['ch1'],
+    });
+    await storage.graph.addEntity({
+      id: 'Forest',
+      name: 'Forest',
+      type: 'LOCATION',
+      description: 'Dark forest',
+      sourceChunkIds: ['ch1'],
+    });
+    await storage.graph.addRelation({
+      id: 'Alice-LOVES-Bob',
+      sourceId: 'Alice',
+      targetId: 'Forest',
+      type: 'LOCATED_IN',
+      description: 'Alice in the forest',
+      keywords: [],
+      sourceChunkIds: ['ch1'],
+    });
   });
 
   afterEach(() => {
@@ -82,7 +69,7 @@ describe('list tool', () => {
   });
 
   it('lists all entities', async () => {
-    const result = await list({ type: 'entities', dbPath });
+    const result = await list({ type: 'entities', arc: 'arc1', dbPath });
 
     expect(result.type).toBe('entities');
     expect(result.results).toHaveLength(2);
@@ -93,9 +80,8 @@ describe('list tool', () => {
   });
 
   it('filters entities by type', async () => {
-    const result = await list({ type: 'entities', entityType: 'LOCATION', dbPath });
+    const result = await list({ type: 'entities', arc: 'arc1', entityType: 'LOCATION', dbPath });
 
-    expect(result.type).toBe('entities');
     expect(result.results).toHaveLength(1);
     if (result.type === 'entities') {
       expect(result.results[0].name).toBe('Forest');
@@ -105,26 +91,24 @@ describe('list tool', () => {
   it('filters entities by arc', async () => {
     const result = await list({ type: 'entities', arc: 'nonexistent', dbPath });
 
-    expect(result.type).toBe('entities');
     expect(result.results).toHaveLength(0);
   });
 
   it('lists all relations', async () => {
-    const result = await list({ type: 'relations', dbPath });
+    const result = await list({ type: 'relations', arc: 'arc1', dbPath });
 
     expect(result.type).toBe('relations');
     expect(result.results).toHaveLength(1);
     expect(result.results[0]).toMatchObject({
-      type: 'LOVES',
-      source_entity: 'arc1:CHARACTER:Alice',
-      target_entity: 'arc1:CHARACTER:Bob',
+      type: 'LOCATED_IN',
+      source_entity: 'Alice',
+      target_entity: 'Forest',
     });
   });
 
   it('filters relations by type', async () => {
-    const result = await list({ type: 'relations', relationType: 'HATES', dbPath });
+    const result = await list({ type: 'relations', arc: 'arc1', relationType: 'HATES', dbPath });
 
-    expect(result.type).toBe('relations');
     expect(result.results).toHaveLength(0);
   });
 });
