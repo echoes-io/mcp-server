@@ -1,3 +1,10 @@
+# [8.1.0](https://github.com/echoes-io/mcp-server/compare/v8.0.1...v8.1.0) (2026-03-09)
+
+
+### Features
+
+* add timeline-overview tool ([177ac2b](https://github.com/echoes-io/mcp-server/commit/177ac2b0f88c650385b5eebb21c49651efd8a70f))
+
 ## [8.0.1](https://github.com/echoes-io/mcp-server/compare/v8.0.0...v8.0.1) (2026-03-08)
 
 

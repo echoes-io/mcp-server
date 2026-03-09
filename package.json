@@ -1,6 +1,6 @@
 {
   "name": "@echoes-io/mcp-server",
-  "version": "8.0.1",
+  "version": "8.1.0",
   "description": "📚 Model Context Protocol server for AI-powered storytelling with Narrative Knowledge Graph - extract characters, locations, relationships and search your stories semantically.",
   "type": "module",
   "bin": {
