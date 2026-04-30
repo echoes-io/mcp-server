@@ -1,6 +1,28 @@
 # [8.1.0](https://github.com/echoes-io/mcp-server/compare/v8.0.1...v8.1.0) (2026-03-09)
 
 
+
+## [8.1.0] - 2026-04-30
+
+### 🐛 Bug Fixes
+
+- fix(ci): configure git identity for release commits
+- fix: resolve biome lint warnings
+- fix(deps): resolve all npm audit vulnerabilities
+
+### ### ci
+
+- ci: drop node 20, test on 22+24, release on node 22
+
+### ### build
+
+- build: migrate from semantic-release to bonvoy
+
+### ### chore
+
+- chore(deps): bump zod ^4.3.6 → ^4.4.1
+- chore(deps): bump flowrag packages to latest versions
+
 ### Features
 
 * add timeline-overview tool ([177ac2b](https://github.com/echoes-io/mcp-server/commit/177ac2b0f88c650385b5eebb21c49651efd8a70f))
