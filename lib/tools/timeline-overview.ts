@@ -144,7 +144,7 @@ function loadOutlines(contentPath: string): Map<string, OutlineInfo[]> {
     };
 
     if (!result.has(arc)) result.set(arc, []);
-    result.get(arc)!.push(info);
+    result.get(arc)?.push(info);
   }
 
   return result;
