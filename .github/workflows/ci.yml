@@ -39,21 +39,19 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      issues: write
-      pull-requests: write
       id-token: write
 
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: npm ci
@@ -62,6 +60,6 @@ jobs:
         run: npm run build
 
       - name: Release
-        run: npx semantic-release
+        run: npx bonvoy shipit
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
