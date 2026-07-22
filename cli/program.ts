@@ -1,19 +1,20 @@
 import { Command } from '@commander-js/extra-typings';
 
-import { DEFAULT_DB_PATH } from '../lib/constants.js';
-import type { EntityType, RelationType } from '../lib/rag/schema.js';
+import { loadConfig } from '../lib/config.js';
+import { createGraphQLClient } from '../lib/graphql/client.js';
 import { startServer } from '../lib/server.js';
-import { checkConsistency, checkConsistencyConfig } from '../lib/tools/consistency/index.js';
-import { graphExport, graphExportConfig } from '../lib/tools/graph-export.js';
-import { history, historyConfig } from '../lib/tools/history.js';
-import { index, indexConfig } from '../lib/tools/index.js';
-import { type ListInput, list, listConfig } from '../lib/tools/list.js';
-import { reviewApply, reviewApplyConfig } from '../lib/tools/review-apply.js';
-import { reviewGenerate, reviewGenerateConfig } from '../lib/tools/review-generate.js';
-import { reviewStatus, reviewStatusConfig } from '../lib/tools/review-status.js';
-import { search, searchConfig } from '../lib/tools/search.js';
-import { stats, statsConfig } from '../lib/tools/stats.js';
-import { timelineOverview, timelineOverviewConfig } from '../lib/tools/timeline-overview.js';
+import { mageCharactersList } from '../lib/tools/mage-characters.js';
+import { mageCommit } from '../lib/tools/mage-commit.js';
+import {
+  mageQueueAdd,
+  mageQueueAddBulk,
+  mageQueueCancel,
+  mageQueueList,
+  mageQueuePause,
+  mageQueueResume,
+} from '../lib/tools/mage-queue.js';
+import { mageResultsList, mageResultsSave, mageResultsSaveAll } from '../lib/tools/mage-results.js';
+import { mageStatus } from '../lib/tools/mage-status.js';
 import { wordsCount, wordsCountConfig } from '../lib/tools/words-count.js';
 import { getPackageConfig } from '../lib/utils.js';
 
@@ -23,6 +24,8 @@ export const program = new Command()
   .name(packageConfig.name)
   .description(packageConfig.description)
   .version(packageConfig.version);
+
+// --- words-count ---
 
 program
   .command(wordsCountConfig.name)
@@ -55,492 +58,306 @@ program
     }
   });
 
-program
-  .command(statsConfig.name)
-  .description(statsConfig.description)
-  .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
-  .option('--arc <name>', statsConfig.arguments.arc)
-  .option('--pov <name>', statsConfig.arguments.pov)
-  .action(async ({ db, arc, pov }) => {
-    try {
-      const result = await stats({ arc, pov, dbPath: db });
+// --- serve ---
 
-      console.log('📊 Timeline Statistics\n');
-      console.log(`   📚 Chapters:           ${result.totalChapters.toLocaleString()}`);
-      console.log(`   📝 Total words:        ${result.totalWords.toLocaleString()}`);
-      console.log(`   📈 Avg words/chapter:  ${result.averageWordsPerChapter.toLocaleString()}`);
-      console.log(`   📁 Arcs:               ${result.arcs.join(', ')}`);
-      console.log('   👤 POVs:');
-      for (const [name, count] of Object.entries(result.povs).sort((a, b) => b[1] - a[1])) {
-        console.log(`      - ${name}: ${count}`);
-      }
-    } catch (error) {
-      console.error(`❌ Error: ${(error as Error).message}`);
-      process.exit(1);
-    }
-  });
-
-program
-  .command(indexConfig.name)
-  .description(indexConfig.description)
-  .argument('[contentPath]', indexConfig.arguments.contentPath, './content')
-  .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
-  .option('--arc <name>', indexConfig.arguments.arc)
-  .option('--force', indexConfig.arguments.force)
-  .action(async (contentPath, { db, arc, force }) => {
-    try {
-      const result = await index({ contentPath, arc, force, dbPath: db });
-
-      console.log('\n📊 Summary');
-      console.log(`   📖 Indexed:   ${result.indexed} chapters`);
-      console.log(`   ⏭️  Skipped:   ${result.skipped} chapters`);
-      console.log(`   🗑️  Deleted:   ${result.deleted} chapters`);
-      console.log(`   👤 Entities:  ${result.entities}`);
-      console.log(`   🔗 Relations: ${result.relations}`);
-    } catch (error) {
-      console.error(`\n❌ Error: ${(error as Error).message}`);
-      process.exit(1);
-    }
-  });
-
-program
-  .command(searchConfig.name)
-  .description(searchConfig.description)
-  .argument('<query>', searchConfig.arguments.query)
-  .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
-  .option('--type <type>', searchConfig.arguments.type, 'chapters')
-  .option('--arc <name>', searchConfig.arguments.arc)
-  .option('--entity-type <type>', searchConfig.arguments.entityType)
-  .option('--relation-type <type>', searchConfig.arguments.relationType)
-  .option('--limit <n>', searchConfig.arguments.limit, '10')
-  .action(async (query, { db, type, arc, entityType, relationType, limit }) => {
-    try {
-      const result = await search({
-        query,
-        type: type as 'chapters' | 'entities' | 'relations',
-        arc,
-        entityType,
-        relationType,
-        limit: Number.parseInt(limit, 10),
-        dbPath: db,
-      });
-
-      if (result.type === 'chapters') {
-        console.log(`🔍 Found ${result.results.length} chapters\n`);
-        for (const ch of result.results) {
-          console.log(`📖 ${ch.id} - ${ch.title} (${ch.pov})`);
-          console.log(`   Score: ${ch.score.toFixed(3)} | Words: ${ch.word_count}`);
-          console.log(`   ${ch.content.slice(0, 100)}...`);
-          console.log('');
-        }
-      } else if (result.type === 'entities') {
-        console.log(`🔍 Found ${result.results.length} entities\n`);
-        for (const e of result.results) {
-          console.log(`👤 ${e.name} (${e.type})`);
-          console.log(`   ${e.description}`);
-          console.log(`   Chapters: ${e.chapter_count} | Score: ${e.score.toFixed(3)}`);
-          console.log('');
-        }
-      } else {
-        console.log(`🔍 Found ${result.results.length} relations\n`);
-        for (const r of result.results) {
-          console.log(`🔗 ${r.source_entity} → ${r.type} → ${r.target_entity}`);
-          console.log(`   ${r.description}`);
-          console.log('');
-        }
-      }
-    } catch (error) {
-      console.error(`❌ Error: ${(error as Error).message}`);
-      process.exit(1);
-    }
-  });
-
-program
-  .command(listConfig.name)
-  .description(listConfig.description)
-  .argument('<type>', listConfig.arguments.type)
-  .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
-  .option('--arc <name>', listConfig.arguments.arc)
-  .option('--entity-type <type>', listConfig.arguments.entityType)
-  .option('--relation-type <type>', listConfig.arguments.relationType)
-  .action(async (type, { db, arc, entityType, relationType }) => {
-    try {
-      const result = await list({
-        type: type as 'entities' | 'relations',
-        arc,
-        entityType: entityType as ListInput['entityType'],
-        relationType: relationType as ListInput['relationType'],
-        dbPath: db,
-      });
-
-      if (result.type === 'entities') {
-        console.log(`👤 Found ${result.results.length} entities\n`);
-        for (const e of result.results) {
-          console.log(`${e.name} (${e.type})`);
-          console.log(`   ${e.description}`);
-          /* c8 ignore start */
-          if (Array.isArray(e.aliases) && e.aliases.length > 0) {
-            console.log(`   Aliases: ${e.aliases.join(', ')}`);
-          }
-          /* c8 ignore stop */
-          console.log(`   Chapters: ${e.chapter_count}`);
-          console.log('');
-        }
-      } else {
-        console.log(`🔗 Found ${result.results.length} relations\n`);
-        for (const r of result.results) {
-          const source = r.source_entity.split(':').pop();
-          const target = r.target_entity.split(':').pop();
-          console.log(`${source} → ${r.type} → ${target}`);
-          console.log(`   ${r.description}`);
-          console.log(`   Chapters: ${r.chapters.length}`);
-          console.log('');
-        }
-      }
-    } catch (error) {
-      console.error(`❌ Error: ${(error as Error).message}`);
-      process.exit(1);
-    }
-  });
-
-/* c8 ignore start */
+/* v8 ignore start */
 program
   .command('serve')
   .description('Start MCP server (for AI assistant integration)')
   .action(async () => {
     await startServer();
   });
-/* c8 ignore stop */
+/* v8 ignore stop */
 
-program
-  .command(checkConsistencyConfig.name)
-  .description(checkConsistencyConfig.description)
-  .argument('<arc>', checkConsistencyConfig.arguments.arc)
-  .option('--content <path>', checkConsistencyConfig.arguments.contentPath, './content')
-  .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
-  .option(
-    '--rules <rules>',
-    checkConsistencyConfig.arguments.rules,
-    (val) =>
-      val.split(',') as (
-        | 'kink-firsts'
-        | 'outfit-claims'
-        | 'first-time-content'
-        | 'relation-jump'
-        | 'entity-duplicate'
-      )[],
-  )
-  .option('--severity <level>', checkConsistencyConfig.arguments.severity)
-  .option('--format <format>', 'Output format: text or json', 'text')
-  .action(async (arc, { content, db, rules, severity, format }) => {
+// --- Mage commands ---
+
+const mage = program.command('mage').description('Mage image generation commands');
+
+// mage status
+mage
+  .command('status')
+  .description('Show Mage system status')
+  .action(async () => {
     try {
-      const result = await checkConsistency({
-        contentPath: content,
-        arc,
-        rules,
-        severity: severity as 'error' | 'warning' | 'info' | undefined,
-        dbPath: db,
-      });
+      const config = loadConfig();
+      const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
+      const result = await mageStatus(client);
 
-      if (format === 'json') {
-        console.log(JSON.stringify(result, null, 2));
-        return;
-      }
-
-      console.log(`🔍 Consistency check for "${arc}"\n`);
-
-      if (result.issues.length === 0) {
-        console.log('✅ No issues found!');
-        return;
-      }
-
-      console.log(`Found ${result.issues.length} issue(s):\n`);
-
-      for (const issue of result.issues) {
-        const icon = issue.severity === 'error' ? '❌' : issue.severity === 'warning' ? '⚠️' : 'ℹ️';
-        console.log(`${icon} ${issue.message}`);
-        console.log(`   Current: ep${issue.current.episode}:ch${issue.current.chapter}`);
-        if (issue.previous) {
-          console.log(`   Previous: ep${issue.previous.episode}:ch${issue.previous.chapter}`);
-        }
-        console.log('');
-      }
-
-      console.log('Summary:');
-      console.log(`   ❌ Errors:   ${result.summary.errors}`);
-      console.log(`   ⚠️  Warnings: ${result.summary.warnings}`);
-      console.log(`   ℹ️  Info:     ${result.summary.info}`);
-    } catch (error) {
-      console.error(`❌ Error: ${(error as Error).message}`);
-      process.exit(1);
-    }
-  });
-
-program
-  .command('graph')
-  .description(graphExportConfig.description)
-  .argument('<arc>', graphExportConfig.arguments.arc)
-  .option('--format <format>', 'Output format: json or dot', 'json')
-  .option('--db <path>', 'Database path', DEFAULT_DB_PATH)
-  .option('--entity-types <types>', 'Filter by entity types (comma-separated)')
-  .option('--relation-types <types>', 'Filter by relation types (comma-separated)')
-  .option('--characters <names>', 'Filter by character names (comma-separated)')
-  .action(async (arc, { format, db, entityTypes, relationTypes, characters }) => {
-    try {
-      const result = await graphExport({
-        arc,
-        format: format as 'json' | 'dot',
-        entityTypes: entityTypes?.split(',') as EntityType[] | undefined,
-        relationTypes: relationTypes?.split(',') as RelationType[] | undefined,
-        characters: characters?.split(','),
-        dbPath: db,
-      });
-
-      console.log(result.content);
-
-      /* v8 ignore start -- TTY-only output */
-      if (process.stderr.isTTY) {
-        console.error(
-          `\n📊 Graph exported: ${result.stats.nodes} nodes, ${result.stats.edges} edges`,
-        );
-      }
-      /* v8 ignore stop */
-    } catch (error) {
-      console.error(`❌ Error: ${(error as Error).message}`);
-      process.exit(1);
-    }
-  });
-
-// History command
-program
-  .command('history')
-  .description(historyConfig.description)
-  .argument('<arc>', historyConfig.arguments.arc)
-  .option('--character <character>', historyConfig.arguments.character)
-  .option('--only <type>', historyConfig.arguments.only)
-  .option('--search <term>', historyConfig.arguments.search)
-  .option('--db <path>', historyConfig.arguments.dbPath, DEFAULT_DB_PATH)
-  .action(async (arc, options) => {
-    try {
-      const result = await history({
-        arc,
-        character: options.character,
-        only: options.only as 'kinks' | 'outfits' | 'locations' | 'relations' | undefined,
-        search: options.search,
-        dbPath: options.db,
-      });
-
-      console.log(`=== ${arc.toUpperCase()} - Arc History ===\n`);
-
-      if (!options.only || options.only === 'kinks') {
-        if (result.kinks.length > 0) {
-          console.log('🔥 Kinks (chronological):');
-          for (const kink of result.kinks) {
-            const star = kink.isFirst ? ' ⭐' : '';
-            console.log(`  ${kink.chapter}  ${kink.kink}${star}`);
-          }
-          console.log();
-        }
-      }
-
-      if (!options.only || options.only === 'outfits') {
-        if (result.outfits.length > 0) {
-          console.log('👗 Outfits:');
-          for (const outfit of result.outfits) {
-            console.log(`  ${outfit.chapter}  ${outfit.character}: ${outfit.outfit}`);
-          }
-          console.log();
-        }
-      }
-
-      if (!options.only || options.only === 'locations') {
-        if (result.locations.length > 0) {
-          console.log('📍 Locations:');
-          for (const location of result.locations) {
-            console.log(`  ${location.chapter}  ${location.location}`);
-          }
-          console.log();
-        }
-      }
-
-      if (!options.only || options.only === 'relations') {
-        if (result.relations.length > 0) {
-          console.log('💕 Relations (from DB):');
-          for (const relation of result.relations) {
-            console.log(
-              `  ${relation.chapter}  ${relation.source} → ${relation.type} → ${relation.target}`,
-            );
-          }
-          console.log();
-        }
-      }
-
-      if (
-        result.kinks.length === 0 &&
-        result.outfits.length === 0 &&
-        result.locations.length === 0 &&
-        result.relations.length === 0
-      ) {
-        console.log('No history found for the specified criteria.');
-      }
-    } catch (error) {
-      console.error(`❌ Error: ${(error as Error).message}`);
-      process.exit(1);
-    }
-  });
-
-// Review generate command
-program
-  .command('review-generate')
-  .description(reviewGenerateConfig.description)
-  .argument('<arc>', reviewGenerateConfig.arguments.arc)
-  .option('--output <file>', reviewGenerateConfig.arguments.output, '.echoes-review.yaml')
-  .option('--filter <type>', reviewGenerateConfig.arguments.filter, 'pending')
-  .option('--db <path>', reviewGenerateConfig.arguments.dbPath, DEFAULT_DB_PATH)
-  .action(async (arc, options) => {
-    try {
-      const result = await reviewGenerate({
-        arc,
-        output: options.output,
-        filter: options.filter as 'pending' | 'all',
-        dbPath: options.db,
-      });
-
-      console.log(`📝 Review file generated: ${result.file}`);
-      console.log(`📊 ${result.stats.entities} entities, ${result.stats.relations} relations`);
-
-      // Write file to disk
-      const fs = await import('node:fs/promises');
-      await fs.writeFile(result.file, result.content, 'utf8');
-      console.log(`✅ File written successfully`);
-    } catch (error) {
-      console.error(`❌ Error: ${(error as Error).message}`);
-      process.exit(1);
-    }
-  });
-
-// Review status command
-program
-  .command('review-status')
-  .description(reviewStatusConfig.description)
-  .argument('<arc>', reviewStatusConfig.arguments.arc)
-  .option('--db <path>', reviewStatusConfig.arguments.dbPath, DEFAULT_DB_PATH)
-  .action(async (arc, options) => {
-    try {
-      const result = await reviewStatus({
-        arc,
-        dbPath: options.db,
-      });
-
-      console.log(`=== ${arc.toUpperCase()} - Review Status ===\n`);
-
-      console.log('📊 Entities:');
-      console.log(`  Pending: ${result.entities.pending}`);
-      console.log(`  Approved: ${result.entities.approved}`);
-      console.log(`  Modified: ${result.entities.modified}`);
-      console.log(`  Rejected: ${result.entities.rejected}`);
-      console.log(`  Total: ${result.entities.total}\n`);
-
-      console.log('🔗 Relations:');
-      console.log(`  Pending: ${result.relations.pending}`);
-      console.log(`  Approved: ${result.relations.approved}`);
-      console.log(`  Modified: ${result.relations.modified}`);
-      console.log(`  Rejected: ${result.relations.rejected}`);
-      console.log(`  Total: ${result.relations.total}`);
-    } catch (error) {
-      console.error(`❌ Error: ${(error as Error).message}`);
-      process.exit(1);
-    }
-  });
-
-// Review apply command
-program
-  .command('review-apply')
-  .description(reviewApplyConfig.description)
-  .argument('<file>', reviewApplyConfig.arguments.file)
-  .option('--dry-run', reviewApplyConfig.arguments.dryRun, false)
-  .option('--db <path>', reviewApplyConfig.arguments.dbPath, DEFAULT_DB_PATH)
-  .action(async (file, options) => {
-    try {
-      const result = await reviewApply({
-        file,
-        dryRun: options.dryRun,
-        dbPath: options.db,
-      });
-
-      if (result.preview) {
-        console.log('🔍 DRY RUN - Preview of changes:\n');
-      } else {
-        console.log('✅ Applied changes:\n');
-      }
-
-      console.log('📊 Summary:');
+      const queueIcon = result.queue.paused ? '⏸️' : '▶️';
       console.log(
-        `  Entities: ${result.changes.entities.approved} approved, ${result.changes.entities.modified} modified, ${result.changes.entities.rejected} rejected, ${result.changes.entities.added} added`,
-      );
-      console.log(
-        `  Relations: ${result.changes.relations.approved} approved, ${result.changes.relations.modified} modified, ${result.changes.relations.rejected} rejected, ${result.changes.relations.added} added\n`,
+        `${queueIcon} Queue: ${result.queue.paused ? 'PAUSED' : 'ACTIVE'} (${result.queue.size} items)`,
       );
 
-      if (result.details.length > 0) {
-        console.log('📝 Details:');
-        for (const detail of result.details) {
-          console.log(`  ${detail}`);
-        }
-      }
-
-      if (result.preview) {
-        console.log('\n💡 Run without --dry-run to apply changes');
-      }
-    } catch (error) {
-      console.error(`❌ Error: ${(error as Error).message}`);
-      process.exit(1);
-    }
-  });
-
-program
-  .command('overview')
-  .description(timelineOverviewConfig.description)
-  .argument('[contentPath]', timelineOverviewConfig.arguments.contentPath, './content')
-  .action((contentPath) => {
-    try {
-      const result = timelineOverview({ contentPath });
-
-      const statusIcon: Record<string, string> = {
-        planned: '⬜',
-        active: '🟢',
-        hiatus: '🟡',
-        complete: '✅',
-      };
-
-      for (const arc of result.arcs) {
-        const icon = statusIcon[arc.status];
+      if (result.queue.currentJob) {
         console.log(
-          `${icon} ${arc.name} [${arc.status}] — ${arc.chapters} ch, ${arc.words.toLocaleString()} words (avg ${arc.avgWordsPerChapter})`,
+          `   🔄 Processing: ${result.queue.currentJob.arc} — ${result.queue.currentJob.prompt.slice(0, 60)}...`,
         );
-        if (arc.povs.length > 0) console.log(`   POVs: ${arc.povs.join(', ')}`);
-        if (arc.lastModified) console.log(`   Last modified: ${arc.lastModified}`);
+      }
 
-        for (const ep of arc.episodes) {
-          const epIcon = statusIcon[ep.status];
-          const chLabel = ep.plannedChapters
-            ? `${ep.chapters}/${ep.plannedChapters}`
-            : `${ep.chapters}`;
-          const avg = ep.avgWordsPerChapter > 0 ? ` (avg ${ep.avgWordsPerChapter})` : '';
+      console.log(
+        `\n📊 Results: ${result.results.total} total, ${result.results.unsaved} unsaved, ${result.results.uncommitted} uncommitted`,
+      );
+
+      if (result.circuitBreaker.open) {
+        console.log(`\n🔴 Circuit breaker OPEN (${result.circuitBreaker.failures} failures)`);
+      }
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// mage characters
+mage
+  .command('characters')
+  .description('List configured characters')
+  .action(async () => {
+    try {
+      const config = loadConfig();
+      const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
+      const result = await mageCharactersList(client);
+
+      console.log('👤 Characters:\n');
+      for (const char of result.characters) {
+        console.log(`   [${char.placeholder}] → @${char.username} (${char.timeline}/${char.arc})`);
+      }
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// mage queue
+const queue = mage.command('queue').description('Queue management');
+
+queue
+  .command('add')
+  .description('Queue a single image generation')
+  .argument('<prompt>', 'Prompt (with [PLACEHOLDER] for characters)')
+  .requiredOption('-t, --type <type>', 'Image type: scene, chapter, character')
+  .requiredOption('-a, --arc <arc>', 'Arc name')
+  .option('-e, --episode <episode>', 'Episode')
+  .option('-n, --number <number>', 'Scene/chapter number', Number.parseInt)
+  .option('-v, --variant <variant>', 'Variant letter')
+  .option('-m, --media <media>', 'Media type: image or video')
+  .action(async (prompt, opts) => {
+    try {
+      const config = loadConfig();
+      const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
+      const job = await mageQueueAdd(
+        {
+          prompt,
+          imageType: opts.type as 'scene' | 'chapter' | 'character',
+          arc: opts.arc,
+          episode: opts.episode,
+          number: opts.number,
+          variant: opts.variant,
+          mediaType: opts.media as 'image' | 'video' | undefined,
+        },
+        client,
+      );
+      console.log(`✅ Queued: ${job.id} (${job.arc} ${job.imageType} #${job.number ?? '?'})`);
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+queue
+  .command('add-bulk')
+  .description('Queue multiple generations (one prompt per line from stdin or argument)')
+  .argument('<prompts>', 'Prompts separated by newlines')
+  .requiredOption('-t, --type <type>', 'Image type: scene, chapter, character')
+  .requiredOption('-a, --arc <arc>', 'Arc name')
+  .option('-e, --episode <episode>', 'Episode')
+  .action(async (prompts, opts) => {
+    try {
+      const config = loadConfig();
+      const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
+      const result = await mageQueueAddBulk(
+        {
+          prompts,
+          imageType: opts.type as 'scene' | 'chapter' | 'character',
+          arc: opts.arc,
+          episode: opts.episode,
+        },
+        client,
+      );
+      console.log(`✅ Queued ${result.queued} jobs`);
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+queue
+  .command('list')
+  .description('List queued and processing jobs')
+  .action(async () => {
+    try {
+      const config = loadConfig();
+      const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
+      const result = await mageQueueList(client);
+
+      if (result.processing.length > 0) {
+        console.log('🔄 Processing:');
+        for (const job of result.processing) {
           console.log(
-            `   └─ ${epIcon} ${ep.name}: ${chLabel} ch, ${ep.words.toLocaleString()} words${avg}${ep.lastModified ? ` [${ep.lastModified}]` : ''}`,
+            `   ${job.id} — ${job.arc} ${job.imageType} #${job.number ?? '?'}: ${job.prompt.slice(0, 50)}...`,
           );
         }
         console.log('');
       }
 
-      console.log('─'.repeat(50));
-      const chLabel = result.totals.plannedChapters
-        ? `${result.totals.chapters}/${result.totals.plannedChapters} chapters (${Math.round((result.totals.chapters / result.totals.plannedChapters) * 100)}%)`
-        : `${result.totals.chapters} chapters`;
-      console.log(
-        `📊 Total: ${result.totals.arcs} arcs, ${result.totals.episodes} episodes, ${chLabel}, ${result.totals.words.toLocaleString()} words`,
+      if (result.queued.length > 0) {
+        console.log('⏳ Queued:');
+        for (const [i, job] of result.queued.entries()) {
+          console.log(
+            `   ${i + 1}. ${job.id} — ${job.arc} ${job.imageType} #${job.number ?? '?'}: ${job.prompt.slice(0, 50)}...`,
+          );
+        }
+      } else {
+        console.log('✅ Queue is empty');
+      }
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+queue
+  .command('pause')
+  .description('Pause the queue')
+  .action(async () => {
+    try {
+      const config = loadConfig();
+      const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
+      const result = await mageQueuePause(client);
+      console.log(`⏸️  ${result.message}`);
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+queue
+  .command('resume')
+  .description('Resume the queue')
+  .action(async () => {
+    try {
+      const config = loadConfig();
+      const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
+      const result = await mageQueueResume(client);
+      console.log(`▶️  ${result.message}`);
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+queue
+  .command('cancel')
+  .description('Cancel a queued job')
+  .argument('<id>', 'Job ID (or prefix)')
+  .action(async (id) => {
+    try {
+      const config = loadConfig();
+      const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
+      const result = await mageQueueCancel({ id }, client);
+      console.log(`🗑️  Cancelled: ${result.id} (${result.status})`);
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// mage results
+const results = mage.command('results').description('Results management');
+
+results
+  .command('list')
+  .description('List generated results')
+  .option('--unsaved', 'Only show unsaved results')
+  .option('-l, --limit <limit>', 'Max results', Number.parseInt)
+  .action(async (opts) => {
+    try {
+      const config = loadConfig();
+      const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
+      const result = await mageResultsList(
+        { unsavedOnly: opts.unsaved, limit: opts.limit },
+        client,
       );
+
+      console.log(`📸 ${result.total} results:\n`);
+      for (const job of result.results) {
+        const saved = job.s3Uploaded ? '💾' : '⏳';
+        const committed = job.gitCommitted ? '✅' : '📤';
+        console.log(
+          `   ${saved}${committed} ${job.id} — ${job.arc} ${job.imageType} #${job.number ?? '?'}${job.variant ?? ''}`,
+        );
+        console.log(`      ${job.prompt.slice(0, 70)}...`);
+      }
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+results
+  .command('save')
+  .description('Save a result to S3')
+  .argument('<id>', 'Job ID')
+  .action(async (id) => {
+    try {
+      const config = loadConfig();
+      const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
+      const result = await mageResultsSave({ id }, client);
+      console.log(`💾 Saved: ${result.id} → ${result.s3Key}`);
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+results
+  .command('save-all')
+  .description('Save all unsaved results')
+  .option('-a, --arc <arc>', 'Filter by arc')
+  .action(async (opts) => {
+    try {
+      const config = loadConfig();
+      const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
+      const result = await mageResultsSaveAll({ arc: opts.arc }, client);
+      console.log(`💾 Saved ${result.saved} results`);
+      for (const r of result.results) {
+        console.log(`   ${r.id} → ${r.s3Key}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// mage commit
+mage
+  .command('commit')
+  .description('Commit saved images to GitHub repos')
+  .option('-m, --message <message>', 'Custom commit message')
+  .action(async (opts) => {
+    try {
+      const config = loadConfig();
+      const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
+      const result = await mageCommit({ message: opts.message }, client);
+
+      if (result.commits.length === 0) {
+        console.log('ℹ️  Nothing to commit');
+        return;
+      }
+
+      console.log('✅ Committed:');
+      for (const commit of result.commits) {
+        console.log(`   ${commit.repo}: ${commit.sha.slice(0, 7)} (${commit.filesCount} files)`);
+      }
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);
       process.exit(1);

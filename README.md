@@ -4,19 +4,16 @@
 [![npm](https://img.shields.io/npm/v/@echoes-io/mcp-server)](https://www.npmjs.com/package/@echoes-io/mcp-server)
 [![Node](https://img.shields.io/node/v/@echoes-io/mcp-server)](https://www.npmjs.com/package/@echoes-io/mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Coverage Badge](https://img.shields.io/badge/coverage-100%25-brightgreen?style=flat)
 
-Model Context Protocol server for AI integration with Echoes storytelling platform.
+Model Context Protocol server for AI integration with the Echoes storytelling platform — Mage image generation and content tools.
 
 ## Features
 
-- **Narrative Knowledge Graph**: Automatically extracts characters, locations, events, and their relationships using Gemini AI
-- **Semantic Search**: Find relevant chapters using natural language queries
-- **Entity Search**: Search for characters, locations, and events
-- **Relation Search**: Explore relationships between entities
-- **Arc Isolation**: Each arc is a separate narrative universe - no cross-arc contamination
-- **Statistics**: Aggregate word counts, POV distribution, and more
-- **Dynamic Prompts**: Reusable prompt templates with placeholder substitution
+- **Mage Image Generation**: Queue, monitor, save, and commit AI-generated images via AppSync
+- **Word Count**: Count words and text statistics in markdown chapter files
+- **MCP Resources**: Expose Mage status, queue, results, and characters as MCP resources
+- **CLI**: Full command-line interface for all operations
+- **Thin Client**: No heavy dependencies — just GraphQL calls to AppSync
 
 ## Installation
 
@@ -32,127 +29,95 @@ npx @echoes-io/mcp-server --help
 
 ## Requirements
 
-- Node.js 20+
-- Gemini API key (for entity extraction)
+- Node.js 22+
+- AppSync API URL and API Key (for Mage tools)
 
-## Usage
+## Configuration
 
-### CLI
+Create a `.env` file in your timeline repo root:
 
-```bash
-# Count words in a markdown file
-echoes words-count ./content/arc1/ep01/ch001.md
-
-# Index timeline content
-echoes index ./content
-
-# Index only a specific arc
-echoes index ./content --arc bloom
-
-# Get statistics
-echoes stats
-echoes stats --arc arc1 --pov Alice
-
-# Search (filters by arc to avoid cross-arc contamination)
-echoes search "primo incontro" --arc bloom
-echoes search "Alice" --type entities --arc bloom
-
-# Check narrative consistency
-echoes check-consistency bloom
-echoes check-consistency bloom --rules kink-firsts,outfit-claims
+```env
+PUBLISHER_API_URL=https://xxx.appsync-api.eu-west-1.amazonaws.com/graphql
+PUBLISHER_API_KEY=da2-xxxxxxxxxxxxxxxxxxxx
 ```
 
-### MCP Server
+The timeline is auto-detected from the cwd path (e.g., `/path/to/timeline-eros/` → `eros`).
 
-Configure in your MCP client (e.g., Claude Desktop, Kiro):
+### MCP Client Configuration
 
 ```json
 {
   "mcpServers": {
-    "echoes": {
+    "publisher": {
       "command": "npx",
-      "args": ["@echoes-io/mcp-server"],
-      "cwd": "/path/to/timeline",
-      "env": {
-        "GEMINI_API_KEY": "your_api_key"
-      }
+      "args": ["@echoes-io/mcp-server"]
     }
   }
 }
 ```
-
-## Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `GEMINI_API_KEY` | Yes | - | API key for Gemini entity extraction |
-| `ECHOES_GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model for extraction |
-| `ECHOES_EMBEDDING_MODEL` | No | `Xenova/e5-small-v2` | HuggingFace embedding model |
-| `ECHOES_EMBEDDING_DTYPE` | No | `fp32` | Quantization level: `fp32`, `q8`, `q4` (see Performance Notes) |
-| `HF_TOKEN` | No | - | HuggingFace token for gated models |
 
 ## Available Tools
 
 | Tool | Description |
 |------|-------------|
 | `words-count` | Count words and statistics in a markdown file |
-| `index` | Index timeline content into LanceDB |
-| `search` | Search chapters, entities, or relations |
-| `stats` | Get aggregate statistics |
-| `check-consistency` | Analyze arc for narrative inconsistencies |
-| `timeline-overview` | Quick overview of all arcs: status, chapters, words, POVs |
-| `graph-export` | Export knowledge graph in various formats |
-| `history` | Query character/arc history (kinks, outfits, locations, relations) |
-| `review-generate` | Generate review file for pending entity/relation extractions |
-| `review-status` | Show review statistics for an arc |
-| `review-apply` | Apply corrections from review file to database |
+| `mage_queue_add` | Queue a single image/video generation |
+| `mage_queue_add_bulk` | Queue multiple generations (one prompt per line) |
+| `mage_queue_list` | List queued and processing jobs |
+| `mage_queue_pause` | Pause the queue |
+| `mage_queue_resume` | Resume the queue |
+| `mage_queue_cancel` | Cancel a queued job |
+| `mage_results_list` | List generated results |
+| `mage_results_save` | Save a result to S3 |
+| `mage_results_save_all` | Save all unsaved results |
+| `mage_commit` | Commit saved images to GitHub repos |
+| `mage_status` | Get overall system status |
+| `mage_characters_list` | List configured characters with placeholders |
 
-## Available Prompts
+## Available Resources
 
-| Prompt | Arguments | Description |
-|--------|-----------|-------------|
-| `arc-resume` | arc, episode?, lastChapters? | Load complete context for resuming work on an arc |
-| `new-chapter` | arc, chapter | Create a new chapter |
-| `revise-chapter` | arc, chapter | Revise an existing chapter |
-| `expand-chapter` | arc, chapter, target | Expand chapter to target word count |
-| `new-character` | name | Create a new character sheet |
-| `new-episode` | arc, episode | Create a new episode outline |
-| `new-arc` | name | Create a new story arc |
-| `revise-arc` | arc | Review and fix an entire arc |
+| URI | Description |
+|-----|-------------|
+| `publisher://mage/status` | Mage system status |
+| `publisher://mage/queue` | Current queue |
+| `publisher://mage/results` | Recent results |
+| `publisher://mage/characters` | Configured characters |
+
+## CLI Usage
+
+```bash
+# Word count
+echoes words-count ./content/arc/ep01/ch001.md
+echoes words-count -d ./content/arc/ep01/ch001.md  # detailed
+
+# Start MCP server
+echoes serve
+
+# Mage commands
+echoes mage status
+echoes mage characters
+echoes mage queue list
+echoes mage queue add "[01] Full body of [ALE] at café" -t scene -a ale -e 1
+echoes mage queue add-bulk "<prompts>" -t scene -a ale -e 1
+echoes mage queue pause
+echoes mage queue resume
+echoes mage queue cancel <job-id>
+echoes mage results list
+echoes mage results list --unsaved
+echoes mage results save <job-id>
+echoes mage results save-all
+echoes mage commit -m "🎨 Add ale ep01 scenes"
+```
 
 ## Architecture
 
-### Content Hierarchy
-
 ```
-Timeline (content directory)
-└── Arc (story universe)
-    └── Episode (story event)
-        └── Chapter (individual .md file)
+Agent (Kiro/Claude) → MCP Server (stdio) → AppSync (GraphQL, API Key) → Lambda/DynamoDB
+                           ↑
+                    .env in timeline repo root
 ```
 
-### Arc Isolation
-
-Each arc is treated as a separate narrative universe:
-- Entities are scoped to arcs: `bloom:CHARACTER:Alice` ≠ `work:CHARACTER:Alice`
-- Relations are internal to arcs
-- Searches can be filtered by arc to avoid cross-arc contamination
-
-### Data Flow
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     INDEXING PHASE                          │
-├─────────────────────────────────────────────────────────────┤
-│  1. Scan content/*.md (filesystem scanner)                  │
-│  2. Parse frontmatter + content (gray-matter)               │
-│  3. For each chapter:                                       │
-│     a. Extract entities/relations with Gemini API           │
-│     b. Generate embeddings (Transformers.js ONNX)           │
-│     c. Calculate word count and statistics                  │
-│  4. Save everything to LanceDB                              │
-└─────────────────────────────────────────────────────────────┘
-```
+The MCP server is a **thin GraphQL client** — it doesn't execute any generation logic. It calls the same AppSync mutations/queries used by the Publisher web portal.
 
 ## Development
 
@@ -170,7 +135,7 @@ npm run test:coverage
 npm run lint
 
 # Type check
-npm run typecheck
+npx tsc --noEmit
 
 # Build
 npm run build
@@ -180,33 +145,12 @@ npm run build
 
 | Purpose | Tool |
 |---------|------|
-| Runtime | Node.js 20+ |
+| Runtime | Node.js 22+ |
 | Language | TypeScript |
-| Vector DB | LanceDB |
-| Embeddings | @huggingface/transformers (ONNX) |
-| Entity Extraction | Gemini AI |
 | MCP SDK | @modelcontextprotocol/sdk |
+| CLI | Commander |
 | Testing | Vitest |
 | Linting | Biome |
-
-## Performance Notes
-
-### Embedding Quantization
-
-The default embedding model (`Xenova/e5-small-v2`) supports different quantization levels via `ECHOES_EMBEDDING_DTYPE`:
-
-| Level | Speed | Quality | Memory | Recommendation |
-|-------|-------|---------|---------|----------------|
-| `fp32` | Baseline | Best (100%) | High | Production with ample resources |
-| `q8` | 2-3x faster | Excellent (99.6%) | 50% less | **Recommended** - optimal balance |
-| `q4` | 3-4x faster | Good (99.1%) | 75% less | Resource-constrained environments |
-
-**Note**: Some models like `onnx-community/embeddinggemma-300m-ONNX` don't support `fp16`. Always check model documentation.
-
-**Recommended setting**:
-```bash
-export ECHOES_EMBEDDING_DTYPE=q8
-```
 
 ## License
 
@@ -214,4 +158,4 @@ MIT
 
 ---
 
-Part of the [Echoes](https://github.com/echoes-io) project - a multi-POV digital storytelling platform.
+Part of the [Echoes](https://github.com/echoes-io) project — a multi-POV digital storytelling platform.

@@ -1,7 +1,7 @@
 {
   "name": "@echoes-io/mcp-server",
-  "version": "8.1.2",
-  "description": "📚 Model Context Protocol server for AI-powered storytelling with Narrative Knowledge Graph - extract characters, locations, relationships and search your stories semantically.",
+  "version": "9.0.0",
+  "description": "📚 Model Context Protocol server for AI-powered storytelling — Mage image generation and content tools.",
   "type": "module",
   "bin": {
     "echoes": "cli/index.js"
@@ -32,7 +32,7 @@
     "lint:engines": "ls-engines",
     "lint:publish": "publint --strict",
     "postlint": "npm run clean",
-    "clean": "rimraf --glob ./{cli,lib,scripts,test}/**/*.{d.ts,js,map} ./vitest*.{d.ts,js,map}",
+    "clean": "rimraf --glob ./{cli,lib,test}/**/*.{d.ts,js,map} ./vitest*.{d.ts,js,map}",
     "prepare": "[ \"$CI\" = \"true\" ] || [ \"$GITHUB_ACTIONS\" = \"true\" ] && echo 'Skipping husky' && exit 0 || husky"
   },
   "repository": {
@@ -44,14 +44,10 @@
     "model-context-protocol",
     "storytelling",
     "narrative",
-    "knowledge-graph",
-    "rag",
-    "semantic-search",
-    "entity-extraction",
-    "lancedb",
-    "vector-database",
-    "gemini",
-    "embeddings",
+    "image-generation",
+    "mage",
+    "graphql",
+    "appsync",
     "typescript",
     "ai",
     "llm"
@@ -87,15 +83,9 @@
   },
   "dependencies": {
     "@commander-js/extra-typings": "^14.0.0",
-    "@flowrag/core": "^1.8.1",
-    "@flowrag/pipeline": "^1.9.2",
-    "@flowrag/provider-gemini": "^1.5.5",
-    "@flowrag/provider-local": "^1.5.4",
-    "@flowrag/storage-json": "^1.1.4",
-    "@flowrag/storage-lancedb": "^1.1.6",
-    "@flowrag/storage-sqlite": "^1.5.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "commander": "^14.0.3",
+    "dotenv": "^16.5.0",
     "gray-matter": "^4.0.3",
     "remove-markdown": "^0.6.3",
     "zod": "^4.4.1"

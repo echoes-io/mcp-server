@@ -1,3 +1,0 @@
-# Nic
-
-Protagonista maschile.
