@@ -3,6 +3,35 @@
 
 
 
+
+## [9.0.0] - 2026-07-22
+
+### 💥 Breaking Changes
+
+- feat!: revamp to thin GraphQL client for Mage image generation
+
+### 🐛 Bug Fixes
+
+- fix(ci): configure git identity for release commits
+- fix: resolve biome lint warnings
+- fix(deps): resolve all npm audit vulnerabilities
+
+### ### chore
+
+- chore: :bookmark: release
+- chore(deps): update all dependencies to latest versions
+- chore: :bookmark: release
+- chore(deps): bump zod ^4.3.6 → ^4.4.1
+- chore(deps): bump flowrag packages to latest versions
+
+### ### ci
+
+- ci: drop node 20, test on 22+24, release on node 22
+
+### ### build
+
+- build: migrate from semantic-release to bonvoy
+
 ## [8.1.1] - 2026-05-13
 
 ### 🐛 Bug Fixes
