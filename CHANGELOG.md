@@ -4,6 +4,13 @@
 
 
 
+## [10.0.1](https://github.com/echoes-io/mcp-server/compare/v10.0.0...v10.0.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* align GraphQL queries and types to actual publisher schema ([76c30bf](https://github.com/echoes-io/mcp-server/commit/76c30bf164ee80597f6d956a09561f98f4a92f71))
+
 ## [10.0.0](https://github.com/echoes-io/mcp-server/compare/v9.0.0...v10.0.0) (2026-07-22)
 
 
