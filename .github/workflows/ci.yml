@@ -1,25 +1,25 @@
-name: CI/CD
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: ['22', '24']
+        node: [22, 24]
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v7
 
-      - name: Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          node-version: ${{ matrix.node }}
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -27,28 +27,56 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Lint
-        run: npm run lint
-
-  release:
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  lint:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-
     steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: 'lts/*'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+  release-please:
+    if: github.event_name == 'push'
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+    steps:
+      - uses: googleapis/release-please-action@v5
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    if: needs.release-please.outputs.release_created == 'true'
+    needs: release-please
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
           registry-url: 'https://registry.npmjs.org'
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -56,12 +84,5 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Release
-        run: npx bonvoy shipit
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to npm
+        run: npm publish
