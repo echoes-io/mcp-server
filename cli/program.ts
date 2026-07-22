@@ -85,21 +85,18 @@ mage
 
       const queueIcon = result.queue.paused ? '⏸️' : '▶️';
       console.log(
-        `${queueIcon} Queue: ${result.queue.paused ? 'PAUSED' : 'ACTIVE'} (${result.queue.size} items)`,
+        `${queueIcon} Queue: ${result.queue.paused ? 'PAUSED' : 'ACTIVE'} (${result.queue.queued} queued, ${result.queue.processing} processing)`,
       );
-
-      if (result.queue.currentJob) {
-        console.log(
-          `   🔄 Processing: ${result.queue.currentJob.arc} — ${result.queue.currentJob.prompt.slice(0, 60)}...`,
-        );
-      }
 
       console.log(
         `\n📊 Results: ${result.results.total} total, ${result.results.unsaved} unsaved, ${result.results.uncommitted} uncommitted`,
       );
 
-      if (result.circuitBreaker.open) {
-        console.log(`\n🔴 Circuit breaker OPEN (${result.circuitBreaker.failures} failures)`);
+      if (result.auth) {
+        const sessionIcon = result.auth.hasSession ? '🟢' : '🔴';
+        console.log(
+          `\n${sessionIcon} Auth: session=${result.auth.hasSession}, token=${result.auth.hasAuthToken}`,
+        );
       }
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);
@@ -119,7 +116,10 @@ mage
 
       console.log('👤 Characters:\n');
       for (const char of result.characters) {
-        console.log(`   [${char.placeholder}] → @${char.username} (${char.timeline}/${char.arc})`);
+        const placeholder = char.placeholder ? `[${char.placeholder}]` : char.name;
+        console.log(
+          `   ${placeholder} → @${char.username} (${char.timeline ?? ''}/${char.arc ?? ''})`,
+        );
       }
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);
@@ -136,7 +136,7 @@ queue
   .argument('<prompt>', 'Prompt (with [PLACEHOLDER] for characters)')
   .requiredOption('-t, --type <type>', 'Image type: scene, chapter, character')
   .requiredOption('-a, --arc <arc>', 'Arc name')
-  .option('-e, --episode <episode>', 'Episode')
+  .option('-f, --folder <folder>', 'Subfolder (episode)')
   .option('-n, --number <number>', 'Scene/chapter number', Number.parseInt)
   .option('-v, --variant <variant>', 'Variant letter')
   .option('-m, --media <media>', 'Media type: image or video')
@@ -147,12 +147,12 @@ queue
       const job = await mageQueueAdd(
         {
           prompt,
-          imageType: opts.type as 'scene' | 'chapter' | 'character',
+          imageType: opts.type,
           arc: opts.arc,
-          episode: opts.episode,
+          folder: opts.folder,
           number: opts.number,
           variant: opts.variant,
-          mediaType: opts.media as 'image' | 'video' | undefined,
+          mediaType: opts.media,
         },
         client,
       );
@@ -169,7 +169,7 @@ queue
   .argument('<prompts>', 'Prompts separated by newlines')
   .requiredOption('-t, --type <type>', 'Image type: scene, chapter, character')
   .requiredOption('-a, --arc <arc>', 'Arc name')
-  .option('-e, --episode <episode>', 'Episode')
+  .option('-f, --folder <folder>', 'Subfolder (episode)')
   .action(async (prompts, opts) => {
     try {
       const config = loadConfig();
@@ -177,9 +177,9 @@ queue
       const result = await mageQueueAddBulk(
         {
           prompts,
-          imageType: opts.type as 'scene' | 'chapter' | 'character',
+          imageType: opts.type,
           arc: opts.arc,
-          episode: opts.episode,
+          folder: opts.folder,
         },
         client,
       );
@@ -232,8 +232,8 @@ queue
     try {
       const config = loadConfig();
       const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
-      const result = await mageQueuePause(client);
-      console.log(`⏸️  ${result.message}`);
+      await mageQueuePause(client);
+      console.log('⏸️  Queue paused');
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);
       process.exit(1);
@@ -247,8 +247,8 @@ queue
     try {
       const config = loadConfig();
       const client = createGraphQLClient(config.publisherApiUrl, config.publisherApiKey);
-      const result = await mageQueueResume(client);
-      console.log(`▶️  ${result.message}`);
+      await mageQueueResume(client);
+      console.log('▶️  Queue resumed');
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);
       process.exit(1);
@@ -356,7 +356,9 @@ mage
 
       console.log('✅ Committed:');
       for (const commit of result.commits) {
-        console.log(`   ${commit.repo}: ${commit.sha.slice(0, 7)} (${commit.filesCount} files)`);
+        console.log(
+          `   ${commit.repo}: ${commit.sha.slice(0, 7)} (${commit.filesCommitted} files)`,
+        );
       }
     } catch (error) {
       console.error(`❌ Error: ${(error as Error).message}`);

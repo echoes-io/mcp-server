@@ -45,7 +45,7 @@ describe('mageQueueAdd', () => {
           prompt: 'Full body of [ALE]',
           imageType: 'scene',
           arc: 'ale',
-          episode: 'ep01',
+          folder: 'ep01',
           number: 1,
           variant: undefined,
           mediaType: 'image',
@@ -58,7 +58,7 @@ describe('mageQueueAdd', () => {
 
   it('queues a job with explicit params', async () => {
     const result = await mageQueueAdd(
-      { prompt: 'Full body of [ALE]', imageType: 'scene', arc: 'ale', episode: '1', number: 1 },
+      { prompt: 'Full body of [ALE]', imageType: 'scene', arc: 'ale', folder: 'ep01', number: 1 },
       client,
     );
 
@@ -72,6 +72,7 @@ describe('mageQueueAdd', () => {
           imageType: 'scene',
           arc: 'ale',
           number: 1,
+          folder: 'ep01',
         }),
       }),
     );
@@ -133,7 +134,7 @@ describe('mageQueueAddBulk', () => {
         prompts: '[01] First scene\n[02] Second scene\n\n[03] Third scene',
         imageType: 'scene',
         arc: 'ale',
-        episode: '1',
+        folder: 'ep01',
       },
       client,
     );
@@ -148,9 +149,9 @@ describe('mageQueueList', () => {
     const client: GraphQLClient = {
       execute: vi.fn().mockImplementation((_query, variables) => {
         if (variables?.status === 'QUEUED') {
-          return { listMageJobs: { items: [{ id: 'q1' }] } };
+          return { listMageJobs: [{ id: 'q1' }] };
         }
-        return { listMageJobs: { items: [{ id: 'p1' }] } };
+        return { listMageJobs: [{ id: 'p1' }] };
       }),
     };
 
@@ -161,34 +162,29 @@ describe('mageQueueList', () => {
 });
 
 describe('mageQueuePause', () => {
-  it('pauses the queue', async () => {
+  it('pauses the queue and returns true', async () => {
     const client: GraphQLClient = {
-      execute: vi.fn().mockResolvedValue({
-        pauseMageQueue: { success: true, message: 'Queue paused' },
-      }),
+      execute: vi.fn().mockResolvedValue({ pauseMageQueue: true }),
     };
 
     const result = await mageQueuePause(client);
-    expect(result.success).toBe(true);
-    expect(result.message).toBe('Queue paused');
+    expect(result).toBe(true);
   });
 });
 
 describe('mageQueueResume', () => {
-  it('resumes the queue', async () => {
+  it('resumes the queue and returns true', async () => {
     const client: GraphQLClient = {
-      execute: vi.fn().mockResolvedValue({
-        resumeMageQueue: { success: true, message: 'Queue resumed' },
-      }),
+      execute: vi.fn().mockResolvedValue({ resumeMageQueue: true }),
     };
 
     const result = await mageQueueResume(client);
-    expect(result.success).toBe(true);
+    expect(result).toBe(true);
   });
 });
 
 describe('mageQueueCancel', () => {
-  it('cancels a job', async () => {
+  it('cancels a job and returns the job', async () => {
     const client: GraphQLClient = {
       execute: vi.fn().mockResolvedValue({
         cancelMageJob: { id: 'job-123', status: 'CANCELLED' },

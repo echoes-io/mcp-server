@@ -260,7 +260,7 @@ function registerResources(server: McpServer, client: GraphQLClient): void {
       ]);
       const data = {
         config: configRes.getMageConfig,
-        completedJobs: jobsRes.listMageJobs.items.length,
+        completedJobs: jobsRes.listMageJobs.length,
       };
       return {
         contents: [{ uri: 'publisher://mage/status', text: JSON.stringify(data, null, 2) }],
@@ -277,10 +277,12 @@ function registerResources(server: McpServer, client: GraphQLClient): void {
         client.execute<ListMageJobsResponse>(LIST_MAGE_JOBS, { status: 'PROCESSING' }),
       ]);
       const data = {
-        queued: queued.listMageJobs.items,
-        processing: processing.listMageJobs.items,
+        queued: queued.listMageJobs,
+        processing: processing.listMageJobs,
       };
-      return { contents: [{ uri: 'publisher://mage/queue', text: JSON.stringify(data, null, 2) }] };
+      return {
+        contents: [{ uri: 'publisher://mage/queue', text: JSON.stringify(data, null, 2) }],
+      };
     },
   );
 
@@ -292,7 +294,7 @@ function registerResources(server: McpServer, client: GraphQLClient): void {
         status: 'COMPLETE',
         limit: 20,
       });
-      const data = { results: response.listMageJobs.items };
+      const data = { results: response.listMageJobs };
       return {
         contents: [{ uri: 'publisher://mage/results', text: JSON.stringify(data, null, 2) }],
       };
@@ -304,7 +306,7 @@ function registerResources(server: McpServer, client: GraphQLClient): void {
     new ResourceTemplate('publisher://mage/characters', { list: undefined }),
     async () => {
       const response = await client.execute<ListMageCharactersResponse>(LIST_MAGE_CHARACTERS);
-      const data = { characters: response.listMageCharacters.items };
+      const data = { characters: response.listMageCharacters };
       return {
         contents: [{ uri: 'publisher://mage/characters', text: JSON.stringify(data, null, 2) }],
       };

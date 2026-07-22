@@ -1,17 +1,19 @@
 // --- Mutations ---
 
 export const QUEUE_MAGE_IMAGE = `
-  mutation QueueMageImage($input: QueueMageImageInput!) {
+  mutation QueueMageImage($input: MageImageInput!) {
     queueMageImage(input: $input) {
       id
       prompt
+      resolvedPrompt
       imageType
+      mediaType
       arc
-      episode
+      folder
       number
       variant
-      mediaType
       status
+      position
       createdAt
     }
   }
@@ -19,19 +21,13 @@ export const QUEUE_MAGE_IMAGE = `
 
 export const PAUSE_MAGE_QUEUE = `
   mutation PauseMageQueue {
-    pauseMageQueue {
-      success
-      message
-    }
+    pauseMageQueue
   }
 `;
 
 export const RESUME_MAGE_QUEUE = `
   mutation ResumeMageQueue {
-    resumeMageQueue {
-      success
-      message
-    }
+    resumeMageQueue
   }
 `;
 
@@ -57,11 +53,10 @@ export const SAVE_MAGE_RESULT = `
 export const COMMIT_MAGE_IMAGES = `
   mutation CommitMageImages($message: String) {
     commitMageImages(message: $message) {
-      commits {
-        repo
-        sha
-        filesCount
-      }
+      repo
+      sha
+      filesCommitted
+      message
     }
   }
 `;
@@ -69,24 +64,27 @@ export const COMMIT_MAGE_IMAGES = `
 // --- Queries ---
 
 export const LIST_MAGE_JOBS = `
-  query ListMageJobs($status: MageJobStatus, $limit: Int) {
+  query ListMageJobs($status: MageStatus, $limit: Int) {
     listMageJobs(status: $status, limit: $limit) {
-      items {
-        id
-        prompt
-        imageType
-        arc
-        episode
-        number
-        variant
-        mediaType
-        status
-        s3Key
-        s3Uploaded
-        gitCommitted
-        createdAt
-        completedAt
-      }
+      id
+      prompt
+      resolvedPrompt
+      imageType
+      mediaType
+      arc
+      folder
+      number
+      variant
+      status
+      position
+      imageUrl
+      s3Key
+      s3Uploaded
+      gitCommitted
+      gitCommitSha
+      error
+      createdAt
+      completedAt
     }
   }
 `;
@@ -94,21 +92,26 @@ export const LIST_MAGE_JOBS = `
 export const GET_MAGE_CONFIG = `
   query GetMageConfig {
     getMageConfig {
-      queuePaused
-      queueSize
-      currentJob {
-        id
-        prompt
-        arc
-        status
-      }
-      circuitBreaker {
-        open
-        failures
-        lastFailure
-      }
+      isPaused
       deployment {
-        lastDiscover
+        id
+        submitActionId
+        pollActionId
+        searchActionId
+        discoveredAt
+      }
+      settings {
+        modelId
+        architecture
+        resolution
+        aspectRatio
+        fastMode
+      }
+      auth {
+        hasSession
+        hasAuthToken
+        sessionExpiresAt
+        authTokenExpiresAt
       }
     }
   }
@@ -117,12 +120,13 @@ export const GET_MAGE_CONFIG = `
 export const LIST_MAGE_CHARACTERS = `
   query ListMageCharacters {
     listMageCharacters {
-      items {
-        placeholder
-        username
-        timeline
-        arc
-      }
+      id
+      name
+      username
+      imageUrl
+      timeline
+      arc
+      placeholder
     }
   }
 `;

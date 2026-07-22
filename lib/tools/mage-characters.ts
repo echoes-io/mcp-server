@@ -19,5 +19,5 @@ export interface MageCharactersListOutput {
 
 export async function mageCharactersList(client: GraphQLClient): Promise<MageCharactersListOutput> {
   const result = await client.execute<ListMageCharactersResponse>(LIST_MAGE_CHARACTERS);
-  return { characters: result.listMageCharacters.items };
+  return { characters: result.listMageCharacters };
 }

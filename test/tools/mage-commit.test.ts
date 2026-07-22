@@ -7,16 +7,21 @@ describe('mageCommit', () => {
   it('commits with custom message', async () => {
     const client: GraphQLClient = {
       execute: vi.fn().mockResolvedValue({
-        commitMageImages: {
-          commits: [{ repo: 'echoes-io/timeline-eros', sha: 'abc123def', filesCount: 3 }],
-        },
+        commitMageImages: [
+          {
+            repo: 'echoes-io/timeline-eros',
+            sha: 'abc123def',
+            filesCommitted: 3,
+            message: '🎨 Add scenes',
+          },
+        ],
       }),
     };
 
     const result = await mageCommit({ message: '🎨 Add scenes' }, client);
     expect(result.commits).toHaveLength(1);
     expect(result.commits[0].repo).toBe('echoes-io/timeline-eros');
-    expect(result.commits[0].filesCount).toBe(3);
+    expect(result.commits[0].filesCommitted).toBe(3);
 
     expect(client.execute).toHaveBeenCalledWith(expect.any(String), { message: '🎨 Add scenes' });
   });
@@ -24,7 +29,7 @@ describe('mageCommit', () => {
   it('commits with no message (auto-generated)', async () => {
     const client: GraphQLClient = {
       execute: vi.fn().mockResolvedValue({
-        commitMageImages: { commits: [] },
+        commitMageImages: [],
       }),
     };
 

@@ -2,7 +2,7 @@ import z from 'zod';
 
 import type { GraphQLClient } from '../graphql/client.js';
 import { COMMIT_MAGE_IMAGES } from '../graphql/queries.js';
-import type { CommitMageImagesResponse } from '../graphql/types.js';
+import type { CommitMageImagesResponse, CommitResult } from '../graphql/types.js';
 import type { ToolConfig } from '../types.js';
 
 export const mageCommitConfig: ToolConfig = {
@@ -20,7 +20,7 @@ export const mageCommitSchema = z.object({
 export type MageCommitInput = z.infer<typeof mageCommitSchema>;
 
 export interface MageCommitOutput {
-  commits: Array<{ repo: string; sha: string; filesCount: number }>;
+  commits: CommitResult[];
 }
 
 export async function mageCommit(
@@ -29,5 +29,5 @@ export async function mageCommit(
 ): Promise<MageCommitOutput> {
   const { message } = mageCommitSchema.parse(input);
   const result = await client.execute<CommitMageImagesResponse>(COMMIT_MAGE_IMAGES, { message });
-  return { commits: result.commitMageImages.commits };
+  return { commits: result.commitMageImages };
 }

@@ -1,88 +1,124 @@
-export type MageJobStatus = 'QUEUED' | 'PROCESSING' | 'COMPLETE' | 'FAILED' | 'CANCELLED';
-export type MageImageType = 'scene' | 'chapter' | 'character';
-export type MageMediaType = 'image' | 'video';
+export type MageStatus = 'QUEUED' | 'PROCESSING' | 'COMPLETE' | 'FAILED' | 'CANCELLED';
+
+export interface MageCharacterRef {
+  id: string;
+  name: string;
+  username: string;
+  imageUrl: string;
+}
 
 export interface MageJob {
   id: string;
   prompt: string;
-  imageType: MageImageType;
+  resolvedPrompt?: string;
+  imageType: string;
+  mediaType?: string;
   arc: string;
-  episode?: string;
+  folder?: string;
   number?: number;
   variant?: string;
-  mediaType: MageMediaType;
-  status: MageJobStatus;
+  characters?: MageCharacterRef[];
+  status: MageStatus;
+  position?: number;
+  historyId?: string;
+  imageUrl?: string;
   s3Key?: string;
+  width?: number;
+  height?: number;
+  seed?: number;
+  duration?: number;
+  error?: string;
   s3Uploaded?: boolean;
   gitCommitted?: boolean;
+  gitCommitSha?: string;
   createdAt: string;
   completedAt?: string;
 }
 
-export interface QueueMageImageResponse {
-  queueMageImage: MageJob;
+export interface MageCharacter {
+  id: string;
+  name: string;
+  username: string;
+  imageUrl: string;
+  timeline?: string;
+  arc?: string;
+  placeholder?: string;
 }
 
-export interface ListMageJobsResponse {
-  listMageJobs: {
-    items: MageJob[];
-  };
+export interface MageDeployment {
+  id?: string;
+  submitActionId?: string;
+  pollActionId?: string;
+  searchActionId?: string;
+  discoveredAt?: string;
 }
 
-export interface PauseMageQueueResponse {
-  pauseMageQueue: { success: boolean; message: string };
+export interface MageSettings {
+  modelId: string;
+  architecture: string;
+  resolution: string;
+  aspectRatio: string;
+  fastMode: boolean;
 }
 
-export interface ResumeMageQueueResponse {
-  resumeMageQueue: { success: boolean; message: string };
-}
-
-export interface CancelMageJobResponse {
-  cancelMageJob: { id: string; status: MageJobStatus };
-}
-
-export interface SaveMageResultResponse {
-  saveMageResult: { id: string; s3Key: string; s3Uploaded: boolean };
-}
-
-export interface CommitMageImagesResponse {
-  commitMageImages: {
-    commits: Array<{ repo: string; sha: string; filesCount: number }>;
-  };
+export interface MageAuthStatus {
+  hasSession: boolean;
+  hasAuthToken: boolean;
+  sessionExpiresAt?: string;
+  authTokenExpiresAt?: string;
+  uid?: string;
 }
 
 export interface MageConfig {
-  queuePaused: boolean;
-  queueSize: number;
-  currentJob?: {
-    id: string;
-    prompt: string;
-    arc: string;
-    status: MageJobStatus;
-  };
-  circuitBreaker: {
-    open: boolean;
-    failures: number;
-    lastFailure?: string;
-  };
-  deployment: {
-    lastDiscover?: string;
-  };
+  isPaused: boolean;
+  deployment?: MageDeployment;
+  settings?: MageSettings;
+  auth?: MageAuthStatus;
+}
+
+export interface CommitResult {
+  repo: string;
+  sha: string;
+  filesCommitted: number;
+  message: string;
+}
+
+// --- Query responses ---
+
+export interface ListMageJobsResponse {
+  listMageJobs: MageJob[];
+}
+
+export interface ListMageCharactersResponse {
+  listMageCharacters: MageCharacter[];
 }
 
 export interface GetMageConfigResponse {
   getMageConfig: MageConfig;
 }
 
-export interface MageCharacter {
-  placeholder: string;
-  username: string;
-  timeline: string;
-  arc: string;
+// --- Mutation responses ---
+
+export interface QueueMageImageResponse {
+  queueMageImage: MageJob;
 }
 
-export interface ListMageCharactersResponse {
-  listMageCharacters: {
-    items: MageCharacter[];
-  };
+export interface CancelMageJobResponse {
+  cancelMageJob: MageJob;
+}
+
+export interface SaveMageResultResponse {
+  saveMageResult: MageJob;
+}
+
+export interface CommitMageImagesResponse {
+  commitMageImages: CommitResult[];
+}
+
+export interface PauseMageQueueResponse {
+  pauseMageQueue: boolean;
+}
+
+export interface ResumeMageQueueResponse {
+  resumeMageQueue: boolean;
 }

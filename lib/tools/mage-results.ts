@@ -39,7 +39,7 @@ export async function mageResultsList(
     limit,
   });
 
-  let results = response.listMageJobs.items;
+  let results = response.listMageJobs;
 
   if (unsavedOnly) {
     results = results.filter((job) => !job.s3Uploaded);
@@ -67,7 +67,7 @@ export type MageResultsSaveInput = z.infer<typeof mageResultsSaveSchema>;
 
 export interface MageResultsSaveOutput {
   id: string;
-  s3Key: string;
+  s3Key?: string;
 }
 
 export async function mageResultsSave(
@@ -97,7 +97,7 @@ export type MageResultsSaveAllInput = z.infer<typeof mageResultsSaveAllSchema>;
 
 export interface MageResultsSaveAllOutput {
   saved: number;
-  results: Array<{ id: string; s3Key: string }>;
+  results: Array<{ id: string; s3Key?: string }>;
 }
 
 export async function mageResultsSaveAll(
@@ -111,7 +111,7 @@ export async function mageResultsSaveAll(
 
   const filtered = arc ? results.filter((job) => job.arc === arc) : results;
 
-  const saved: Array<{ id: string; s3Key: string }> = [];
+  const saved: Array<{ id: string; s3Key?: string }> = [];
   for (const job of filtered) {
     const result = await mageResultsSave({ id: job.id }, client);
     saved.push(result);

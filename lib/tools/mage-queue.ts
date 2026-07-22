@@ -28,23 +28,23 @@ export const mageQueueAddConfig: ToolConfig = {
       'Prompt with [PLACEHOLDER] for characters. Can start with [XX] or [XXa] for number/variant.',
     imageType: 'Type of image: scene, chapter, or character.',
     arc: 'Character/arc name (e.g., ale, vale).',
-    episode: 'Episode or subfolder. Number ("1" → ep01), string ("promo"), or omitted.',
+    folder: 'Subfolder. Number ("1" → ep01), string ("promo"), or omitted.',
     number: 'Scene/chapter number. If omitted, extracted from [XX] prefix in prompt.',
     variant: 'Variant letter (a, b, c). If omitted, auto-incremented at save.',
     mediaType: 'Media type: image or video. Default: image.',
+    sourceImage: 'Source image URL for img2img generation (optional).',
   },
 };
 
 export const mageQueueAddSchema = z.object({
   prompt: z.string().describe(mageQueueAddConfig.arguments.prompt),
-  imageType: z
-    .enum(['scene', 'chapter', 'character'])
-    .describe(mageQueueAddConfig.arguments.imageType),
+  imageType: z.string().describe(mageQueueAddConfig.arguments.imageType),
   arc: z.string().describe(mageQueueAddConfig.arguments.arc),
-  episode: z.string().optional().describe(mageQueueAddConfig.arguments.episode),
+  folder: z.string().optional().describe(mageQueueAddConfig.arguments.folder),
   number: z.number().optional().describe(mageQueueAddConfig.arguments.number),
   variant: z.string().optional().describe(mageQueueAddConfig.arguments.variant),
-  mediaType: z.enum(['image', 'video']).optional().describe(mageQueueAddConfig.arguments.mediaType),
+  mediaType: z.string().optional().describe(mageQueueAddConfig.arguments.mediaType),
+  sourceImage: z.string().optional().describe(mageQueueAddConfig.arguments.sourceImage),
 });
 
 export type MageQueueAddInput = z.infer<typeof mageQueueAddSchema>;
@@ -84,10 +84,11 @@ export async function mageQueueAdd(
       prompt: cleanPrompt,
       imageType: parsed.imageType,
       arc: parsed.arc,
-      episode: parsed.episode,
+      folder: parsed.folder,
       number: parsed.number ?? prefixNumber,
       variant: parsed.variant ?? prefixVariant,
-      mediaType: parsed.mediaType ?? 'image',
+      mediaType: parsed.mediaType,
+      sourceImage: parsed.sourceImage,
     },
   });
 
@@ -103,17 +104,15 @@ export const mageQueueAddBulkConfig: ToolConfig = {
     prompts: 'Prompts separated by newline. Each can have [XX] prefix.',
     imageType: 'Type of image for all: scene, chapter, or character.',
     arc: 'Arc name for all.',
-    episode: 'Episode for all (optional).',
+    folder: 'Subfolder for all (optional).',
   },
 };
 
 export const mageQueueAddBulkSchema = z.object({
   prompts: z.string().describe(mageQueueAddBulkConfig.arguments.prompts),
-  imageType: z
-    .enum(['scene', 'chapter', 'character'])
-    .describe(mageQueueAddBulkConfig.arguments.imageType),
+  imageType: z.string().describe(mageQueueAddBulkConfig.arguments.imageType),
   arc: z.string().describe(mageQueueAddBulkConfig.arguments.arc),
-  episode: z.string().optional().describe(mageQueueAddBulkConfig.arguments.episode),
+  folder: z.string().optional().describe(mageQueueAddBulkConfig.arguments.folder),
 });
 
 export type MageQueueAddBulkInput = z.infer<typeof mageQueueAddBulkSchema>;
@@ -140,7 +139,7 @@ export async function mageQueueAddBulk(
         prompt: line,
         imageType: parsed.imageType,
         arc: parsed.arc,
-        episode: parsed.episode,
+        folder: parsed.folder,
       },
       client,
     );
@@ -172,8 +171,8 @@ export async function mageQueueList(client: GraphQLClient): Promise<MageQueueLis
   ]);
 
   return {
-    queued: queued.listMageJobs.items,
-    processing: processing.listMageJobs.items,
+    queued: queued.listMageJobs,
+    processing: processing.listMageJobs,
   };
 }
 
@@ -187,9 +186,7 @@ export const mageQueuePauseConfig: ToolConfig = {
 
 export const mageQueuePauseSchema = z.object({});
 
-export async function mageQueuePause(
-  client: GraphQLClient,
-): Promise<{ success: boolean; message: string }> {
+export async function mageQueuePause(client: GraphQLClient): Promise<boolean> {
   const result = await client.execute<PauseMageQueueResponse>(PAUSE_MAGE_QUEUE);
   return result.pauseMageQueue;
 }
@@ -204,9 +201,7 @@ export const mageQueueResumeConfig: ToolConfig = {
 
 export const mageQueueResumeSchema = z.object({});
 
-export async function mageQueueResume(
-  client: GraphQLClient,
-): Promise<{ success: boolean; message: string }> {
+export async function mageQueueResume(client: GraphQLClient): Promise<boolean> {
   const result = await client.execute<ResumeMageQueueResponse>(RESUME_MAGE_QUEUE);
   return result.resumeMageQueue;
 }
@@ -230,7 +225,7 @@ export type MageQueueCancelInput = z.infer<typeof mageQueueCancelSchema>;
 export async function mageQueueCancel(
   input: MageQueueCancelInput,
   client: GraphQLClient,
-): Promise<{ id: string; status: string }> {
+): Promise<MageJob> {
   const { id } = mageQueueCancelSchema.parse(input);
   const result = await client.execute<CancelMageJobResponse>(CANCEL_MAGE_JOB, { id });
   return result.cancelMageJob;

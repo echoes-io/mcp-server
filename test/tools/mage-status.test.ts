@@ -11,23 +11,36 @@ describe('mageStatus', () => {
           // getMageConfig
           return {
             getMageConfig: {
-              queuePaused: false,
-              queueSize: 5,
-              currentJob: { id: 'j1', prompt: 'test prompt', arc: 'ale', status: 'PROCESSING' },
-              circuitBreaker: { open: false, failures: 0 },
-              deployment: { lastDiscover: '2024-01-01T00:00:00Z' },
+              isPaused: false,
+              deployment: {
+                discoveredAt: '2024-01-01T00:00:00Z',
+                submitActionId: 'abc',
+                pollActionId: 'def',
+              },
+              settings: {
+                modelId: 'flux',
+                architecture: 'schnell',
+                resolution: '1024x1024',
+                aspectRatio: '1:1',
+                fastMode: true,
+              },
+              auth: {
+                hasSession: true,
+                hasAuthToken: true,
+                sessionExpiresAt: '2024-02-01T00:00:00Z',
+              },
             },
           };
         }
-        // listMageJobs COMPLETE
+        if (variables.status === 'QUEUED') return { listMageJobs: [{ id: 'q1' }, { id: 'q2' }] };
+        if (variables.status === 'PROCESSING') return { listMageJobs: [{ id: 'p1' }] };
+        // COMPLETE
         return {
-          listMageJobs: {
-            items: [
-              { id: 'c1', s3Uploaded: true, gitCommitted: true },
-              { id: 'c2', s3Uploaded: true, gitCommitted: false },
-              { id: 'c3', s3Uploaded: false, gitCommitted: false },
-            ],
-          },
+          listMageJobs: [
+            { id: 'c1', s3Uploaded: true, gitCommitted: true },
+            { id: 'c2', s3Uploaded: true, gitCommitted: false },
+            { id: 'c3', s3Uploaded: false, gitCommitted: false },
+          ],
         };
       }),
     };
@@ -35,34 +48,38 @@ describe('mageStatus', () => {
     const result = await mageStatus(client);
 
     expect(result.queue.paused).toBe(false);
-    expect(result.queue.size).toBe(5);
-    expect(result.queue.currentJob?.id).toBe('j1');
+    expect(result.queue.queued).toBe(2);
+    expect(result.queue.processing).toBe(1);
     expect(result.results.total).toBe(3);
     expect(result.results.unsaved).toBe(1);
     expect(result.results.uncommitted).toBe(1);
-    expect(result.circuitBreaker.open).toBe(false);
+    expect(result.deployment?.discoveredAt).toBe('2024-01-01T00:00:00Z');
+    expect(result.auth?.hasSession).toBe(true);
   });
 
-  it('handles no current job', async () => {
+  it('handles empty state', async () => {
     const client: GraphQLClient = {
       execute: vi.fn().mockImplementation((_query, variables) => {
         if (!variables) {
           return {
             getMageConfig: {
-              queuePaused: true,
-              queueSize: 0,
-              currentJob: null,
-              circuitBreaker: { open: false, failures: 0 },
-              deployment: {},
+              isPaused: true,
+              deployment: null,
+              settings: null,
+              auth: null,
             },
           };
         }
-        return { listMageJobs: { items: [] } };
+        return { listMageJobs: [] };
       }),
     };
 
     const result = await mageStatus(client);
-    expect(result.queue.currentJob).toBeUndefined();
     expect(result.queue.paused).toBe(true);
+    expect(result.queue.queued).toBe(0);
+    expect(result.queue.processing).toBe(0);
+    expect(result.results.total).toBe(0);
+    expect(result.deployment).toBeUndefined();
+    expect(result.auth).toBeUndefined();
   });
 });

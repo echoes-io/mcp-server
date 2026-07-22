@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { GraphQLClient } from '../../lib/graphql/client.js';
 import {
@@ -8,29 +8,33 @@ import {
 } from '../../lib/tools/mage-results.js';
 
 describe('mageResultsList', () => {
-  let client: GraphQLClient;
-
-  beforeEach(() => {
-    client = {
+  it('returns all complete results', async () => {
+    const client: GraphQLClient = {
       execute: vi.fn().mockResolvedValue({
-        listMageJobs: {
-          items: [
-            { id: 'j1', s3Uploaded: true, arc: 'ale' },
-            { id: 'j2', s3Uploaded: false, arc: 'ale' },
-            { id: 'j3', s3Uploaded: false, arc: 'vale' },
-          ],
-        },
+        listMageJobs: [
+          { id: 'j1', s3Uploaded: true, arc: 'ale' },
+          { id: 'j2', s3Uploaded: false, arc: 'ale' },
+          { id: 'j3', s3Uploaded: false, arc: 'vale' },
+        ],
       }),
     };
-  });
 
-  it('returns all complete results', async () => {
     const result = await mageResultsList({}, client);
     expect(result.total).toBe(3);
     expect(result.results).toHaveLength(3);
   });
 
   it('filters to unsaved only', async () => {
+    const client: GraphQLClient = {
+      execute: vi.fn().mockResolvedValue({
+        listMageJobs: [
+          { id: 'j1', s3Uploaded: true, arc: 'ale' },
+          { id: 'j2', s3Uploaded: false, arc: 'ale' },
+          { id: 'j3', s3Uploaded: false, arc: 'vale' },
+        ],
+      }),
+    };
+
     const result = await mageResultsList({ unsavedOnly: true }, client);
     expect(result.total).toBe(2);
     expect(result.results.every((r) => !r.s3Uploaded)).toBe(true);
@@ -57,12 +61,10 @@ describe('mageResultsSaveAll', () => {
       execute: vi.fn().mockImplementation((_query, variables) => {
         if (variables?.status === 'COMPLETE') {
           return {
-            listMageJobs: {
-              items: [
-                { id: 'j1', s3Uploaded: false, arc: 'ale' },
-                { id: 'j2', s3Uploaded: false, arc: 'ale' },
-              ],
-            },
+            listMageJobs: [
+              { id: 'j1', s3Uploaded: false, arc: 'ale' },
+              { id: 'j2', s3Uploaded: false, arc: 'ale' },
+            ],
           };
         }
         // saveMageResult calls
@@ -85,12 +87,10 @@ describe('mageResultsSaveAll', () => {
       execute: vi.fn().mockImplementation((_query, variables) => {
         if (variables?.status === 'COMPLETE') {
           return {
-            listMageJobs: {
-              items: [
-                { id: 'j1', s3Uploaded: false, arc: 'ale' },
-                { id: 'j2', s3Uploaded: false, arc: 'vale' },
-              ],
-            },
+            listMageJobs: [
+              { id: 'j1', s3Uploaded: false, arc: 'ale' },
+              { id: 'j2', s3Uploaded: false, arc: 'vale' },
+            ],
           };
         }
         return {
