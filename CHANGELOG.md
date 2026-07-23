@@ -4,6 +4,13 @@
 
 
 
+## [10.0.2](https://github.com/echoes-io/mcp-server/compare/v10.0.1...v10.0.2) (2026-07-23)
+
+
+### Bug Fixes
+
+* align listMageJobs to MageJobConnection schema (items + nextToken) ([a23fa55](https://github.com/echoes-io/mcp-server/commit/a23fa55a5b81294b7d274ae3606818e6d90a168f))
+
 ## [10.0.1](https://github.com/echoes-io/mcp-server/compare/v10.0.0...v10.0.1) (2026-07-22)
 
 
