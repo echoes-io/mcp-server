@@ -12,15 +12,13 @@ export const mageResultsListConfig: ToolConfig = {
   description: 'List generated Mage results.',
   arguments: {
     unsavedOnly: 'If true, only show results not yet saved to S3.',
-    limit: 'Max results per page (default 20).',
-    nextToken: 'Pagination token from a previous response to fetch the next page.',
+    limit: 'Max results to return (default 20).',
   },
 };
 
 export const mageResultsListSchema = z.object({
   unsavedOnly: z.boolean().optional().describe(mageResultsListConfig.arguments.unsavedOnly),
   limit: z.number().optional().describe(mageResultsListConfig.arguments.limit),
-  nextToken: z.string().optional().describe(mageResultsListConfig.arguments.nextToken),
 });
 
 export type MageResultsListInput = z.infer<typeof mageResultsListSchema>;
@@ -28,19 +26,20 @@ export type MageResultsListInput = z.infer<typeof mageResultsListSchema>;
 export interface MageResultsListOutput {
   results: MageJob[];
   total: number;
-  nextToken?: string;
 }
 
 export async function mageResultsList(
   input: MageResultsListInput,
   client: GraphQLClient,
 ): Promise<MageResultsListOutput> {
-  const { unsavedOnly = false, limit = 20, nextToken } = mageResultsListSchema.parse(input);
+  const { unsavedOnly = false, limit = 20 } = mageResultsListSchema.parse(input);
 
+  // NOTE: AppSync DynamoDB resolver nextToken doesn't work with API_KEY auth
+  // (secondary auth mode). Fetch with large limit to avoid pagination.
+  // If this ever exceeds 1000 items, consider switching to a Lambda resolver.
   const response = await client.execute<ListMageJobsResponse>(LIST_MAGE_JOBS, {
     status: 'COMPLETE',
-    limit,
-    nextToken,
+    limit: 1000,
   });
 
   let results = response.listMageJobs.items;
@@ -49,10 +48,12 @@ export async function mageResultsList(
     results = results.filter((job) => !job.s3Uploaded);
   }
 
+  // Apply client-requested limit for display
+  const limited = results.slice(0, limit);
+
   return {
-    results,
+    results: limited,
     total: results.length,
-    nextToken: response.listMageJobs.nextToken ?? undefined,
   };
 }
 
