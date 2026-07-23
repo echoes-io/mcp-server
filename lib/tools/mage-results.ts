@@ -12,13 +12,15 @@ export const mageResultsListConfig: ToolConfig = {
   description: 'List generated Mage results.',
   arguments: {
     unsavedOnly: 'If true, only show results not yet saved to S3.',
-    limit: 'Max results (default 20).',
+    limit: 'Max results per page (default 20).',
+    nextToken: 'Pagination token from a previous response to fetch the next page.',
   },
 };
 
 export const mageResultsListSchema = z.object({
   unsavedOnly: z.boolean().optional().describe(mageResultsListConfig.arguments.unsavedOnly),
   limit: z.number().optional().describe(mageResultsListConfig.arguments.limit),
+  nextToken: z.string().optional().describe(mageResultsListConfig.arguments.nextToken),
 });
 
 export type MageResultsListInput = z.infer<typeof mageResultsListSchema>;
@@ -26,17 +28,19 @@ export type MageResultsListInput = z.infer<typeof mageResultsListSchema>;
 export interface MageResultsListOutput {
   results: MageJob[];
   total: number;
+  nextToken?: string;
 }
 
 export async function mageResultsList(
   input: MageResultsListInput,
   client: GraphQLClient,
 ): Promise<MageResultsListOutput> {
-  const { unsavedOnly = false, limit = 20 } = mageResultsListSchema.parse(input);
+  const { unsavedOnly = false, limit = 20, nextToken } = mageResultsListSchema.parse(input);
 
   const response = await client.execute<ListMageJobsResponse>(LIST_MAGE_JOBS, {
     status: 'COMPLETE',
     limit,
+    nextToken,
   });
 
   let results = response.listMageJobs.items;
@@ -45,7 +49,11 @@ export async function mageResultsList(
     results = results.filter((job) => !job.s3Uploaded);
   }
 
-  return { results, total: results.length };
+  return {
+    results,
+    total: results.length,
+    nextToken: response.listMageJobs.nextToken ?? undefined,
+  };
 }
 
 // --- mage_results_save ---

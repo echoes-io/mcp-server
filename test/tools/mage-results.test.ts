@@ -17,7 +17,7 @@ describe('mageResultsList', () => {
             { id: 'j2', s3Uploaded: false, arc: 'ale' },
             { id: 'j3', s3Uploaded: false, arc: 'vale' },
           ],
-          nextToken: null,
+          nextToken: 'token-abc',
         },
       }),
     };
@@ -25,6 +25,7 @@ describe('mageResultsList', () => {
     const result = await mageResultsList({}, client);
     expect(result.total).toBe(3);
     expect(result.results).toHaveLength(3);
+    expect(result.nextToken).toBe('token-abc');
   });
 
   it('filters to unsaved only', async () => {
@@ -44,6 +45,25 @@ describe('mageResultsList', () => {
     const result = await mageResultsList({ unsavedOnly: true }, client);
     expect(result.total).toBe(2);
     expect(result.results.every((r) => !r.s3Uploaded)).toBe(true);
+    expect(result.nextToken).toBeUndefined();
+  });
+
+  it('passes nextToken for pagination', async () => {
+    const client: GraphQLClient = {
+      execute: vi.fn().mockResolvedValue({
+        listMageJobs: {
+          items: [{ id: 'j4', s3Uploaded: true, arc: 'ale' }],
+          nextToken: null,
+        },
+      }),
+    };
+
+    await mageResultsList({ nextToken: 'token-abc', limit: 10 }, client);
+    expect(client.execute).toHaveBeenCalledWith(expect.any(String), {
+      status: 'COMPLETE',
+      limit: 10,
+      nextToken: 'token-abc',
+    });
   });
 });
 
