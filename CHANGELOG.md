@@ -4,6 +4,13 @@
 
 
 
+## [10.1.0](https://github.com/echoes-io/mcp-server/compare/v10.0.2...v10.1.0) (2026-07-23)
+
+
+### Features
+
+* add nextToken pagination to mage_results_list ([6befac3](https://github.com/echoes-io/mcp-server/commit/6befac397e171fd7bc0d0d667dead455b3f23a3e))
+
 ## [10.0.2](https://github.com/echoes-io/mcp-server/compare/v10.0.1...v10.0.2) (2026-07-23)
 
 
