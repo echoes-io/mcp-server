@@ -64,27 +64,30 @@ export const COMMIT_MAGE_IMAGES = `
 // --- Queries ---
 
 export const LIST_MAGE_JOBS = `
-  query ListMageJobs($status: MageStatus, $limit: Int) {
-    listMageJobs(status: $status, limit: $limit) {
-      id
-      prompt
-      resolvedPrompt
-      imageType
-      mediaType
-      arc
-      folder
-      number
-      variant
-      status
-      position
-      imageUrl
-      s3Key
-      s3Uploaded
-      gitCommitted
-      gitCommitSha
-      error
-      createdAt
-      completedAt
+  query ListMageJobs($status: MageStatus, $limit: Int, $nextToken: String) {
+    listMageJobs(status: $status, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        prompt
+        resolvedPrompt
+        imageType
+        mediaType
+        arc
+        folder
+        number
+        variant
+        status
+        position
+        imageUrl
+        s3Key
+        s3Uploaded
+        gitCommitted
+        gitCommitSha
+        error
+        createdAt
+        completedAt
+      }
+      nextToken
     }
   }
 `;

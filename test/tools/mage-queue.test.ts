@@ -149,9 +149,9 @@ describe('mageQueueList', () => {
     const client: GraphQLClient = {
       execute: vi.fn().mockImplementation((_query, variables) => {
         if (variables?.status === 'QUEUED') {
-          return { listMageJobs: [{ id: 'q1' }] };
+          return { listMageJobs: { items: [{ id: 'q1' }], nextToken: null } };
         }
-        return { listMageJobs: [{ id: 'p1' }] };
+        return { listMageJobs: { items: [{ id: 'p1' }], nextToken: null } };
       }),
     };
 

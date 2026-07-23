@@ -46,7 +46,7 @@ export async function mageStatus(client: GraphQLClient): Promise<MageStatusOutpu
   ]);
 
   const config: MageConfig = configResponse.getMageConfig;
-  const completeJobs = completeResponse.listMageJobs;
+  const completeJobs = completeResponse.listMageJobs.items;
 
   const unsaved = completeJobs.filter((job) => !job.s3Uploaded).length;
   const uncommitted = completeJobs.filter((job) => job.s3Uploaded && !job.gitCommitted).length;
@@ -54,8 +54,8 @@ export async function mageStatus(client: GraphQLClient): Promise<MageStatusOutpu
   return {
     queue: {
       paused: config.isPaused,
-      queued: queuedResponse.listMageJobs.length,
-      processing: processingResponse.listMageJobs.length,
+      queued: queuedResponse.listMageJobs.items.length,
+      processing: processingResponse.listMageJobs.items.length,
     },
     results: {
       total: completeJobs.length,

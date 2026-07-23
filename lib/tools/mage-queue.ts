@@ -171,8 +171,8 @@ export async function mageQueueList(client: GraphQLClient): Promise<MageQueueLis
   ]);
 
   return {
-    queued: queued.listMageJobs,
-    processing: processing.listMageJobs,
+    queued: queued.listMageJobs.items,
+    processing: processing.listMageJobs.items,
   };
 }
 

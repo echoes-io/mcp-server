@@ -32,15 +32,20 @@ describe('mageStatus', () => {
             },
           };
         }
-        if (variables.status === 'QUEUED') return { listMageJobs: [{ id: 'q1' }, { id: 'q2' }] };
-        if (variables.status === 'PROCESSING') return { listMageJobs: [{ id: 'p1' }] };
+        if (variables.status === 'QUEUED')
+          return { listMageJobs: { items: [{ id: 'q1' }, { id: 'q2' }], nextToken: null } };
+        if (variables.status === 'PROCESSING')
+          return { listMageJobs: { items: [{ id: 'p1' }], nextToken: null } };
         // COMPLETE
         return {
-          listMageJobs: [
-            { id: 'c1', s3Uploaded: true, gitCommitted: true },
-            { id: 'c2', s3Uploaded: true, gitCommitted: false },
-            { id: 'c3', s3Uploaded: false, gitCommitted: false },
-          ],
+          listMageJobs: {
+            items: [
+              { id: 'c1', s3Uploaded: true, gitCommitted: true },
+              { id: 'c2', s3Uploaded: true, gitCommitted: false },
+              { id: 'c3', s3Uploaded: false, gitCommitted: false },
+            ],
+            nextToken: null,
+          },
         };
       }),
     };
@@ -70,7 +75,7 @@ describe('mageStatus', () => {
             },
           };
         }
-        return { listMageJobs: [] };
+        return { listMageJobs: { items: [], nextToken: null } };
       }),
     };
 

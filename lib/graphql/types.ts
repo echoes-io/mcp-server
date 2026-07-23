@@ -85,8 +85,13 @@ export interface CommitResult {
 
 // --- Query responses ---
 
+export interface MageJobConnection {
+  items: MageJob[];
+  nextToken?: string;
+}
+
 export interface ListMageJobsResponse {
-  listMageJobs: MageJob[];
+  listMageJobs: MageJobConnection;
 }
 
 export interface ListMageCharactersResponse {

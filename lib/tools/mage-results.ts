@@ -39,7 +39,7 @@ export async function mageResultsList(
     limit,
   });
 
-  let results = response.listMageJobs;
+  let results = response.listMageJobs.items;
 
   if (unsavedOnly) {
     results = results.filter((job) => !job.s3Uploaded);
