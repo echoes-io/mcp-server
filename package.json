@@ -1,6 +1,6 @@
 {
   "name": "@echoes-io/mcp-server",
-  "version": "10.1.0",
+  "version": "10.1.1",
   "description": "📚 Model Context Protocol server for AI-powered storytelling — Mage image generation and content tools.",
   "type": "module",
   "bin": {

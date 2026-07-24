@@ -4,6 +4,13 @@
 
 
 
+## [10.1.1](https://github.com/echoes-io/mcp-server/compare/v10.1.0...v10.1.1) (2026-07-23)
+
+
+### Bug Fixes
+
+* **mage-results:** avoid nextToken pagination with API_KEY auth ([16390bb](https://github.com/echoes-io/mcp-server/commit/16390bb0d733a618b30816c6480e7c8cd933ea04))
+
 ## [10.1.0](https://github.com/echoes-io/mcp-server/compare/v10.0.2...v10.1.0) (2026-07-23)
 
 
